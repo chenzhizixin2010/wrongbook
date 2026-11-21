@@ -15,6 +15,7 @@ SHOTS = ROOT / "docs" / "screens"
 OUT = ROOT / "docs" / "ui-screens.png"
 
 ITEMS = [
+    ("splash", "开屏"),
     ("home", "题库"),
     ("scan", "扫描"),
     ("chat", "AI 对话"),
@@ -66,10 +67,10 @@ def main() -> None:
 
     sheet = Image.new("RGB", (width, height), BG)
     draw = ImageDraw.Draw(sheet)
-    draw.text((MARGIN, 34), "错题本 · Liquid Glass", font=font(38, bold=True), fill=FG)
+    draw.text((MARGIN, 34), "Errata · Liquid Glass", font=font(38, bold=True), fill=FG)
     draw.text(
         (MARGIN, 84),
-        "实际运行截图 · 1080×1920 · 浅色模式 · 玻璃材质 / 极光画布 / 悬浮标签栏",
+        "实际运行截图 · 1080×1920 · 开屏 + 5 个主 Tab · 浅色模式",
         font=font(19),
         fill=MUTED,
     )

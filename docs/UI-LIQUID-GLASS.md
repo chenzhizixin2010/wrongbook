@@ -1,9 +1,10 @@
-# 液态玻璃 UI 重建说明（Liquid Glass）
+# Errata · 液态玻璃 UI 重建说明（Liquid Glass）
 
 > 参考 iOS 26 的 Liquid Glass：**先有会流动的光，才有玻璃**。
 > 本文件说明这次视觉改版的设计语言、令牌、组件、页面落点与验证结果。
+> 品牌：**Errata**（/ɪˈrɑːtə/，勘误表）+ 副标题 **AI Mistake Notebook**；包名与仓库名保持不变。
 > 运行截图：[`docs/ui-screens.png`](ui-screens.png)（360×640dp / Android 12 模拟器，浅色）
-> 设计稿：[`docs/ui-mockup.png`](ui-mockup.png) ｜ 可编辑源：[`docs/ui-mockup.html`](ui-mockup.html)
+> 开屏设计稿：[`docs/splash-mockup.png`](splash-mockup.png)（浅色 / 深色）\n> 设计稿：[`docs/ui-mockup.png`](ui-mockup.png) ｜ 可编辑源：[`docs/ui-mockup.html`](ui-mockup.html)
 > 单页原图：[`docs/screens/`](screens/)
 
 ---
@@ -131,6 +132,18 @@ UI 基座仍是 Cupertino（`CupertinoTheme` / `CupertinoText` / `CupertinoIcon`
 
 ---
 
+## 5.5 开屏与品牌（Errata）
+
+- **系统启动窗口**：`windowBackground` 用「极光渐变 + 品牌 E 标记」的 layer-list；Android 12+ 直接使用原生的
+  `windowSplashScreenBackground` / `windowSplashScreenAnimatedIcon` 两个属性，**不引入 core-splashscreen**。
+- **Compose 开屏** `ErrataSplash`：128dp 玻璃标记 + 衬线 `Errata` 字标 + `AI MISTAKE NOTEBOOK` + 中文 tagline
+  「把每一道错题，改对。」；标记 spring 0.92→1，文字逐层淡入上移，1.2s 后 420ms 淡出。
+- **不做初始化**：开屏只是盖在已经渲染好的主界面之上，不阻塞冷启动；`rememberSaveable` 保证旋转/切主题不重播。
+- **桌面图标**：同一枚 E 标记（蓝紫渐变 + 白色 E），与开屏、系统启动画面形成同一条视觉路径。
+- **命名**：显示名 Errata（/ɪˈrɑːtə/，勘误表），副标题 AI Mistake Notebook；包名、仓库名、备份格式保持不变。
+
+---
+
 ## 6. 动效
 
 | 动效 | 参数 |
@@ -163,7 +176,7 @@ gradle :app:assembleDebug :app:testDebugUnitTest
 ```
 
 - `assembleDebug`：通过。
-- `testDebugUnitTest`：通过，77 个 JVM 用例 0 失败。
+- `testDebugUnitTest`：通过，83 个 JVM 用例 0 失败。
 - **实机（模拟器）已验证**：Android 12 / API 32、360×640dp、1080×1920。
   - 5 个主 Tab、题目详情、手动建题、设置弹窗、深色模式、相机取景页均已截图；
   - 见 [`docs/ui-screens.png`](ui-screens.png) 与 [`docs/screens/`](screens/)。

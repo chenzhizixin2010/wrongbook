@@ -60,6 +60,7 @@ import io.github.robinpcrd.cupertino.icons.outlined.ListBullet
 import io.github.robinpcrd.cupertino.icons.outlined.Paperplane
 import io.github.robinpcrd.cupertino.icons.outlined.RectanglePortraitAndArrowForward
 import io.github.robinpcrd.cupertino.icons.outlined.SquareAndPencil
+import kotlinx.coroutines.delay
 
 /**
  * 路由表。二级页面用 `Routes.xxx()` 生成路径，避免手拼字符串出错。
@@ -156,7 +157,11 @@ fun AppNavHost() {
     val updateState by updateVm.state.collectAsState()
 
     // 启动静默检查一次：大版本才弹窗，小版本不打扰
-    LaunchedEffect(Unit) { updateVm.checkOnce() }
+    LaunchedEffect(Unit) {
+        // 等开屏淡出后再查更新，避免「建议更新」弹窗压在品牌页上。
+        delay(1_650)
+        updateVm.checkOnce()
+    }
 
     val backStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = backStackEntry?.destination?.route

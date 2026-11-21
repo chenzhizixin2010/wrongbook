@@ -33,6 +33,7 @@ import com.chenzixin.wrongbook.ui.component.WbPrimaryButton
 import com.chenzixin.wrongbook.ui.component.WbSecondaryButton
 import com.chenzixin.wrongbook.ui.component.WbTextButton
 import com.chenzixin.wrongbook.ui.component.WbHintBar
+import com.chenzixin.wrongbook.ui.component.WbListRow
 import com.chenzixin.wrongbook.ui.component.WbSection
 import com.chenzixin.wrongbook.ui.component.WbTextField
 import com.chenzixin.wrongbook.ui.component.WbTopBar
@@ -71,23 +72,21 @@ fun ProfileEditScreen(
                 .padding(bottom = 32.dp),
         ) {
             WbSection(
-                header = "快速填入",
-                footer = "点任意一个服务商，可以看到「去哪申请 Key」和领取步骤，再一键填入地址与模型名。Key 必须自己申请，额度以官网为准。",
+                header = "免费服务商",
+                footer = "点任意一个，能看到「去哪申请 Key」和领取步骤，再一键填入地址与模型名。Key 需要自己申请，免费政策以官网为准。",
             ) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .horizontalScroll(rememberScrollState())
-                        .padding(16.dp),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                ) {
-                    PROVIDER_PRESETS.forEach { preset ->
-                        WbChip(
-                            label = preset.name,
-                            selected = state.baseUrl == preset.baseUrl,
-                            onClick = { guidePreset = preset },
-                        )
-                    }
+                PROVIDER_PRESETS.forEachIndexed { index, preset ->
+                    WbListRow(
+                        title = if (preset.needsVpn) "${preset.name} · 需外网" else preset.name,
+                        subtitle = preset.quota,
+                        showDivider = index != PROVIDER_PRESETS.lastIndex,
+                        onClick = { guidePreset = preset },
+                        trailing = {
+                            if (state.baseUrl == preset.baseUrl) {
+                                CupertinoText(text = "使用中", fontSize = 11.sp, color = colors.tint)
+                            }
+                        },
+                    )
                 }
             }
 

@@ -206,3 +206,17 @@
 | D35 | **按钮语义化** | 新增 `WbPrimaryButton/WbSecondaryButton/WbDangerButton/WbTextButton`，禁止在实心按钮里塞灰/红字（对比度问题） |
 | D36 | **透视手柄尺寸必须用 dp** | Canvas 里写 `18f` 是 18px，高密度屏上几乎点不中；改为 `18.dp.toPx()` + 44dp 命中半径 |
 | D37 | **标签可现场新建** | 扫描入库页与手动建题页都能新建标签并自动勾选；标签数量不设上限 |
+| D38 | **品牌名定为 Errata** | /ɪˈrɑːtə/，出版术语「勘误表」，与「错题本」语义对应。App 显示名、开屏、桌面图标统一为 Errata，副标题 AI Mistake Notebook；包名 `com.chenzixin.wrongbook`、GitHub 仓库名与备份格式保持不变，避免升级/更新链路断裂 |
+
+---
+
+## 4.6 免费服务商预设扩充（2026-11-21）
+
+| # | 决策 | 说明 |
+| --- | --- | --- |
+| D38 | **内置 10 个服务商预设，端点逐个探活** | `ark.cn-beijing.volces.com/api/v3`、`api.longcat.chat/openai/v1`、`dashscope.aliyuncs.com/compatible-mode/v1`、`open.bigmodel.cn/api/paas/v4`、`api.siliconflow.cn/v1`、`api.deepseek.com/v1` 全部实测返回 401/400（说明路由存在），不是猜的 |
+| D39 | **只预填地址与模型名，绝不内置共享 Key** | 共享 Key 不合规、会被刷爆；界面里写明「Key 需要自己申请」 |
+| D40 | **免费政策写进 quota 字段但标注「以官网为准」** | 各家额度变动频繁（GLM-4.5-Flash 已下线换 4.7-Flash、LongCat 额度调整过），代码不做硬性判断 |
+
+> 易错点：LongCat 的 API 域名是 `api.longcat.chat`（`longcat.chat` 是网页端，`/v1/models` 会返回 HTML）；
+> 智谱的 `glm-4.5-flash` 已下线，预设改用 `glm-4.7-flash`。

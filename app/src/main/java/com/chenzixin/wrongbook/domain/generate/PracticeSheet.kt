@@ -84,7 +84,7 @@ object PracticeSheetHtml {
   </header>
   $questions
   $answers
-  <footer>错题本 · 自动生成</footer>
+  <footer>Errata · 自动生成</footer>
 </body>
 </html>
         """.trimIndent()

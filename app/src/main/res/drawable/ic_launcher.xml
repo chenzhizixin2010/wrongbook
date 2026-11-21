@@ -1,27 +1,39 @@
 <?xml version="1.0" encoding="utf-8"?>
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:aapt="http://schemas.android.com/aapt"
     android:width="108dp"
     android:height="108dp"
     android:viewportWidth="108"
     android:viewportHeight="108">
 
-    <!-- P0 占位图标：蓝底 + 白色纸张 + 三条错题横线。
-         上架前替换为正式设计稿（含自适应图标 + 各密度切图）。 -->
-    <path
-        android:fillColor="#007AFF"
-        android:pathData="M0,0h108v108h-108z" />
+    <!-- Errata 品牌图标：蓝紫渐变底 + 三条白色圆头横杠组成的 E。
+         全出血绘制，由启动器自行做圆角/圆形遮罩。 -->
+    <path android:pathData="M0,0h108v108h-108z">
+        <aapt:attr name="android:fillColor">
+            <gradient
+                android:type="linear"
+                android:startX="0"
+                android:startY="0"
+                android:endX="108"
+                android:endY="108"
+                android:startColor="#0A84FF"
+                android:endColor="#6C5CE7" />
+        </aapt:attr>
+    </path>
 
     <path
-        android:fillColor="#FFFFFF"
-        android:pathData="M32,26h44a6,6 0,0 1,6 6v44a6,6 0,0 1,-6 6h-44a6,6 0,0 1,-6 -6v-44a6,6 0,0 1,6 -6z" />
-
+        android:pathData="M32,34 L76,34"
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="9"
+        android:strokeLineCap="round" />
     <path
-        android:fillColor="#007AFF"
-        android:pathData="M38,42h32v5h-32z" />
+        android:pathData="M32,54 L62,54"
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="9"
+        android:strokeLineCap="round" />
     <path
-        android:fillColor="#007AFF"
-        android:pathData="M38,54h32v5h-32z" />
-    <path
-        android:fillColor="#007AFF"
-        android:pathData="M38,66h20v5h-20z" />
+        android:pathData="M32,74 L76,74"
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="9"
+        android:strokeLineCap="round" />
 </vector>

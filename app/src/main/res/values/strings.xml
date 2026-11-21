@@ -1,4 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">错题本</string>
+    <string name="app_name">Errata</string>
+    <string name="app_subtitle">AI Mistake Notebook</string>
+    <string name="app_tagline">把每一道错题，改对。</string>
+    <string name="app_footer">本地优先 · 离线可用</string>
 </resources>

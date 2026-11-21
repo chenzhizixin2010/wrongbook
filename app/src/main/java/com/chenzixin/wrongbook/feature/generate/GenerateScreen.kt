@@ -288,7 +288,7 @@ private fun SetupContent(
     WbInputDialog(
         visible = showTitleDialog,
         title = "练习卷标题",
-        placeholder = "错题巩固练习",
+        placeholder = "Errata 错题巩固练习",
         initialValue = state.sheetTitle,
         onConfirm = {
             onTitle(it)
@@ -457,9 +457,9 @@ private fun PreviewContent(
 /** 调系统打印；用户可以在打印面板里选「另存为 PDF」或直接连打印机。 */
 private fun printSheet(context: Context, webView: WebView) {
     val printManager = context.getSystemService(Context.PRINT_SERVICE) as PrintManager
-    val adapter = webView.createPrintDocumentAdapter("错题练习")
+    val adapter = webView.createPrintDocumentAdapter("Errata 练习卷")
     val attributes = PrintAttributes.Builder()
         .setMediaSize(PrintAttributes.MediaSize.ISO_A4)
         .build()
-    printManager.print("错题练习", adapter, attributes)
+    printManager.print("Errata 练习卷", adapter, attributes)
 }

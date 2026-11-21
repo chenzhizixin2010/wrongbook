@@ -31,7 +31,7 @@ class GenerateViewModel @Inject constructor(
         val useAi: Boolean = false,
         val generating: Boolean = false,
         val html: String? = null,
-        val sheetTitle: String = "错题巩固练习",
+        val sheetTitle: String = "Errata 错题巩固练习",
         val message: String? = null,
     ) {
         val filter: TagFilter get() = TagFilter(tagIds = selectedTagIds, matchAll = matchAll)
@@ -76,7 +76,7 @@ class GenerateViewModel @Inject constructor(
                 count = s.count,
                 useAi = s.useAi,
                 withAnswers = s.withAnswers,
-                title = s.sheetTitle.ifBlank { "错题巩固练习" },
+                title = s.sheetTitle.ifBlank { "Errata 错题巩固练习" },
             )
             when (val result = practiceRepo.buildSheet(request)) {
                 is WbResult.Ok -> {

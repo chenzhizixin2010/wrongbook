@@ -1,6 +1,6 @@
-# 错题整理 App · WrongBook
+﻿# Errata · AI Mistake Notebook
 
-一个**离线优先、AI 增强**的 Android 错题本：拍照 → 透视矫正 → 本地 OCR 或视觉模型切题 → 矩形多选入库 → 多标签分类 → AI 讲解 / 整理 / 出同类题 → 按标签生成可打印练习卷。
+一个**离线优先、AI 增强**的 Android 错题本（原名 WrongBook / 错题整理 App，包名保持不变）：拍照 → 透视矫正 → 本地 OCR 或视觉模型切题 → 矩形多选入库 → 多标签分类 → AI 讲解 / 整理 / 出同类题 → 按标签生成可打印练习卷。
 
 - 包名：`com.chenzixin.wrongbook`
 - 系统要求：Android 7.0（API 24）+，编译/目标 API 37
@@ -16,8 +16,8 @@ P0~P8 **功能全部落地**，编译与单元测试通过；真实模型链路�
 ```
 gradle :app:assembleDebug + :app:testDebugUnitTest
 -> BUILD SUCCESSFUL
--> 66 tests, 0 failures（10 个测试类）
--> app-debug.apk 62.9 MB
+-> 83 tests, 0 failures
+-> app-debug.apk 63.8 MB
 ```
 
 ## 已实现的功能
@@ -82,6 +82,22 @@ gradle :app:assembleDebug + :app:testDebugUnitTest
 - 打印输出在真机打印服务里的分页效果
 - 免费服务商的实际额度与可用性（以各官网为准）
 
+
+
+### 内置的免费 / 低价服务商
+
+「设置 → 模型与 API → 免费服务商」里每一项都能看到申请直达链接和领取步骤，一键填入地址与模型名。
+
+| 服务商 | 免费政策（以官网为准） | 网络 |
+| --- | --- | --- |
+| 火山方舟 · 豆包 | 学生认证后 `doubao-seed-1-6` 可长期免费，官方称不限量 | 国内直连 |
+| 智谱 GLM | `GLM-4.7-Flash` 永久免费；教育邮箱再送 10 万 Token | 国内直连 |
+| 美团 LongCat | 每天 5000 万 Token（Lite）+ 500 万共享 | 国内直连 |
+| 阿里云百炼 | 新用户百万级 Token 试用，学生认证可能额外送 | 国内直连 |
+| 硅基流动 | 新用户约 2000 万 Token | 国内直连 |
+| 魔搭 ModelScope | 免费推理接口（限频） | 国内直连 |
+| DeepSeek | 新用户赠送额度；`deepseek-flash` 支持识图 | 国内直连 |
+| Groq / OpenRouter / Gemini | 有免费额度或 `:free` 模型 | 需外网 |
 
 ## 更新日志
 

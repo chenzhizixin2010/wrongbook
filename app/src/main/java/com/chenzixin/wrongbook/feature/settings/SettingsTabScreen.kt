@@ -1,4 +1,4 @@
-﻿package com.chenzixin.wrongbook.feature.settings
+package com.chenzixin.wrongbook.feature.settings
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -277,14 +277,14 @@ private fun IdentityCard(profileCount: Int) {
             Spacer(Modifier.width(13.dp))
             Column(modifier = Modifier.weight(1f)) {
                 CupertinoText(
-                    text = "错题本",
+                    text = "Errata",
                     fontSize = 17.sp,
                     fontWeight = FontWeight.SemiBold,
                     color = colors.label,
                 )
                 Spacer(Modifier.height(3.dp))
                 CupertinoText(
-                    text = "v${BuildConfig.VERSION_NAME} · 本地优先",
+                    text = "v${BuildConfig.VERSION_NAME} · AI Mistake Notebook",
                     fontSize = 11.5.sp,
                     color = colors.secondaryLabel,
                 )

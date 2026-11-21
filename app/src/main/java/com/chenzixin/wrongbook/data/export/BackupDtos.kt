@@ -118,7 +118,7 @@ object BackupCodec {
     /** 校验备份能不能导入：版本号必须 ≤ 当前版本。 */
     fun validate(manifest: BackupManifest?): String? = when {
         manifest == null -> "备份文件损坏：缺少 manifest.json"
-        manifest.app != "wrongbook" -> "这不是错题本的备份文件"
+        manifest.app != "wrongbook" -> "这不是 Errata 导出的备份文件"
         manifest.version > BackupManifest.CURRENT_VERSION ->
             "备份来自更新版本的 App（v${manifest.version}），请先升级再导入"
         else -> null

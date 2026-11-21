@@ -82,7 +82,7 @@ fun HomeTabScreen(
         item(key = "header") {
             WbPageHeader(
                 title = "题库",
-                kicker = "本地优先 · 错题本",
+                kicker = "本地优先 · Errata",
                 subtitle = buildString {
                     append("${state.questions.size} 道错题")
                     if (state.tags.isNotEmpty()) append(" · ${state.tags.size} 个标签")

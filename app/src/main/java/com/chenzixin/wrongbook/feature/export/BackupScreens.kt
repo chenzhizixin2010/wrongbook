@@ -77,7 +77,7 @@ fun ExportScreen(
                     Spacer(Modifier.height(16.dp))
                     WbPrimaryButton(
                         text = if (state.busy) "导出中…" else "选择保存位置",
-                        onClick = { createLauncher.launch("wrongbook-backup.zip") },
+                        onClick = { createLauncher.launch("errata-backup.zip") },
                         modifier = Modifier.fillMaxWidth(),
                         enabled = !state.busy,
                         icon = CupertinoIcons.Outlined.SquareAndArrowUp,
