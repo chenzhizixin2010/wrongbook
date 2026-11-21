@@ -23,7 +23,7 @@ android {
         versionName = "0.3.0"
 
         // 更新源：仓库信息与镜像前缀。owner/repo 也可以在设置页里改。
-        buildConfigField("String", "GITHUB_OWNER", "\"chenzixin\"")
+        buildConfigField("String", "GITHUB_OWNER", "\"chenzhizixin2010\"")
         buildConfigField("String", "GITHUB_REPO", "\"wrongbook\"")
         buildConfigField("String", "UPDATE_MIRRORS", "\"https://ghproxy.net/,https://gh-proxy.com/,https://hub.gitmirror.com/\"")
 
