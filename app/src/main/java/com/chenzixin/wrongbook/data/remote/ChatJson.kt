@@ -35,6 +35,13 @@ object SseParser {
 
 object ChatJson {
 
+    /** 取 choices[0].finish_reason，没有就返回空串。 */
+    fun finishReasonOf(raw: String): String {
+        val root = parseObject(raw) ?: return ""
+        val choice = root["choices"]?.jsonArray?.firstOrNull()?.jsonObject ?: return ""
+        return choice["finish_reason"]?.jsonPrimitive?.contentOrNull.orEmpty()
+    }
+
     private val json = Json {
         ignoreUnknownKeys = true
         isLenient = true

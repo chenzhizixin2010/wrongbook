@@ -47,7 +47,7 @@ class VisionQuestionSegmenter @Inject constructor(
             apiKey = apiKey,
             messages = listOf(ChatMsg.user(prompt, images = listOf(base64))),
             jsonMode = true,
-            maxTokens = 4000,
+            maxTokens = visionProfile.maxTokens.coerceAtLeast(4096),
         )
 
         when (first) {
@@ -70,7 +70,7 @@ class VisionQuestionSegmenter @Inject constructor(
             apiKey = apiKey,
             messages = listOf(ChatMsg.user(prompt, images = listOf(base64))),
             jsonMode = false,
-            maxTokens = 4000,
+            maxTokens = visionProfile.maxTokens.coerceAtLeast(4096),
         )
         when (second) {
             is WbResult.Ok -> VisionRegionParser.parse(second.value, bitmap.width, bitmap.height)

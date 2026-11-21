@@ -18,6 +18,8 @@ data class ChatChunk(
     val delta: String,
     val done: Boolean = false,
     val reasoningDelta: String = "",
+    /** 原生 finish_reason；"length" 表示被输出上限截断 */
+    val finishReason: String = "",
 )
 
 /** 面向用户的错误：message 可直接展示。 */

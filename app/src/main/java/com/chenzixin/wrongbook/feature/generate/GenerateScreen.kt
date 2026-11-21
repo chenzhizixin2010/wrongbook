@@ -94,6 +94,34 @@ fun GenerateScreen(vm: GenerateViewModel = hiltViewModel()) {
         )
     }
 
+    state.pendingPlan?.let { plan ->
+        WbAlertDialog(
+            visible = true,
+            title = "有 ${plan.missingCount} 处缺少答案或解析",
+            message = buildString {
+                append("本次选的 ${plan.items.size} 道题里：")
+                if (plan.missingAnswer > 0) append("${plan.missingAnswer} 道没有答案；")
+                if (plan.missingAnalysis > 0) append("${plan.missingAnalysis} 道没有解析。")
+                append("要用 AI 补全吗？补全结果会同时写回题库。")
+            },
+            confirmText = "AI 补全",
+            onConfirm = vm::confirmFill,
+            dismissText = "跳过",
+            onDismiss = vm::skipFill,
+        )
+    }
+
+    if (state.warning != null) {
+        WbAlertDialog(
+            visible = true,
+            title = "已生成，但有问题",
+            message = state.warning,
+            confirmText = "知道了",
+            onConfirm = vm::dismissWarning,
+            onDismiss = vm::dismissWarning,
+        )
+    }
+
     if (state.message != null) {
         WbAlertDialog(
             visible = true,
@@ -208,6 +236,15 @@ private fun SetupContent(
                         selected = state.useAi,
                         onClick = { onUseAi(true) },
                         modifier = Modifier.weight(1f),
+                    )
+                }
+
+                if (state.useAi && !state.aiAvailable) {
+                    CupertinoText(
+                        text = "没有可用的 API 配置，AI 出题会退回整理错题。去「设置 → 模型与 API」确认 Key 已保存。",
+                        modifier = Modifier.padding(top = 10.dp),
+                        fontSize = 12.sp,
+                        color = colors.danger,
                     )
                 }
 

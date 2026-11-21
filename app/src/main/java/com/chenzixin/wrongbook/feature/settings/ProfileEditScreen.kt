@@ -145,7 +145,7 @@ fun ProfileEditScreen(
                     )
                     Spacer(Modifier.height(6.dp))
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        listOf(4096, 8192, 16384).forEach { n ->
+                        listOf(4096, 8192, 16384, 32768).forEach { n ->
                             WbChip(
                                 label = "$n",
                                 selected = state.maxTokens == n,

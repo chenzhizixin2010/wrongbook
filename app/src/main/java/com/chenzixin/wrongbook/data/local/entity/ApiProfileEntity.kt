@@ -22,7 +22,7 @@ data class ApiProfileEntity(
     /** 视觉模型，留空 = 不支持识图，扫描流程自动降级为纯本地 OCR */
     val visionModel: String = "",
     val temperature: Float = 0.7f,
-    val maxTokens: Int = 4096,
+    val maxTokens: Int = 8192,
     val isDefault: Boolean = false,
     val enabled: Boolean = true,
     val createdAt: Long = System.currentTimeMillis(),

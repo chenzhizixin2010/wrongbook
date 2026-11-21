@@ -19,8 +19,8 @@ android {
         applicationId = "com.chenzixin.wrongbook"
         minSdk = 24
         targetSdk = 37
-        versionCode = 8
-        versionName = "0.9.2"
+        versionCode = 9
+        versionName = "0.9.3"
 
         // 更新源：仓库信息与镜像前缀。owner/repo 也可以在设置页里改。
         buildConfigField("String", "GITHUB_OWNER", "\"chenzhizixin2010\"")
