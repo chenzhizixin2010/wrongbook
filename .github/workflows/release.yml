@@ -14,6 +14,10 @@ permissions:
 jobs:
   build:
     runs-on: ubuntu-latest
+    env:
+      # runner 自带 Android SDK，直接复用，避免 setup-android 的 sdkmanager 版本坑
+      ANDROID_HOME: /usr/local/lib/android/sdk
+      ANDROID_SDK_ROOT: /usr/local/lib/android/sdk
     steps:
       - uses: actions/checkout@v4
 
@@ -23,8 +27,26 @@ jobs:
           distribution: temurin
           java-version: "17"
 
-      - name: Set up Android SDK
-        uses: android-actions/setup-android@v3
+      - name: Cache Gradle
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: gradle-${{ runner.os }}-${{ hashFiles('gradle/wrapper/gradle-wrapper.properties', 'gradle/libs.versions.toml') }}
+          restore-keys: gradle-${{ runner.os }}-
+
+      - name: Install SDK packages
+        run: |
+          set -e
+          SDKMGR="$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager"
+          if [ ! -x "$SDKMGR" ]; then
+            SDKMGR="$(find "$ANDROID_HOME" -name sdkmanager -type f | head -n 1)"
+          fi
+          echo "using sdkmanager: $SDKMGR"
+          yes | "$SDKMGR" --licenses > /dev/null || true
+          yes | "$SDKMGR" "platform-tools" "platforms;android-37.0" "build-tools;37.0.0" > /dev/null
+          ls "$ANDROID_HOME/platforms" "$ANDROID_HOME/build-tools"
 
       - name: Grant execute permission for gradlew
         run: chmod +x ./gradlew
@@ -53,5 +75,4 @@ jobs:
 # 说明：
 # 1. 这里发布的是 debug 签名 APK，能直接安装升级（同签名覆盖安装）。
 # 2. 若要上架或对外分发，建议在仓库 Secrets 里放 keystore，改成 assembleRelease 并配置 signingConfig。
-# 3. Release 的 APK 必须是 application/vnd.android.package-archive 能被系统安装的包；
-#    App 内下载后会校验文件 > 1MB，然后调系统安装器。
+# 3. App 内下载后会校验文件 > 1MB，然后调系统安装器。
