@@ -19,8 +19,8 @@ android {
         applicationId = "com.chenzixin.wrongbook"
         minSdk = 24
         targetSdk = 37
-        versionCode = 3
-        versionName = "0.3.0"
+        versionCode = 4
+        versionName = "0.3.1"
 
         // 更新源：仓库信息与镜像前缀。owner/repo 也可以在设置页里改。
         buildConfigField("String", "GITHUB_OWNER", "\"chenzhizixin2010\"")
@@ -31,8 +31,24 @@ android {
         vectorDrawables { useSupportLibrary = true }
     }
 
+    signingConfigs {
+        // 固定开发签名：本地与 GitHub Actions 共用，保证「应用内更新」能覆盖安装。
+        // 这是开发用自签名证书（密码在仓库里公开），**不要**用于应用商店上架。
+        create("devFixed") {
+            storeFile = rootProject.file("keystore/wrongbook-dev.jks")
+            storePassword = "wrongbook123"
+            keyAlias = "wrongbook"
+            keyPassword = "wrongbook123"
+        }
+    }
+
     buildTypes {
+        debug {
+            signingConfig = signingConfigs.getByName("devFixed")
+        }
         release {
+            // release 暂用同一把开发签名，方便内测分发；上架前请换成你自己的证书
+            signingConfig = signingConfigs.getByName("devFixed")
             isMinifyEnabled = false
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
