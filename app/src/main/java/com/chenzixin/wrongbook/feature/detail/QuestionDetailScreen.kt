@@ -47,6 +47,7 @@ import com.chenzixin.wrongbook.ui.component.WbPrimaryButton
 import com.chenzixin.wrongbook.ui.component.WbSecondaryButton
 import com.chenzixin.wrongbook.ui.component.WbInputDialog
 import com.chenzixin.wrongbook.ui.component.WbSection
+import com.chenzixin.wrongbook.ui.component.WbTagEditorDialog
 import com.chenzixin.wrongbook.ui.component.WbTextButton
 import com.chenzixin.wrongbook.ui.component.WbTextField
 import com.chenzixin.wrongbook.ui.component.WbTopBar
@@ -79,6 +80,8 @@ fun QuestionDetailScreen(
     val context = LocalContext.current
     var confirmDelete by remember { mutableStateOf(false) }
     var editingText by remember { mutableStateOf(false) }
+    var editingTags by remember { mutableStateOf(false) }
+    val allTags by vm.allTags.collectAsState()
     var editingValue by remember { mutableStateOf("") }
     var editingRefined by remember { mutableStateOf<RefinedQuestion?>(null) }
     var variantsToSave by remember { mutableStateOf<List<RefinedQuestion>?>(null) }
@@ -226,18 +229,30 @@ fun QuestionDetailScreen(
                 }
             }
 
-            if (tags.isNotEmpty()) {
-                WbSection(header = "标签", icon = CupertinoIcons.Outlined.Star) {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .horizontalScroll(rememberScrollState())
-                            .padding(16.dp),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    ) {
-                        tags.forEach { tag ->
-                            WbBadge(text = tag.name, color = parseTagColor(tag.color))
-                        }
+            WbSection(
+                header = "标签",
+                icon = CupertinoIcons.Outlined.Star,
+                footer = if (tags.isEmpty()) "还没打标签，点「编辑」可以随时补。" else null,
+                action = {
+                    WbTextButton(text = "编辑", onClick = { editingTags = true })
+                },
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .horizontalScroll(rememberScrollState())
+                        .padding(16.dp),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    if (tags.isEmpty()) {
+                        CupertinoText(
+                            text = "未分类",
+                            fontSize = 14.sp,
+                            color = colors.secondaryLabel,
+                        )
+                    }
+                    tags.forEach { tag ->
+                        WbBadge(text = tag.name, color = parseTagColor(tag.color))
                     }
                 }
             }
@@ -334,6 +349,15 @@ fun QuestionDetailScreen(
             },
         )
     }
+
+    WbTagEditorDialog(
+        visible = editingTags,
+        allTags = allTags,
+        selectedIds = (item?.tags ?: emptyList()).map { it.id }.toSet(),
+        onToggle = vm::toggleTag,
+        onCreate = vm::createTag,
+        onDismiss = { editingTags = false },
+    )
 
     WbInputDialog(
         visible = editingText,

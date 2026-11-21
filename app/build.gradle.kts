@@ -19,13 +19,13 @@ android {
         applicationId = "com.chenzixin.wrongbook"
         minSdk = 24
         targetSdk = 37
-        versionCode = 7
-        versionName = "0.9.1"
+        versionCode = 8
+        versionName = "0.9.2"
 
         // 更新源：仓库信息与镜像前缀。owner/repo 也可以在设置页里改。
         buildConfigField("String", "GITHUB_OWNER", "\"chenzhizixin2010\"")
         buildConfigField("String", "GITHUB_REPO", "\"wrongbook\"")
-        buildConfigField("String", "UPDATE_MIRRORS", "\"https://ghproxy.net/,https://gh-proxy.com/,https://hub.gitmirror.com/\"")
+        buildConfigField("String", "UPDATE_MIRRORS", "\"https://gh-proxy.org/,https://gh-proxy.com/,https://gh.monlor.com/,https://ghproxy.net/,https://ghfast.top/\"")
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables { useSupportLibrary = true }

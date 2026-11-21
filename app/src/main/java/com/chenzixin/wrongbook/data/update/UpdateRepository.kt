@@ -13,7 +13,11 @@ import java.io.IOException
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.withTimeoutOrNull
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.withContext
@@ -120,14 +124,46 @@ class UpdateRepository @Inject constructor(
     }
 
     /**
-     * 下载 APK；失败会换下一个源。进度通过 [DownloadProgress] 回传。
+     * 并行测速：每个候选源拉 64KB，按耗时排序；失败的排到最后。
+     *
+     * 公共镜像站速度差异极大（实测 5KB/s ~ 240KB/s），固定顺序会让用户一直等最慢的那条。
+     */
+    suspend fun rankedCandidates(apkUrl: String): List<Pair<String, String>> = coroutineScope {
+        val all = candidates(apkUrl)
+        val scored = all.map { (url, label) -> async { Triple(url, label, probe(url)) } }.awaitAll()
+        val alive = scored.filter { it.third != null }.sortedBy { it.third }
+        val dead = scored.filter { it.third == null }
+        (alive + dead).map { it.first to it.second }
+    }
+
+    /** 拉一小段测延迟；不可用返回 null。 */
+    private suspend fun probe(url: String): Int? = withContext(io) {
+        withTimeoutOrNull(PROBE_TIMEOUT_MS) {
+            runCatching {
+                val request = Request.Builder()
+                    .url(url)
+                    .header("Range", "bytes=0-$PROBE_BYTES")
+                    .header("User-Agent", "WrongBook-Android")
+                    .build()
+                val started = System.currentTimeMillis()
+                client.newCall(request).execute().use { response ->
+                    if (!response.isSuccessful) return@use null
+                    val read = response.body.byteStream().use { it.readNBytes(PROBE_BYTES + 1).size }
+                    if (read < 1024) null else (System.currentTimeMillis() - started).toInt()
+                }
+            }.getOrNull()
+        }
+    }
+
+    /**
+     * 下载 APK；先测速挑最快源，失败再换下一个。进度通过 [DownloadProgress] 回传。
      */
     fun download(info: UpdateInfo): Flow<DownloadProgress> = flow {
         val dir = File(context.cacheDir, "updates").apply { if (!exists()) mkdirs() }
         val target = File(dir, "wrongbook-${info.version}.apk")
 
         var lastError: Throwable? = null
-        for ((url, label) in candidates(info.apkUrl)) {
+        for ((url, label) in rankedCandidates(info.apkUrl)) {
             try {
                 val request = Request.Builder()
                     .url(url)
@@ -215,5 +251,10 @@ class UpdateRepository @Inject constructor(
         WbResult.Ok(Unit)
     } catch (t: Throwable) {
         WbResult.Err("打不开设置页", t)
+    }
+
+    private companion object {
+        const val PROBE_BYTES = 64 * 1024
+        const val PROBE_TIMEOUT_MS = 4_000L
     }
 }

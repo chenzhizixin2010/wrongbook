@@ -33,6 +33,7 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.unit.IntOffset
+import com.chenzixin.wrongbook.core.ImageUtils.detectContentBox
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -60,16 +61,19 @@ fun PerspectiveCropScreen(
     val imgW = bitmap.width.toFloat()
     val imgH = bitmap.height.toFloat()
 
-    // 四个角初始内缩 4%，留出手柄可点区域
+    // 初始框：优先自动框住「有文字的区域」，识别不到内容才退回 4% 内缩
     var quad by remember(bitmap) {
-        val insetX = imgW * 0.04f
-        val insetY = imgH * 0.04f
+        val auto = bitmap.detectContentBox()
+        val l = (auto?.left ?: 0.04f) * imgW
+        val t = (auto?.top ?: 0.04f) * imgH
+        val r = (auto?.right ?: 0.96f) * imgW
+        val b = (auto?.bottom ?: 0.96f) * imgH
         mutableStateOf(
             listOf(
-                insetX to insetY,
-                (imgW - insetX) to insetY,
-                (imgW - insetX) to (imgH - insetY),
-                insetX to (imgH - insetY),
+                l to t,
+                r to t,
+                r to b,
+                l to b,
             ),
         )
     }

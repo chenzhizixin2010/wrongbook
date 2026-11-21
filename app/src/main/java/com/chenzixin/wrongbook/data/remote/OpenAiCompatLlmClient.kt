@@ -132,7 +132,7 @@ class OpenAiCompatLlmClient @Inject constructor(
             put("model", profile.chatModel)
             put("stream", stream)
             put("temperature", profile.temperature.toDouble())
-            put("max_tokens", maxTokens ?: profile.maxTokens)
+            put("max_tokens", maxTokens ?: profile.maxTokens.coerceAtLeast(MIN_MAX_TOKENS))
             if (jsonMode) {
                 putJsonObject("response_format") { put("type", "json_object") }
             }
@@ -178,5 +178,8 @@ class OpenAiCompatLlmClient @Inject constructor(
 
     private companion object {
         val JSON_MEDIA = "application/json; charset=utf-8".toMediaType()
+
+        /** 老配置里存的是 2048，长回答必被截断；统一抬到 4096 起步。 */
+        const val MIN_MAX_TOKENS = 4096
     }
 }

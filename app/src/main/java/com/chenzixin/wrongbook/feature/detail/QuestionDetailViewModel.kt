@@ -33,7 +33,7 @@ class QuestionDetailViewModel @Inject constructor(
     private val llm: LlmClient,
     private val imageStore: QuestionImageStore,
     savedStateHandle: SavedStateHandle,
-) : ViewModel() {
+    private val tagRepo: com.chenzixin.wrongbook.data.repository.TagRepository,) : ViewModel() {
 
     private val questionId: Long = savedStateHandle.get<Long>("questionId") ?: 0L
 
@@ -146,6 +146,41 @@ class QuestionDetailViewModel @Inject constructor(
     }
 
     /** 手动编辑题干：OCR 再差也有兜底，用户改完立即生效。 */
+
+    /** 全部标签，编辑弹窗里用。 */
+    val allTags: kotlinx.coroutines.flow.StateFlow<List<com.chenzixin.wrongbook.data.local.entity.TagEntity>> =
+        tagRepo.observeAll().stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5_000),
+            initialValue = emptyList(),
+        )
+
+    /** 勾选/取消勾选标签，立即写库（不做「确定」暂存，避免用户以为没生效）。 */
+    fun toggleTag(tagId: Long) {
+        val current = item.value?.tags?.map { it.id }.orEmpty().toMutableList()
+        if (tagId in current) current.remove(tagId) else current.add(tagId)
+        viewModelScope.launch {
+            when (val r = repo.setTags(questionId, current)) {
+                is WbResult.Ok -> Unit
+                is WbResult.Err -> _message.value = r.message
+            }
+        }
+    }
+
+    /** 现场建标签并直接挂到这道题上。 */
+    fun createTag(name: String) {
+        if (name.isBlank()) return
+        viewModelScope.launch {
+            when (val r = tagRepo.create(name = name.trim())) {
+                is WbResult.Ok -> {
+                    val current = item.value?.tags?.map { it.id }.orEmpty() + r.value
+                    repo.setTags(questionId, current)
+                }
+                is WbResult.Err -> _message.value = r.message
+            }
+        }
+    }
+
     fun saveText(text: String) {
         val question = item.value?.question ?: return
         if (text.isBlank()) return
