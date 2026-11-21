@@ -37,6 +37,7 @@ import com.chenzixin.wrongbook.data.prefs.ThemeMode
 import com.chenzixin.wrongbook.ui.component.GlassSurface
 import com.chenzixin.wrongbook.ui.component.WbBadge
 import com.chenzixin.wrongbook.ui.component.WbGlassIconButton
+import com.chenzixin.wrongbook.ui.component.WbAlertDialog
 import com.chenzixin.wrongbook.ui.component.WbListRow
 import com.chenzixin.wrongbook.ui.component.WbPageHeader
 import com.chenzixin.wrongbook.ui.component.WbSection
@@ -75,6 +76,10 @@ fun SettingsTabScreen(
     val vm: SettingsViewModel = hiltViewModel()
     val profiles by vm.profiles.collectAsState()
     val themeMode by vm.themeMode.collectAsState()
+    val reprocess by vm.reprocess.collectAsState()
+    val reprocessMessage by vm.reprocessMessage.collectAsState()
+    var confirmReprocess by remember { mutableStateOf(false) }
+    var hideReprocessProgress by remember { mutableStateOf(false) }
     val colors = wbColors()
     val bottomSpace = wbTabBarSpace()
     var showThemeDialog by remember { mutableStateOf(false) }
@@ -180,12 +185,57 @@ fun SettingsTabScreen(
             WbListRow(
                 title = "导入题库",
                 subtitle = "从 ZIP 恢复或迁移到新机",
-                showDivider = false,
+                showDivider = true,
                 onClick = onOpenImport,
+            )
+            WbListRow(
+                title = "重新处理题目图片",
+                subtitle = "统一摆正并提亮纸面（保留颜色）",
+                showDivider = false,
+                onClick = { confirmReprocess = true },
             )
         }
 
-        WbSection(header = "关于", icon = CupertinoIcons.Outlined.InfoCircle) {
+        WbAlertDialog(
+        visible = confirmReprocess,
+        title = "重新处理所有题目图片？",
+        message = "会逐张识别方向、摆正并提亮纸面（颜色保留），覆盖原图。题目多时需要几分钟，中途可以退出。",
+        confirmText = "开始处理",
+        onConfirm = {
+            confirmReprocess = false
+            hideReprocessProgress = false
+            vm.reprocessImages()
+        },
+        onDismiss = { confirmReprocess = false },
+    )
+
+    reprocess?.let { p ->
+        if (!hideReprocessProgress) {
+            WbAlertDialog(
+                visible = true,
+                title = "正在处理图片",
+                message = "已完成 ${p.done} / ${p.total} 张" +
+                    if (p.failed > 0) "（失败 ${p.failed}）" else "" +
+                    "\n\n处理在后台继续，可以先去别的页面。",
+                confirmText = "后台运行",
+                onConfirm = { hideReprocessProgress = true },
+                onDismiss = { hideReprocessProgress = true },
+            )
+        }
+    }
+
+    if (reprocessMessage != null) {
+        WbAlertDialog(
+            visible = true,
+            title = "提示",
+            message = reprocessMessage,
+            confirmText = "知道了",
+            onConfirm = vm::clearReprocessMessage,
+            onDismiss = vm::clearReprocessMessage,
+        )
+    }
+
+    WbSection(header = "关于", icon = CupertinoIcons.Outlined.InfoCircle) {
             WbListRow(
                 title = "隐私政策",
                 subtitle = "题目与对话只存在本机",

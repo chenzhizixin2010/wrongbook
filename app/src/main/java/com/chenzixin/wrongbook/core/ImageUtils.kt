@@ -188,6 +188,30 @@ object ImageUtils {
         return out
     }
 
+
+    /**
+     * 纸面提亮（保留彩色）：阴影/偏黄的纸变白，墨迹的颜色和深浅都保留。
+     *
+     * 相比 [toHighContrast] 的黑白二值化，这个更"温和"：
+     * 铅笔的浅灰还在、红笔蓝笔还是彩色，只是背景不再发灰发暗。
+     */
+    fun Bitmap.toPaperClean(strength: Float = 1f): Bitmap {
+        val src = scaledToMaxSide(1600)
+        val w = src.width
+        val h = src.height
+        if (w <= 0 || h <= 0) return src
+
+        val pixels = IntArray(w * h)
+        src.getPixels(pixels, 0, w, 0, 0, w, h)
+
+        val flattened = IlluminationFlattener.flatten(pixels, w, h, strength)
+
+        val out = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888)
+        out.setPixels(flattened, 0, w, 0, 0, w, h)
+        if (src !== this) src.recycle()
+        return out
+    }
+
     fun Bitmap.toWebp(quality: Int = 82): ByteArray {
         val out = ByteArrayOutputStream()
         // WEBP_LOSSY 需要 API 30+，旧机型退回 WEBP（已废弃但可用）

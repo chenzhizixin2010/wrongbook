@@ -66,7 +66,7 @@ object PracticeSheetHtml {
   h1 { font-size: 17pt; margin: 0 0 4pt 0; }
   .sub { font-size: 10pt; color: #555; }
   .q { margin: 0 0 14pt 0; page-break-inside: avoid; }
-  .stem { white-space: pre-wrap; }
+  .stem { white-space: pre-wrap; overflow-wrap: anywhere; word-break: break-word; }
   .no { font-weight: 600; }
   .space { height: 52pt; border-bottom: 0.5pt dashed #bbb; margin-top: 6pt; }
   .answers h2 { font-size: 14pt; border-bottom: 1pt solid #111; padding-bottom: 4pt; }

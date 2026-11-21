@@ -142,7 +142,14 @@ class OpenAiCompatLlmClient @Inject constructor(
             put("model", profile.chatModel)
             put("stream", stream)
             put("temperature", profile.temperature.toDouble())
-            put("max_tokens", maxTokens ?: profile.maxTokens.coerceAtLeast(MIN_MAX_TOKENS))
+            // 0 = 不限制：干脆不传 max_tokens，交给服务端默认值
+            val effective = maxTokens ?: profile.maxTokens
+            val budget = if (maxTokens == null && effective > 0) {
+                effective.coerceAtLeast(MIN_MAX_TOKENS)
+            } else {
+                effective
+            }
+            if (budget > 0) put("max_tokens", budget)
             if (jsonMode) {
                 putJsonObject("response_format") { put("type", "json_object") }
             }

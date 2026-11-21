@@ -74,7 +74,10 @@ class ProfileEditViewModel @Inject constructor(
     fun onVisionModelChange(v: String) = _state.update { it.copy(visionModel = v) }
     fun onApiKeyChange(v: String) = _state.update { it.copy(apiKeyInput = v) }
 
-    fun setMaxTokens(value: Int) = _state.update { it.copy(maxTokens = value.coerceIn(1024, 32768)) }
+    fun setMaxTokens(value: Int) = _state.update {
+        // 0 表示「不限制」，其余夹在合理区间
+        it.copy(maxTokens = if (value <= 0) 0 else value.coerceIn(1024, 32768))
+    }
 
     /** 一键填入服务商预设（只填地址与模型名，Key 仍需用户自己贴）。 */
     fun applyPreset(preset: ProviderPreset) {

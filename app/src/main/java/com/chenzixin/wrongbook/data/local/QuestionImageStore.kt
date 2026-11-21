@@ -3,7 +3,7 @@ package com.chenzixin.wrongbook.data.local
 import android.content.Context
 import android.graphics.Bitmap
 import com.chenzixin.wrongbook.core.ImageUtils.cropToNormalized
-import com.chenzixin.wrongbook.core.ImageUtils.toHighContrast
+import com.chenzixin.wrongbook.core.ImageUtils.toPaperClean
 import com.chenzixin.wrongbook.core.ImageUtils.scaledToMaxSide
 import com.chenzixin.wrongbook.core.ImageUtils.toWebp
 import com.chenzixin.wrongbook.core.WbResult
@@ -40,8 +40,8 @@ class QuestionImageStore @Inject constructor(
             val name = UUID.randomUUID().toString()
             val cropped = source.cropToNormalized(rect.left, rect.top, rect.right, rect.bottom)
 
-            // 入库前统一处理成白底黑字，列表和详情页都更清楚
-            val enhanced = cropped.toHighContrast()
+            // 入库前提亮纸面：颜色保留，只把背景推到接近纯白
+            val enhanced = cropped.toPaperClean()
 
             val full = enhanced.scaledToMaxSide(MAX_SIDE)
             val fullFile = File(dir, "$name.webp")

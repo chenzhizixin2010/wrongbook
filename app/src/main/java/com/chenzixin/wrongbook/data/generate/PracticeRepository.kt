@@ -10,6 +10,8 @@ import com.chenzixin.wrongbook.di.IoDispatcher
 import com.chenzixin.wrongbook.domain.generate.PracticeItem
 import com.chenzixin.wrongbook.domain.generate.PracticeSheet
 import com.chenzixin.wrongbook.domain.generate.PracticeSheetHtml
+import com.chenzixin.wrongbook.domain.generate.OptionFormatter
+import com.chenzixin.wrongbook.domain.generate.VariantParser
 import com.chenzixin.wrongbook.domain.tag.TagFilter
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -83,7 +85,8 @@ class PracticeRepository @Inject constructor(
             val q = item.question
             PracticeItem(
                 index = index + 1,
-                stem = (q.refinedText ?: q.rawOcrText).trim(),
+                // 选择题常见「A. … B. …」挤一行，这里按选项边界断行
+                stem = OptionFormatter.wrap((q.refinedText ?: q.rawOcrText).trim()),
                 answer = q.answer.orEmpty(),
                 analysis = q.analysis.orEmpty(),
             )
@@ -243,7 +246,11 @@ class PracticeRepository @Inject constructor(
         val active = settings.resolveActive()
             ?: return WbResult.Err("没有可用的 API 配置（Key 可能没保存），已退回整理错题")
 
-        val materials = source.take(5).joinToString("\n\n") { item ->
+        val usable = source.filter { (it.question.refinedText ?: it.question.rawOcrText).isNotBlank() }
+        if (usable.isEmpty()) {
+            return WbResult.Err("选中的题目没有文字内容，AI 无法据此出题")
+        }
+        val materials = usable.take(5).joinToString("\n\n") { item ->
             val q = item.question
             "题目：${(q.refinedText ?: q.rawOcrText).take(300)}\n答案：${q.answer.orEmpty().take(200)}"
         }
@@ -258,8 +265,13 @@ class PracticeRepository @Inject constructor(
 
         val raw = completeWithRetry(active.profile, active.apiKey, prompt)
             ?: return WbResult.Err("AI 出题请求失败（超时或网络错误），已退回整理错题")
-        val parsed = parseVariants(raw)
-            ?: return WbResult.Err("AI 返回的内容无法解析成题目，已退回整理错题")
+        val parsed = VariantParser.parse(raw)
+        if (parsed.isEmpty()) {
+            return WbResult.Err(
+                "AI 返回的内容无法解析成题目，已退回整理错题。模型原话片段：" +
+                    raw.replace("\n", " ").take(140),
+            )
+        }
         return WbResult.Ok(parsed)
     }
 
@@ -269,7 +281,7 @@ class PracticeRepository @Inject constructor(
         apiKey: String,
         prompt: List<ChatMsg>,
     ): String? {
-        val budget = profile.maxTokens.coerceAtLeast(4096)
+        val budget = profile.maxTokens
         val first = llm.complete(profile, apiKey, prompt, jsonMode = true, maxTokens = budget)
         if (first is WbResult.Ok) {
             val text = first.value
@@ -277,23 +289,6 @@ class PracticeRepository @Inject constructor(
         }
         val second = llm.complete(profile, apiKey, prompt, jsonMode = false, maxTokens = budget)
         return (second as? WbResult.Ok)?.value
-    }
-
-    private fun parseVariants(raw: String): List<PracticeItem>? {
-        val root = extractObject(raw) ?: return null
-        val array = root["questions"]?.jsonArray ?: return null
-        val items = array.mapNotNull { element ->
-            val obj = element.jsonObject
-            val stem = obj["stem"]?.jsonPrimitive?.contentOrNull?.trim().orEmpty()
-            if (stem.isEmpty()) return@mapNotNull null
-            PracticeItem(
-                index = 0,
-                stem = stem,
-                answer = obj["answer"]?.jsonPrimitive?.contentOrNull.orEmpty(),
-                analysis = obj["analysis"]?.jsonPrimitive?.contentOrNull.orEmpty(),
-            )
-        }
-        return items.takeIf { it.isNotEmpty() }
     }
 
     private fun parseEnrich(raw: String): Map<Int, Pair<String, String>>? {

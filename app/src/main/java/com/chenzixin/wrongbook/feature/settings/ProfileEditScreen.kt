@@ -1,5 +1,7 @@
 package com.chenzixin.wrongbook.feature.settings
 
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.horizontalScroll
@@ -46,6 +48,7 @@ import io.github.robinpcrd.cupertino.CupertinoText
  * 安全约定：Key 输入框永远不回显已保存的值，只显示「已保存，留空不修改」。
  */
 @Composable
+@OptIn(ExperimentalLayoutApi::class)
 fun ProfileEditScreen(
     onBack: () -> Unit,
     vm: ProfileEditViewModel = hiltViewModel(),
@@ -71,25 +74,6 @@ fun ProfileEditScreen(
                 .verticalScroll(rememberScrollState())
                 .padding(bottom = 32.dp),
         ) {
-            WbSection(
-                header = "免费服务商",
-                footer = "点任意一个，能看到「去哪申请 Key」和领取步骤，再一键填入地址与模型名。Key 需要自己申请，免费政策以官网为准。",
-            ) {
-                PROVIDER_PRESETS.forEachIndexed { index, preset ->
-                    WbListRow(
-                        title = if (preset.needsVpn) "${preset.name} · 需外网" else preset.name,
-                        subtitle = preset.quota,
-                        showDivider = index != PROVIDER_PRESETS.lastIndex,
-                        onClick = { guidePreset = preset },
-                        trailing = {
-                            if (state.baseUrl == preset.baseUrl) {
-                                CupertinoText(text = "使用中", fontSize = 11.sp, color = colors.tint)
-                            }
-                        },
-                    )
-                }
-            }
-
             WbSection(header = "基础") {
                 Column(modifier = Modifier.padding(16.dp)) {
                     WbTextField(
@@ -132,19 +116,31 @@ fun ProfileEditScreen(
                     )
                     Spacer(Modifier.height(12.dp))
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        CupertinoText(text = "温度 ${"%.1f".format(state.temperature)}", fontSize = 15.sp, color = colors.label)
+                        CupertinoText(
+                            text = "温度 ${"%.1f".format(state.temperature)}",
+                            fontSize = 15.sp,
+                            color = colors.label,
+                        )
                         Spacer(Modifier.width(16.dp))
                         WbTextButton(text = "－", onClick = { vm.adjustTemperature(-0.1f) })
                         WbTextButton(text = "＋", onClick = { vm.adjustTemperature(0.1f) })
+                    }
 
-                    Spacer(Modifier.height(10.dp))
+                    Spacer(Modifier.height(14.dp))
                     CupertinoText(
-                        text = "最大输出 ${state.maxTokens} tokens",
+                        text = if (state.maxTokens <= 0) {
+                            "最大输出：不限制"
+                        } else {
+                            "最大输出 ${state.maxTokens} tokens"
+                        },
                         fontSize = 15.sp,
                         color = colors.label,
                     )
-                    Spacer(Modifier.height(6.dp))
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Spacer(Modifier.height(8.dp))
+                    FlowRow(
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp),
+                    ) {
                         listOf(4096, 8192, 16384, 32768).forEach { n ->
                             WbChip(
                                 label = "$n",
@@ -152,14 +148,18 @@ fun ProfileEditScreen(
                                 onClick = { vm.setMaxTokens(n) },
                             )
                         }
+                        WbChip(
+                            label = "无限制",
+                            selected = state.maxTokens <= 0,
+                            onClick = { vm.setMaxTokens(0) },
+                        )
                     }
                     CupertinoText(
                         text = "回答被截断时调大这一项；模型自身的上限以服务商文档为准。",
-                        modifier = Modifier.padding(top = 4.dp),
+                        modifier = Modifier.padding(top = 6.dp),
                         fontSize = 11.sp,
                         color = colors.secondaryLabel,
                     )
-                    }
                 }
             }
 
@@ -167,18 +167,41 @@ fun ProfileEditScreen(
                 WbHintBar(text = msg, onClick = vm::clearMessage)
             }
 
-            Row(
+            WbSection(
+                header = "免费服务商",
+                footer = "点任意一个，能看到「去哪申请 Key」和领取步骤，再一键填入地址与模型名。Key 需要自己申请，免费政策以官网为准。",
+            ) {
+                PROVIDER_PRESETS.forEachIndexed { index, preset ->
+                    WbListRow(
+                        title = if (preset.needsVpn) "${preset.name} · 需外网" else preset.name,
+                        subtitle = preset.quota,
+                        showDivider = index != PROVIDER_PRESETS.lastIndex,
+                        onClick = { guidePreset = preset },
+                        trailing = {
+                            if (state.baseUrl == preset.baseUrl) {
+                                CupertinoText(text = "使用中", fontSize = 11.sp, color = colors.tint)
+                            }
+                        },
+                    )
+                }
+            }
+
+            // 三个按钮挤一行会在窄屏上把文字压扁，拆成「保存」独占一行 + 两个测试并排
+            WbPrimaryButton(
+                text = if (state.saving) "保存中…" else "保存",
+                onClick = vm::save,
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(horizontal = 16.dp, vertical = 12.dp),
+                enabled = !state.saving,
+            )
+
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp),
                 horizontalArrangement = Arrangement.spacedBy(12.dp),
             ) {
-                WbPrimaryButton(
-                    text = if (state.saving) "保存中…" else "保存",
-                    onClick = vm::save,
-                    modifier = Modifier.weight(1f),
-                    enabled = !state.saving,
-                )
                 WbSecondaryButton(
                     text = if (state.testing) "测试中…" else "测试连接",
                     onClick = vm::testConnection,

@@ -14,3 +14,6 @@ build/
 # 本地生成的 UI 截图，不入库（可用 scripts/make_ui_sheet.py 重新生成）
 /docs/screens/
 /docs/ui-screens.png
+
+# Kotlin 编译器的临时错误日志
+/.kotlin/

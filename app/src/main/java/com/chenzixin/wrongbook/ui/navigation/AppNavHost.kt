@@ -4,6 +4,8 @@ import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.background
@@ -178,10 +180,19 @@ fun AppNavHost() {
             navController = navController,
             startDestination = Routes.HOME,
             modifier = Modifier.fillMaxSize(),
-            enterTransition = { fadeIn(animationSpec = tween(220)) },
-            exitTransition = { fadeOut(animationSpec = tween(160)) },
-            popEnterTransition = { fadeIn(animationSpec = tween(220)) },
-            popExitTransition = { fadeOut(animationSpec = tween(160)) },
+            // iOS 风格滑页：新页从右滑入，旧页向左退 1/4；返回时反过来
+            enterTransition = {
+                slideInHorizontally(tween(320)) { it } + fadeIn(tween(200))
+            },
+            exitTransition = {
+                slideOutHorizontally(tween(320)) { -it / 4 } + fadeOut(tween(200))
+            },
+            popEnterTransition = {
+                slideInHorizontally(tween(320)) { -it / 4 } + fadeIn(tween(200))
+            },
+            popExitTransition = {
+                slideOutHorizontally(tween(320)) { it } + fadeOut(tween(200))
+            },
         ) {
             composable(Routes.HOME) {
                 WbRoute(insetBottom = false) {
@@ -374,19 +385,22 @@ private fun WbRoute(
     insetBottom: Boolean = true,
     content: @Composable () -> Unit,
 ) {
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(wbColors().canvasBottom)
-            .then(
-                if (insetTop) Modifier.windowInsetsPadding(WindowInsets.statusBars) else Modifier,
-            )
-            .then(
-                if (insetBottom) Modifier.windowInsetsPadding(WindowInsets.navigationBars) else Modifier,
-            ),
-    ) {
-        // 每页自带不透明底：侧滑返回转场时不会和上一页互相透视
+    Box(modifier = Modifier.fillMaxSize()) {
+        // 底图铺满全屏（含状态栏/手势条区域），否则顶部底部会露出一条纯色「白条」
         WbPageBase()
-        content()
+
+        // 只让内容避让系统栏
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .then(
+                    if (insetTop) Modifier.windowInsetsPadding(WindowInsets.statusBars) else Modifier,
+                )
+                .then(
+                    if (insetBottom) Modifier.windowInsetsPadding(WindowInsets.navigationBars) else Modifier,
+                ),
+        ) {
+            content()
+        }
     }
 }

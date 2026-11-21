@@ -44,12 +44,15 @@ class SettingsRepositoryImpl @Inject constructor(
                 val encrypted = if (apiKey != null) crypto.encrypt(apiKey) else null
                 db.withTransaction {
                     val isFirst = dao.count() == 0
+                    // 关键：调用方传进来的往往是 apiKeyEnc = "" 的新实体，
+                    // 用户只改温度时不能拿这个空串覆盖库里已保存的密文
+                    val existingKeyEnc = if (profile.id != 0L) dao.findById(profile.id)?.apiKeyEnc else null
                     val target = profile.copy(
                         name = name,
                         baseUrl = baseUrl,
                         chatModel = chatModel,
                         visionModel = profile.visionModel.trim(),
-                        apiKeyEnc = encrypted ?: profile.apiKeyEnc,
+                        apiKeyEnc = encrypted ?: existingKeyEnc ?: profile.apiKeyEnc,
                         isDefault = profile.isDefault || isFirst,
                     )
                     val id = if (target.id == 0L) {
