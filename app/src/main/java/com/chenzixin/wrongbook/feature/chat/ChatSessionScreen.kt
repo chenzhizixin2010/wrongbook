@@ -53,6 +53,8 @@ import com.chenzixin.wrongbook.ui.component.WbAlertDialog
 import com.chenzixin.wrongbook.ui.component.WbChip
 import com.chenzixin.wrongbook.ui.component.WbGlassIconButton
 import com.chenzixin.wrongbook.ui.component.WbTopBar
+import com.chenzixin.wrongbook.ui.component.WbTextButton
+import com.chenzixin.wrongbook.data.local.entity.TagEntity
 import com.chenzixin.wrongbook.ui.theme.wbColors
 import io.github.robinpcrd.cupertino.CupertinoIcon
 import io.github.robinpcrd.cupertino.CupertinoText
@@ -72,6 +74,8 @@ fun ChatSessionScreen(
     val session by vm.session.collectAsState()
     val messages by vm.messages.collectAsState()
     val streaming by vm.streaming.collectAsState()
+    val allTags by vm.allTags.collectAsState()
+    var savingText by remember { mutableStateOf<String?>(null) }
     val thinking by vm.thinking.collectAsState()
     val status by vm.status.collectAsState()
     val colors = wbColors()
@@ -98,7 +102,18 @@ fun ChatSessionScreen(
             .fillMaxSize()
             .imePadding(),
     ) {
-        WbTopBar(title = session?.title ?: "对话", onBack = onBack)
+        WbTopBar(
+            title = session?.title ?: "对话",
+            onBack = onBack,
+            actions = {
+                if (streaming == null) {
+                    WbTextButton(
+                        text = "继续",
+                        onClick = { vm.send("请从上次中断的地方继续，不要重复已经给过的内容。") },
+                    )
+                }
+            },
+        )
 
         LazyColumn(
             modifier = Modifier
@@ -119,7 +134,10 @@ fun ChatSessionScreen(
                 }
             }
             items(messages, key = { it.id }) { message ->
-                MessageBubble(message = message)
+                MessageBubble(
+                    message = message,
+                    onSaveAsQuestion = { text -> savingText = text },
+                )
             }
             if (streaming != null) {
                 item(key = "streaming") {
@@ -127,6 +145,13 @@ fun ChatSessionScreen(
                 }
             }
         }
+
+        SaveQuestionFromChatHost(
+            vm = vm,
+            savingText = savingText,
+            allTags = allTags,
+            onDismiss = { savingText = null },
+        )
 
         if (pendingImages.isNotEmpty()) {
             GlassSurface(
@@ -298,6 +323,25 @@ private fun Composer(
 }
 
 @Composable
+private fun SaveQuestionFromChatHost(
+    vm: ChatSessionViewModel,
+    savingText: String?,
+    allTags: List<TagEntity>,
+    onDismiss: () -> Unit,
+) {
+    val text = savingText ?: return
+    SaveQuestionFromChatDialog(
+        rawText = text,
+        allTags = allTags,
+        onSave = { stem, answer, analysis, tagIds ->
+            vm.saveAsQuestion(stem, answer, analysis, tagIds)
+            onDismiss()
+        },
+        onDismiss = onDismiss,
+    )
+}
+
+@Composable
 private fun ChatWelcome(onPick: (String) -> Unit) {
     val colors = wbColors()
     Column(
@@ -380,7 +424,10 @@ private fun ChatWelcome(onPick: (String) -> Unit) {
 }
 
 @Composable
-private fun MessageBubble(message: ChatMessageEntity) {
+private fun MessageBubble(
+    message: ChatMessageEntity,
+    onSaveAsQuestion: ((String) -> Unit)? = null,
+) {
     if (message.role == "user") {
         val context = LocalContext.current
         Column(
@@ -421,7 +468,21 @@ private fun MessageBubble(message: ChatMessageEntity) {
             }
         }
     } else {
-        AssistantBubble(text = message.content, streaming = false)
+        Column(modifier = Modifier.fillMaxWidth()) {
+            AssistantBubble(text = message.content, streaming = false)
+            if (onSaveAsQuestion != null && message.content.isNotBlank()) {
+                Row(
+                    modifier = Modifier.padding(start = 8.dp, top = 2.dp),
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                ) {
+                    WbTextButton(
+                        text = "存为错题",
+                        onClick = { onSaveAsQuestion(message.content) },
+                        fontSize = 12,
+                    )
+                }
+            }
+        }
     }
 }
 

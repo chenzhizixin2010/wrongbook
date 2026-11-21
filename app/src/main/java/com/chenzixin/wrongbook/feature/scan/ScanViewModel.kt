@@ -3,6 +3,8 @@ package com.chenzixin.wrongbook.feature.scan
 import android.graphics.Bitmap
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.chenzixin.wrongbook.core.ImageUtils.rotated
+import com.chenzixin.wrongbook.core.ImageUtils.scaledToMaxSide
 import com.chenzixin.wrongbook.core.WbResult
 import com.chenzixin.wrongbook.data.local.QuestionImageStore
 import com.chenzixin.wrongbook.data.local.entity.QuestionEntity
@@ -64,7 +66,12 @@ class ScanViewModel @Inject constructor(
         _state.update { it.copy(stage = Stage.Recognizing, bitmap = bitmap, message = null) }
         viewModelScope.launch {
             try {
+                // 横着拍竖版试卷时，先自动转正再识别，否则 OCR 全是竖排碎片
+                val upright = autoOrient(bitmap)
                 val active = settings.resolveActive()
+                val hasProfile = active == null && runCatching {
+                    settings.observeProfiles().first().isNotEmpty()
+                }.getOrDefault(false)
                 var regions: List<QuestionRegion>? = null
                 var engine = "本地识别"
 
@@ -74,7 +81,7 @@ class ScanViewModel @Inject constructor(
                 if (active != null && active.profile.visionModel.isNotBlank()) {
                     visionTried = true
                     val outcome = runCatching {
-                        vision.segment(active.profile, active.apiKey, bitmap)
+                        vision.segment(active.profile, active.apiKey, upright)
                     }.getOrNull()
                     when (outcome) {
                         is WbResult.Ok -> {
@@ -94,14 +101,18 @@ class ScanViewModel @Inject constructor(
                 // 第二层：本地 ML Kit OCR + 规则切分
                 var fallbackHint: String? = null
                 if (regions.isNullOrEmpty()) {
-                    val ocrResult = ocr.recognize(bitmap)
+                    val ocrResult = ocr.recognize(upright)
                     regions = QuestionSegmenter.segment(ocrResult)
                     engine = "本地识别"
                     // 降级要让用户知道原因，否则只会觉得「识别很烂」
-                    fallbackHint = if (visionTried) {
-                        "AI 识图失败：${visionError ?: "模型没返回可解析的题目"}。已改用本地识别，文字可在详情页手动改。"
-                    } else {
-                        "当前用本地识别。想更准可以在设置里配置支持图片的模型（如 deepseek-flash、豆包）。"
+                    fallbackHint = when {
+                        visionTried ->
+                            "AI 识图失败：${visionError ?: "模型没返回可解析的题目"}。已改用本地识别，文字可在详情页手动改。"
+                        // 有配置但读不到 Key：多半是输了 Key 却忘了点保存
+                        hasProfile ->
+                            "有 API 配置但没读到 Key，AI 识图用不了。去「设置 → 模型与 API」重新贴 Key 并点保存。"
+                        else ->
+                            "当前用本地识别。想更准可以在设置里配置支持图片的模型（如 deepseek-flash、豆包）。"
                     }
                 }
 
@@ -119,6 +130,7 @@ class ScanViewModel @Inject constructor(
                         selected = selectable,
                         engine = engine,
                         message = fallbackHint,
+                        bitmap = upright,
                     )
                 }
             } catch (t: Throwable) {
@@ -127,6 +139,29 @@ class ScanViewModel @Inject constructor(
                 }
             }
         }
+    }
+
+    /**
+     * 自动摆正：竖图直接返回；横图用低分辨率试 0/90/270 三个方向，
+     * 取「识别出的有效字符最多」的那个（试卷文字远多于噪声，这个判据很稳）。
+     */
+    private suspend fun autoOrient(bitmap: Bitmap): Bitmap {
+        if (bitmap.height >= bitmap.width) return bitmap
+        val small = bitmap.scaledToMaxSide(1400)
+        val candidates = listOf(0, 90, 270)
+        var bestDeg = 0
+        var bestScore = -1
+        candidates.forEach { deg ->
+            val rotated = if (deg == 0) small else small.rotated(deg.toFloat())
+            val score = runCatching {
+                ocr.recognize(rotated).lines.sumOf { it.text.trim().count { c -> c.isLetterOrDigit() } }
+            }.getOrDefault(0)
+            if (score > bestScore) {
+                bestScore = score
+                bestDeg = deg
+            }
+        }
+        return if (bestDeg == 0) bitmap else bitmap.rotated(bestDeg.toFloat())
     }
 
     fun toggleRegion(index: Int) = _state.update { s ->

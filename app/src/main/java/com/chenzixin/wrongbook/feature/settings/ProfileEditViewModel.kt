@@ -23,10 +23,12 @@ data class ProfileEditUiState(
     val apiKeyInput: String = "",
     val hasSavedKey: Boolean = false,
     val temperature: Float = 0.7f,
+    val maxTokens: Int = 4096,
     val isDefault: Boolean = false,
     val isNew: Boolean = true,
     val saving: Boolean = false,
     val testing: Boolean = false,
+    val visionTesting: Boolean = false,
     val message: String? = null,
     val finished: Boolean = false,
 )
@@ -34,6 +36,7 @@ data class ProfileEditUiState(
 @HiltViewModel
 class ProfileEditViewModel @Inject constructor(
     private val repo: SettingsRepository,
+    private val visionDiagnostics: com.chenzixin.wrongbook.data.ocr.VisionDiagnostics,
     savedStateHandle: SavedStateHandle,
 ) : ViewModel() {
 
@@ -55,6 +58,7 @@ class ProfileEditViewModel @Inject constructor(
                             visionModel = p.visionModel,
                             hasSavedKey = p.apiKeyEnc.isNotEmpty(),
                             temperature = p.temperature,
+            maxTokens = p.maxTokens,
                             isDefault = p.isDefault,
                             isNew = false,
                         )
@@ -69,6 +73,8 @@ class ProfileEditViewModel @Inject constructor(
     fun onChatModelChange(v: String) = _state.update { it.copy(chatModel = v) }
     fun onVisionModelChange(v: String) = _state.update { it.copy(visionModel = v) }
     fun onApiKeyChange(v: String) = _state.update { it.copy(apiKeyInput = v) }
+
+    fun setMaxTokens(value: Int) = _state.update { it.copy(maxTokens = value.coerceIn(1024, 32768)) }
 
     /** 一键填入服务商预设（只填地址与模型名，Key 仍需用户自己贴）。 */
     fun applyPreset(preset: ProviderPreset) {
@@ -100,6 +106,7 @@ class ProfileEditViewModel @Inject constructor(
                 chatModel = s.chatModel,
                 visionModel = s.visionModel,
                 temperature = s.temperature,
+                maxTokens = s.maxTokens,
                 isDefault = s.isDefault,
                 apiKeyEnc = "",
             )
@@ -136,6 +143,36 @@ class ProfileEditViewModel @Inject constructor(
             when (val r = repo.testConnection(s.id)) {
                 is WbResult.Ok -> _state.update { it.copy(testing = false, message = "连接成功，往返 ${r.value} ms") }
                 is WbResult.Err -> _state.update { it.copy(testing = false, message = r.message) }
+            }
+        }
+    }
+
+    /**
+     * 识图自检：用设备现画的样张走一遍真实视觉链路。
+     * 结果（成功/N 道题，或具体报错）直接显示，方便定位「为什么只用了本地识别」。
+     */
+    fun testVision() {
+        val s = _state.value
+        if (s.visionTesting) return
+        if (s.id == 0L) {
+            _state.update { it.copy(message = "先保存配置，再测试识图") }
+            return
+        }
+        if (s.visionModel.isBlank()) {
+            _state.update { it.copy(message = "视觉模型留空，扫描时只会用本地 OCR。先填上模型名（如 deepseek-flash）") }
+            return
+        }
+        _state.update { it.copy(visionTesting = true, message = null) }
+        viewModelScope.launch {
+            val profile = repo.getProfile(s.id)
+            val key = repo.revealApiKey(s.id)
+            if (profile == null || key.isNullOrBlank()) {
+                _state.update { it.copy(visionTesting = false, message = "读不到这套配置或 Key，请重新保存") }
+                return@launch
+            }
+            when (val r = visionDiagnostics.run(profile, key)) {
+                is WbResult.Ok -> _state.update { it.copy(visionTesting = false, message = r.value) }
+                is WbResult.Err -> _state.update { it.copy(visionTesting = false, message = r.message) }
             }
         }
     }

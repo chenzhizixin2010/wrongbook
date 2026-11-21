@@ -109,6 +109,38 @@ object ImageUtils {
         return out
     }
 
+
+    /**
+     * 估算「有文字的区域」，用于拍照后自动框选。
+     *
+     * 缩到 400px 再逐像素判断，几十毫秒就能出结果；返回归一化坐标。
+     */
+    fun Bitmap.detectContentBox(): com.chenzixin.wrongbook.domain.scan.ContentBox? {
+        val small = scaledToMaxSide(400)
+        val w = small.width
+        val h = small.height
+        if (w <= 0 || h <= 0) return null
+        val pixels = IntArray(w * h)
+        small.getPixels(pixels, 0, w, 0, 0, w, h)
+        if (small !== this) small.recycle()
+
+        val threshold = 0.55f * 255f
+        val box = com.chenzixin.wrongbook.domain.scan.InkBounds.detect(w, h, step = 2) { x, y ->
+            val c = pixels[y * w + x]
+            val r = (c shr 16) and 0xFF
+            val g = (c shr 8) and 0xFF
+            val b = c and 0xFF
+            (0.299f * r + 0.587f * g + 0.114f * b) < threshold
+        } ?: return null
+
+        return com.chenzixin.wrongbook.domain.scan.ContentBox(
+            left = box.left,
+            top = box.top,
+            right = box.right,
+            bottom = box.bottom,
+        )
+    }
+
     fun Bitmap.toWebp(quality: Int = 82): ByteArray {
         val out = ByteArrayOutputStream()
         // WEBP_LOSSY 需要 API 30+，旧机型退回 WEBP（已废弃但可用）

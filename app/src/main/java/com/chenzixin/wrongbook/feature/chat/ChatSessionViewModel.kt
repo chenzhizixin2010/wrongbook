@@ -18,6 +18,7 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -31,7 +32,8 @@ class ChatSessionViewModel @Inject constructor(
     private val settings: SettingsRepository,
     private val llm: LlmClient,
     savedStateHandle: SavedStateHandle,
-) : ViewModel() {
+    private val questionRepo: com.chenzixin.wrongbook.data.repository.QuestionRepository,
+    private val tagRepo: com.chenzixin.wrongbook.data.repository.TagRepository,) : ViewModel() {
 
     private val sessionId: Long = savedStateHandle.get<Long>("sessionId") ?: 0L
 
@@ -74,6 +76,49 @@ class ChatSessionViewModel @Inject constructor(
 
     fun clearStatus() {
         _status.value = null
+    }
+
+
+    /** 对话里把某条回答存成错题。 */
+    fun saveAsQuestion(stem: String, answer: String, analysis: String, tagIds: List<Long>) {
+        if (stem.isBlank()) {
+            _status.value = "题干是空的，先填一点内容"
+            return
+        }
+        viewModelScope.launch {
+            val now = System.currentTimeMillis()
+            val entity = com.chenzixin.wrongbook.data.local.entity.QuestionEntity(
+                imagePath = "",
+                thumbPath = "",
+                rawOcrText = stem.trim(),
+                refinedText = stem.trim(),
+                answer = answer.trim().ifBlank { null },
+                analysis = analysis.trim().ifBlank { null },
+                subject = "",
+                source = "CHAT",
+                createdAt = now,
+            )
+            when (val r = questionRepo.add(entity, tagIds)) {
+                is WbResult.Ok -> {
+                    _status.value = "已加入错题本"
+                    allTagsRefresh()
+                }
+                is WbResult.Err -> _status.value = r.message
+            }
+        }
+    }
+
+    private fun allTagsRefresh() {
+        viewModelScope.launch {
+            runCatching { tagRepo.observeAll().first() }.onSuccess { _allTags.value = it }
+        }
+    }
+
+    private val _allTags = MutableStateFlow<List<com.chenzixin.wrongbook.data.local.entity.TagEntity>>(emptyList())
+    val allTags: StateFlow<List<com.chenzixin.wrongbook.data.local.entity.TagEntity>> = _allTags.asStateFlow()
+
+    init {
+        allTagsRefresh()
     }
 
     fun stop() {

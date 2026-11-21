@@ -14,6 +14,13 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import com.chenzixin.wrongbook.ui.component.WbAlertDialog
+import com.chenzixin.wrongbook.ui.component.WbDangerButton
+import com.chenzixin.wrongbook.ui.component.WbSecondaryButton
+import com.chenzixin.wrongbook.ui.component.WbTextButton
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
@@ -51,6 +58,7 @@ import com.chenzixin.wrongbook.ui.theme.wbColors
 import io.github.robinpcrd.cupertino.CupertinoIcon
 import io.github.robinpcrd.cupertino.CupertinoText
 import io.github.robinpcrd.cupertino.icons.CupertinoIcons
+import io.github.robinpcrd.cupertino.icons.outlined.Checkmark
 import io.github.robinpcrd.cupertino.icons.outlined.ListBullet
 import io.github.robinpcrd.cupertino.icons.outlined.MagnifyingGlass
 import io.github.robinpcrd.cupertino.icons.outlined.Plus
@@ -75,9 +83,12 @@ fun HomeTabScreen(
     val colors = wbColors()
     val bottomSpace = wbTabBarSpace()
 
+    var confirmDelete by remember { mutableStateOf(false) }
+
+    Box(modifier = Modifier.fillMaxSize()) {
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
-        contentPadding = PaddingValues(bottom = bottomSpace),
+        contentPadding = PaddingValues(bottom = if (state.selectionMode) bottomSpace + 72.dp else bottomSpace),
     ) {
         item(key = "header") {
             WbPageHeader(
@@ -88,14 +99,22 @@ fun HomeTabScreen(
                     if (state.tags.isNotEmpty()) append(" · ${state.tags.size} 个标签")
                 },
                 trailing = {
-                    WbGlassIconButton(
-                        icon = CupertinoIcons.Outlined.Plus,
-                        contentDescription = "新建题目",
-                        onClick = onNewQuestion,
-                        size = 46.dp,
-                        iconSize = 19.dp,
-                        tint = colors.tint,
-                    )
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        WbTextButton(
+                            text = if (state.selectionMode) "取消" else "选择",
+                            onClick = {
+                                if (state.selectionMode) vm.exitSelectionMode() else vm.enterSelectionMode()
+                            },
+                        )
+                        WbGlassIconButton(
+                            icon = CupertinoIcons.Outlined.Plus,
+                            contentDescription = "新建题目",
+                            onClick = onNewQuestion,
+                            size = 46.dp,
+                            iconSize = 19.dp,
+                            tint = colors.tint,
+                        )
+                    }
                 },
             )
         }
@@ -170,10 +189,67 @@ fun HomeTabScreen(
             }
         } else {
             items(state.questions, key = { it.question.id }) { item ->
-                QuestionCard(item = item, onClick = { onOpenQuestion(item.question.id) })
+                val id = item.question.id
+                QuestionCard(
+                    item = item,
+                    selectable = state.selectionMode,
+                    selected = id in state.selectedIds,
+                    onClick = {
+                        if (state.selectionMode) vm.toggleSelect(id) else onOpenQuestion(id)
+                    },
+                )
                 Spacer(Modifier.height(10.dp))
             }
         }
+    }
+
+    if (state.selectionMode) {
+        Row(
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .padding(bottom = bottomSpace - 8.dp, start = 16.dp, end = 16.dp)
+                .fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(10.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            WbSecondaryButton(
+                text = if (state.selectedIds.size == state.questions.size && state.questions.isNotEmpty()) "取消全选" else "全选",
+                onClick = {
+                    if (state.selectedIds.size == state.questions.size) vm.clearSelection() else vm.selectAll()
+                },
+                modifier = Modifier.weight(1f),
+            )
+            WbDangerButton(
+                text = "删除（${state.selectedIds.size}）",
+                onClick = { if (state.selectedIds.isNotEmpty()) confirmDelete = true },
+                modifier = Modifier.weight(1f),
+            )
+        }
+    }
+
+    WbAlertDialog(
+        visible = confirmDelete,
+        title = "删除选中的 ${state.selectedIds.size} 道题？",
+        message = "题目和图片都会被删除，无法恢复。",
+        confirmText = "删除",
+        destructive = true,
+        onConfirm = {
+            confirmDelete = false
+            vm.deleteSelected()
+        },
+        onDismiss = { confirmDelete = false },
+    )
+
+    if (state.message != null) {
+        WbAlertDialog(
+            visible = true,
+            title = "提示",
+            message = state.message,
+            confirmText = "知道了",
+            onConfirm = vm::clearMessage,
+            onDismiss = vm::clearMessage,
+        )
+    }
     }
 }
 
@@ -238,7 +314,12 @@ private fun HomeEmptyState(filtered: Boolean, onOpenScan: () -> Unit) {
 }
 
 @Composable
-private fun QuestionCard(item: QuestionWithTags, onClick: () -> Unit) {
+private fun QuestionCard(
+    item: QuestionWithTags,
+    onClick: () -> Unit,
+    selectable: Boolean = false,
+    selected: Boolean = false,
+) {
     val colors = wbColors()
     val context = LocalContext.current
     val question = item.question
@@ -257,6 +338,28 @@ private fun QuestionCard(item: QuestionWithTags, onClick: () -> Unit) {
                 .padding(12.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
+            if (selectable) {
+                Box(
+                    modifier = Modifier
+                        .padding(end = 10.dp)
+                        .size(24.dp)
+                        .clip(CircleShape)
+                        .background(
+                            if (selected) colors.tint else colors.groupedBackground,
+                        ),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    if (selected) {
+                        CupertinoIcon(
+                            imageVector = CupertinoIcons.Outlined.Checkmark,
+                            contentDescription = null,
+                            modifier = Modifier.size(14.dp),
+                            tint = Color.White,
+                        )
+                    }
+                }
+            }
+
             if (question.thumbPath.isNotBlank()) {
                 AsyncImage(
                     model = File(context.filesDir, question.thumbPath),

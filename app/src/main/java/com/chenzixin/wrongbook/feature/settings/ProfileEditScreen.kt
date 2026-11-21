@@ -136,6 +136,29 @@ fun ProfileEditScreen(
                         Spacer(Modifier.width(16.dp))
                         WbTextButton(text = "－", onClick = { vm.adjustTemperature(-0.1f) })
                         WbTextButton(text = "＋", onClick = { vm.adjustTemperature(0.1f) })
+
+                    Spacer(Modifier.height(10.dp))
+                    CupertinoText(
+                        text = "最大输出 ${state.maxTokens} tokens",
+                        fontSize = 15.sp,
+                        color = colors.label,
+                    )
+                    Spacer(Modifier.height(6.dp))
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        listOf(4096, 8192, 16384).forEach { n ->
+                            WbChip(
+                                label = "$n",
+                                selected = state.maxTokens == n,
+                                onClick = { vm.setMaxTokens(n) },
+                            )
+                        }
+                    }
+                    CupertinoText(
+                        text = "回答被截断时调大这一项；模型自身的上限以服务商文档为准。",
+                        modifier = Modifier.padding(top = 4.dp),
+                        fontSize = 11.sp,
+                        color = colors.secondaryLabel,
+                    )
                     }
                 }
             }
@@ -161,6 +184,12 @@ fun ProfileEditScreen(
                     onClick = vm::testConnection,
                     modifier = Modifier.weight(1f),
                     enabled = !state.testing,
+                )
+                WbSecondaryButton(
+                    text = if (state.visionTesting) "自检中…" else "测试识图",
+                    onClick = vm::testVision,
+                    modifier = Modifier.weight(1f),
+                    enabled = !state.visionTesting,
                 )
             }
 
