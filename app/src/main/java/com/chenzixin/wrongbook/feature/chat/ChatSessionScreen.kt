@@ -76,6 +76,8 @@ fun ChatSessionScreen(
     val streaming by vm.streaming.collectAsState()
     val allTags by vm.allTags.collectAsState()
     var savingText by remember { mutableStateOf<String?>(null) }
+    var pickingQuestion by remember { mutableStateOf(false) }
+    val questions by vm.questions.collectAsState()
     val thinking by vm.thinking.collectAsState()
     val status by vm.status.collectAsState()
     val colors = wbColors()
@@ -106,6 +108,7 @@ fun ChatSessionScreen(
             title = session?.title ?: "对话",
             onBack = onBack,
             actions = {
+                WbTextButton(text = "选题", onClick = { pickingQuestion = true })
                 if (streaming == null) {
                     WbTextButton(
                         text = "继续",
@@ -144,6 +147,18 @@ fun ChatSessionScreen(
                     AssistantBubble(text = streaming.orEmpty(), streaming = true, thinking = thinking)
                 }
             }
+        }
+
+        if (pickingQuestion) {
+            QuestionPickerDialog(
+                questions = questions,
+                onPick = { item ->
+                    val stem = (item.question.refinedText ?: item.question.rawOcrText).trim()
+                    input = "【题目】$stem\n\n【我的问题】"
+                    pickingQuestion = false
+                },
+                onDismiss = { pickingQuestion = false },
+            )
         }
 
         SaveQuestionFromChatHost(

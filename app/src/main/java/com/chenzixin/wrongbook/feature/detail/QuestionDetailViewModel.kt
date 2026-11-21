@@ -95,9 +95,11 @@ class QuestionDetailViewModel @Inject constructor(
 
     fun askAi(kind: AskAiKind) {
         val question = item.value?.question ?: return
+        // 优先用整理后的题干，识别错字少一些；没有整理过才退回 OCR 原文
+        val stem = (question.refinedText ?: question.rawOcrText).trim()
         val prompt = when (kind) {
-            AskAiKind.EXPLAIN -> "请讲解这道题：\n${question.rawOcrText}"
-            AskAiKind.REFINE -> "请把下面这道题整理成结构化格式（题干/答案/解析/知识点）：\n${question.rawOcrText}"
+            AskAiKind.EXPLAIN -> "请讲解这道题，并给出答案与解析：\n$stem"
+            AskAiKind.REFINE -> "请把下面这道题整理成结构化格式（题干/答案/解析/知识点）：\n$stem"
         }
         viewModelScope.launch {
             when (val created = chatRepo.createSession(title = kind.title)) {

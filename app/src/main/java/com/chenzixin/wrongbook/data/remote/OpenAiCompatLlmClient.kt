@@ -35,6 +35,7 @@ class OpenAiCompatLlmClient @Inject constructor(
     ): Flow<ChatChunk> = flow {
         val request = buildRequest(profile, apiKey, messages, stream = true, jsonMode = false, maxTokens = null)
         val call = client.newCall(request)
+        var truncated = false
         try {
             call.execute().use { response ->
                 if (!response.isSuccessful) {
@@ -52,11 +53,14 @@ class OpenAiCompatLlmClient @Inject constructor(
                         is SseParser.Event.Chunk -> {
                             val delta = ChatJson.contentOf(event.json)
                             val reasoning = ChatJson.reasoningOf(event.json)
-                            if (!delta.isNullOrEmpty() || !reasoning.isNullOrEmpty()) {
+                            val finish = ChatJson.finishReasonOf(event.json)
+                            if (finish == "length") truncated = true
+                            if (!delta.isNullOrEmpty() || !reasoning.isNullOrEmpty() || finish.isNotEmpty()) {
                                 emit(
                                     ChatChunk(
                                         delta = delta.orEmpty(),
                                         reasoningDelta = reasoning.orEmpty(),
+                                        finishReason = finish,
                                     ),
                                 )
                             }
@@ -64,7 +68,13 @@ class OpenAiCompatLlmClient @Inject constructor(
                         SseParser.Event.Done -> break
                     }
                 }
-                emit(ChatChunk(delta = "", done = true))
+                emit(
+                    ChatChunk(
+                        delta = "",
+                        done = true,
+                        finishReason = if (truncated) "length" else "",
+                    ),
+                )
             }
         } catch (e: LlmException) {
             throw e

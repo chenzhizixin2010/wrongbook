@@ -114,6 +114,14 @@ class ChatSessionViewModel @Inject constructor(
         }
     }
 
+    /** 题库列表，供「从题库选题」用。 */
+    val questions: StateFlow<List<com.chenzixin.wrongbook.data.local.model.QuestionWithTags>> =
+        questionRepo.observeAll().stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5_000),
+            initialValue = emptyList(),
+        )
+
     private val _allTags = MutableStateFlow<List<com.chenzixin.wrongbook.data.local.entity.TagEntity>>(emptyList())
     val allTags: StateFlow<List<com.chenzixin.wrongbook.data.local.entity.TagEntity>> = _allTags.asStateFlow()
 
@@ -121,7 +129,10 @@ class ChatSessionViewModel @Inject constructor(
         allTagsRefresh()
     }
 
+    private var userStopped = false
+
     fun stop() {
+        userStopped = true
         job?.cancel()
         job = null
         _streaming.value = null
@@ -163,8 +174,10 @@ class ChatSessionViewModel @Inject constructor(
             _thinking.value = ""
             val buffer = StringBuilder()
             val thoughts = StringBuilder()
+            var truncated = false
             try {
                 llm.stream(active.profile, active.apiKey, context).collect { chunk ->
+                    if (chunk.finishReason == "length") truncated = true
                     if (chunk.reasoningDelta.isNotEmpty()) {
                         thoughts.append(chunk.reasoningDelta)
                         _thinking.value = thoughts.toString()
@@ -175,6 +188,23 @@ class ChatSessionViewModel @Inject constructor(
                         _streaming.value = buffer.toString()
                     }
                 }
+
+                // 被输出上限截断：自动续写一次，把后半段接上
+                if (truncated && buffer.isNotEmpty() && !userStopped) {
+                    val followUp = context + listOf(
+                        ChatMsg.assistant(buffer.toString()),
+                        ChatMsg.user("请从断开的地方继续写完，不要重复已经给出的内容，也不要重新开头。"),
+                    )
+                    runCatching {
+                        llm.stream(active.profile, active.apiKey, followUp).collect { chunk ->
+                            if (chunk.delta.isNotEmpty()) {
+                                buffer.append(chunk.delta)
+                                _streaming.value = buffer.toString()
+                            }
+                        }
+                    }
+                }
+
                 if (buffer.isNotEmpty()) {
                     chatRepo.appendMessage(sessionId, "assistant", buffer.toString())
                 }
