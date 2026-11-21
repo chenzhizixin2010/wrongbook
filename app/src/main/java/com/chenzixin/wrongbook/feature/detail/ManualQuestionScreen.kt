@@ -15,6 +15,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
@@ -22,8 +25,10 @@ import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.chenzixin.wrongbook.ui.component.WbAlertDialog
 import com.chenzixin.wrongbook.ui.component.WbChip
+import com.chenzixin.wrongbook.ui.component.WbInputDialog
 import com.chenzixin.wrongbook.ui.component.WbSection
 import com.chenzixin.wrongbook.ui.component.WbTextField
+import com.chenzixin.wrongbook.ui.component.WbTextButton
 import com.chenzixin.wrongbook.ui.component.WbTopBar
 import com.chenzixin.wrongbook.ui.theme.wbColors
 import io.github.robinpcrd.cupertino.CupertinoButton
@@ -40,6 +45,7 @@ fun ManualQuestionScreen(
 ) {
     val state by vm.state.collectAsState()
     val colors = wbColors()
+    var showTagDialog by remember { mutableStateOf(false) }
 
     LaunchedEffect(state.finished) {
         if (state.finished) onBack()
@@ -50,9 +56,11 @@ fun ManualQuestionScreen(
             title = "手动新建题目",
             onBack = onBack,
             actions = {
-                CupertinoButton(onClick = vm::save, enabled = !state.saving) {
-                    CupertinoText(text = if (state.saving) "保存中…" else "保存")
-                }
+                WbTextButton(
+                    text = if (state.saving) "保存中…" else "保存",
+                    onClick = vm::save,
+                    enabled = !state.saving,
+                )
             },
         )
 
@@ -60,7 +68,7 @@ fun ManualQuestionScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .verticalScroll(rememberScrollState())
-                .padding(bottom = 32.dp),
+                .padding(bottom = 28.dp),
         ) {
             WbSection(header = "题目", footer = "题干必填；答案是可选，之后可以用 AI 讲解补上。") {
                 Column(modifier = Modifier.padding(16.dp)) {
@@ -97,28 +105,42 @@ fun ManualQuestionScreen(
                 }
             }
 
-            if (state.tags.isNotEmpty()) {
-                WbSection(header = "标签") {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .horizontalScroll(rememberScrollState())
-                            .padding(16.dp),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        state.tags.forEach { tag ->
-                            WbChip(
-                                label = tag.name,
-                                selected = tag.id in state.selectedTagIds,
-                                onClick = { vm.toggleTag(tag.id) },
-                            )
-                        }
+            WbSection(header = "标签", footer = "标签数量不限，一题可以打任意多个。") {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .horizontalScroll(rememberScrollState())
+                        .padding(16.dp),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    state.tags.forEach { tag ->
+                        WbChip(
+                            label = tag.name,
+                            selected = tag.id in state.selectedTagIds,
+                            onClick = { vm.toggleTag(tag.id) },
+                        )
                     }
+                    WbChip(
+                        label = "＋ 新建标签",
+                        selected = false,
+                        onClick = { showTagDialog = true },
+                    )
                 }
             }
         }
     }
+
+    WbInputDialog(
+        visible = showTagDialog,
+        title = "新建标签",
+        placeholder = "标签名，例如 函数",
+        onConfirm = { name ->
+            showTagDialog = false
+            vm.createTag(name)
+        },
+        onDismiss = { showTagDialog = false },
+    )
 
     if (state.message != null) {
         WbAlertDialog(

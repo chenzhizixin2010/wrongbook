@@ -140,7 +140,9 @@ class UpdateRepository @Inject constructor(
                     val body = response.body
                     val total = body.contentLength().takeIf { it > 0 } ?: info.sizeBytes
                     var downloaded = 0L
-                    var lastEmit = 0L
+                    var lastEmit = System.currentTimeMillis()
+                    var lastBytes = 0L
+                    var speed = 0L
                     emit(DownloadProgress(0, total, label))
 
                     body.byteStream().use { input ->
@@ -152,14 +154,19 @@ class UpdateRepository @Inject constructor(
                                 output.write(buffer, 0, read)
                                 downloaded += read
                                 val now = System.currentTimeMillis()
-                                if (now - lastEmit > 120) {
+                                val elapsed = now - lastEmit
+                                if (elapsed >= 150) {
+                                    val instant = ((downloaded - lastBytes) * 1000L) / elapsed
+                                    // 指数平滑，避免速度数字剧烈跳动
+                                    speed = if (speed == 0L) instant else (speed * 0.6f + instant * 0.4f).toLong()
                                     lastEmit = now
-                                    emit(DownloadProgress(downloaded, total, label))
+                                    lastBytes = downloaded
+                                    emit(DownloadProgress(downloaded, total, label, speed))
                                 }
                             }
                         }
                     }
-                    emit(DownloadProgress(downloaded, total, label))
+                    emit(DownloadProgress(downloaded, total, label, speed))
                 }
                 // 校验：至少 1MB，且不是 HTML 错误页
                 if (target.length() < 1024 * 1024) throw IOException("下载内容不完整")

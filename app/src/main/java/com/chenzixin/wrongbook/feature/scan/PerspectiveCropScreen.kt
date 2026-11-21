@@ -9,10 +9,13 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -21,6 +24,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
@@ -73,6 +77,8 @@ fun PerspectiveCropScreen(
     var dragging by remember { mutableStateOf(-1) }
     var working by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
+    val density = androidx.compose.ui.platform.LocalDensity.current
+    val hitRadius = with(density) { 44.dp.toPx() }
 
     // 画布内图片的缩放与偏移（触摸与绘制共用同一套计算）
     fun layout(size: IntSize): Triple<Float, Float, Float> {
@@ -95,7 +101,7 @@ fun PerspectiveCropScreen(
                             dragging = quad.indexOfFirst { p ->
                                 val sx = ox + p.first * scale
                                 val sy = oy + p.second * scale
-                                (Offset(sx, sy) - start).getDistance() < 64f
+                                (Offset(sx, sy) - start).getDistance() < hitRadius
                             }
                         },
                         onDragEnd = { dragging = -1 },
@@ -135,10 +141,14 @@ fun PerspectiveCropScreen(
             drawPath(path = path, color = Color(0x330A84FF))
             drawPath(path = path, color = Color(0xFF0A84FF), style = Stroke(width = 4f))
 
+            // 手柄尺寸必须按 dp 换算：Canvas 里直接写 18f 是 18px，高密度屏上小到点不中
+            val outer = 18.dp.toPx()
+            val inner = 12.dp.toPx()
             quad.forEach { p ->
                 val s = screen(p)
-                drawCircle(color = Color.White, radius = 18f, center = s)
-                drawCircle(color = Color(0xFF0A84FF), radius = 12f, center = s)
+                drawCircle(color = Color(0x66FFFFFF), radius = outer * 1.7f, center = s)
+                drawCircle(color = Color.White, radius = outer, center = s)
+                drawCircle(color = Color(0xFF0A84FF), radius = inner, center = s)
             }
         }
 
@@ -146,47 +156,54 @@ fun PerspectiveCropScreen(
             modifier = Modifier
                 .align(Alignment.BottomCenter)
                 .fillMaxWidth()
-                .background(Color(0xCC000000))
-                .padding(horizontal = 16.dp, vertical = 12.dp),
+                .clip(androidx.compose.foundation.shape.RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp))
+                .background(Color(0xE6000000))
+                .windowInsetsPadding(WindowInsets.navigationBars)
+                .padding(horizontal = 16.dp, vertical = 14.dp),
         ) {
             CupertinoText(
                 text = "拖动四个圆点贴住试卷四角；拍歪了也不用重拍",
                 fontSize = 12.sp,
                 color = Color(0x99FFFFFF),
             )
-            Spacer(Modifier.height(10.dp))
+            Spacer(Modifier.height(12.dp))
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                CupertinoButton(onClick = onCancel) {
-                    CupertinoText(text = "重拍", color = Color.White)
-                }
-                CupertinoButton(onClick = {
-                    quad = listOf(0f to 0f, imgW to 0f, imgW to imgH, 0f to imgH)
-                }) {
-                    CupertinoText(text = "取全图", color = Color.White)
-                }
-                Spacer(Modifier.weight(1f))
-                CupertinoButton(
+                com.chenzixin.wrongbook.ui.component.WbChip(
+                    label = "重拍",
+                    selected = false,
+                    onClick = onCancel,
+                    onLight = true,
+                )
+                com.chenzixin.wrongbook.ui.component.WbChip(
+                    label = "取全图",
+                    selected = false,
                     onClick = {
-                        if (working) return@CupertinoButton
-                        working = true
-                        scope.launch {
-                            val result = withContext(Dispatchers.Default) {
-                                runCatching { bitmap.warpQuad(quad) }.getOrNull()
+                        quad = listOf(0f to 0f, imgW to 0f, imgW to imgH, 0f to imgH)
+                    },
+                    onLight = true,
+                )
+                Spacer(Modifier.weight(1f))
+                com.chenzixin.wrongbook.ui.component.WbPrimaryButton(
+                    text = if (working) "处理中…" else "拉正并识别",
+                    onClick = {
+                        if (!working) {
+                            working = true
+                            scope.launch {
+                                val result = withContext(Dispatchers.Default) {
+                                    runCatching { bitmap.warpQuad(quad) }.getOrNull()
+                                }
+                                working = false
+                                if (result != null) onConfirm(result)
                             }
-                            working = false
-                            if (result != null) onConfirm(result)
                         }
                     },
-                ) {
-                    CupertinoText(
-                        text = if (working) "处理中…" else "拉正并识别",
-                        fontSize = 16.sp,
-                    )
-                }
+                    enabled = !working,
+                    fontSize = 14,
+                )
             }
         }
     }

@@ -1,13 +1,13 @@
 # 错题整理 App · WrongBook
 
-一个**离线优先、AI 增强**的 Android 错题本：拍照 → 透视矫正 → 本地 OCR 或视觉模型切题 → 矩形多选入库 → 多标签分类 → AI 讲解 / 整理 / 出同类题 → 按掌握度复习。
+一个**离线优先、AI 增强**的 Android 错题本：拍照 → 透视矫正 → 本地 OCR 或视觉模型切题 → 矩形多选入库 → 多标签分类 → AI 讲解 / 整理 / 出同类题 → 按标签生成可打印练习卷。
 
 - 包名：`com.chenzixin.wrongbook`
 - 系统要求：Android 7.0（API 24）+，编译/目标 API 37
 - 视觉风格：iOS / Cupertino
 - 数据：纯本地（Room + 私有目录图片），手动导出 ZIP
 
-**仓库**：https://github.com/chenzhizixin2010/wrongbook ｜ **最新发布**：v0.3.0（Actions 自动构建，APK 62.8 MB）
+**仓库**：https://github.com/chenzhizixin2010/wrongbook ｜ **最新发布**：v0.4.0（Actions 自动构建）
 
 ## 当前状态
 
@@ -49,12 +49,17 @@ gradle :app:assembleDebug + :app:testDebugUnitTest
 - 题目详情三个动作：AI 讲解（开新会话）、AI 整理（JSON 回填，可编辑预览）、生成同类题（入库）
 - 所有模型输出走「解析 → 重试一次 → 本地兜底」
 
-**复习与数据**
-- 简化 SM-2：答对 1/2/4/7/15/30 天，答错 10 分钟后重做
-- **统计图表**：掌握度分布（0~5 级条形图）、标签分布（题量前 8）
-- 每日 9:00 复习提醒（WorkManager）
+**生成与数据**
+- **生成练习卷**：按标签（AND / OR）筛错题 → 「整理错题」或「AI 生成同类题」→ 5/10/15/20 题 → 附答案 → 预览 → 系统打印（可另存 PDF）
+- AI 出题失败会自动回退成「整理错题」，不会生成空卷
+- **学习统计**：掌握度 0~5 分布、标签题量前 10（设置 → 学习统计）
 - ZIP 备份：`manifest.json` + `questions.json` + `tags.json` + `chats.json` + `images/`
-- 导入幂等：按（原文 + 创建时间）判重，同一包导两次不会翻倍；备份里不含 API Key
+- 导入幂等：按（原文 + 创建时间）判重；备份里不含 API Key
+
+**外观与交互**
+- 深色 / 浅色 / 跟随系统切换（设置 → 外观，DataStore 持久化）
+- 按钮统一语义色（主要/次要/危险/文字），修掉了「灰字压蓝底」看不清的问题
+- 对话会话列表支持删除；标签可在打标签时现场新建，数量不限
 
 ## 实测记录（DeepSeek）
 
@@ -73,41 +78,28 @@ gradle :app:assembleDebug + :app:testDebugUnitTest
 ## 仍需真机/真 Key 验证的
 
 - 拍照切分的实际准确率（不同纸张、光照、双栏排版）
-- 透视矫正后的识别效果与耗时（千元机）
-- 真实错题跑「AI 整理」的成功率
-- 长对话下的摘要触发是否顺畅
+- 透视矫正后的识别效果与耗时（千元机）——手柄已改为按 dp 绘制、命中半径 44dp
+- 打印输出在真机打印服务里的分页效果
+- 免费服务商的实际额度与可用性（以各官网为准）
 
 
-## 更新与发布（GitHub）
+## 更新日志
 
-App 内「设置 → 检查更新」读取 **GitHub Releases**：比对 `tag_name` 与当前版本，有新版就下载 APK 并调系统安装器。直连失败会自动依次尝试镜像前缀（默认 `ghproxy.net` / `gh-proxy.com` / `hub.gitmirror.com`）。
+### v0.4.0
 
-### 发布一个新版本
+- **「巩固」换成「生成」**：按标签（AND/OR）出练习卷，支持「整理错题」与「AI 生成同类题」，可打印 / 另存 PDF；AI 失败自动回退
+- 学习统计独立成页（设置 → 学习统计）：掌握度分布、标签分布
+- AI 对话支持删除会话；标签可在扫描/建题时现场新建，数量不限
+- 免费服务商预设（智谱 / 硅基流动 / 魔搭 / Groq / OpenRouter / Gemini），点开有申请直达链接与步骤教程
+- 深色 / 浅色 / 跟随系统切换
+- 更新提示分级：大版本弹「建议更新」，小版本不打扰；下载显示进度、速度、剩余时间
+- 修复：透视矫正手柄按 dp 绘制（原来 18px 在高密度屏上几乎点不中）
+- 修复：按钮文字对比度（灰字压蓝底）、清单缺少 INTERNET 权限
+- 移除：复习调度、每日提醒、POST_NOTIFICATIONS 权限
 
-```bash
-git tag v0.3.1
-git push origin v0.3.1
-```
+### v0.3.1 / v0.3.0
 
-推 tag 后 GitHub Actions（[`.github/workflows/release.yml`](.github/workflows/release.yml)）会自动跑单测、构建 APK、创建 Release 并上传 `wrongbook-v0.3.1.apk`。
-
-已实测：`v0.3.0` 的 tag 触发 CI 成功，Release 页有 `wrongbook-v0.3.0.apk`（62.8 MB）；直连与 `ghproxy.net` 镜像均可下载。
-
-也可以手动触发：仓库 → Actions → Build & Release APK → Run workflow。
-
-### 需要改的地方
-
-| 位置 | 作用 |
-| --- | --- |
-| `app/build.gradle.kts` 的 `versionName` / `versionCode` | 版本号；`versionCode` 必须递增 |
-| `GITHUB_OWNER` / `GITHUB_REPO` 的 `buildConfigField` | 更新源仓库，改成你的账号 |
-| `UPDATE_MIRRORS` 的 `buildConfigField` | 镜像前缀，逗号分隔；留空则只走直连 |
-
-### 注意
-
-- 发布的 APK 与已安装版本必须**同签名**才能覆盖安装。仓库里提交了固定开发签名 `keystore/wrongbook-dev.jks`（密码公开，仅内测用），本地与 CI 共用，所以内测包之间可以互相升级；**上架前请换成自己的正式证书**并删掉这个 jks。
-- 私有仓库的 Release API 需要 token，**不要**把 token 打进 App；要自动更新就用公开仓库。
-- 首次安装需要用户在系统里允许「安装未知应用」；更新页提供了一键跳转。
+- 首个可用版本：扫描 + 透视矫正 + 双引擎切题 + 多标签 + AI 对话 + AI 整理 + ZIP 备份 + GitHub 自动更新
 
 ## 环境（本机已装好）
 

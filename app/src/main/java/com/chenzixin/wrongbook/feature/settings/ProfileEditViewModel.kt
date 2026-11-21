@@ -70,6 +70,18 @@ class ProfileEditViewModel @Inject constructor(
     fun onVisionModelChange(v: String) = _state.update { it.copy(visionModel = v) }
     fun onApiKeyChange(v: String) = _state.update { it.copy(apiKeyInput = v) }
 
+    /** 一键填入服务商预设（只填地址与模型名，Key 仍需用户自己贴）。 */
+    fun applyPreset(preset: ProviderPreset) {
+        _state.update {
+            it.copy(
+                name = preset.name,
+                baseUrl = preset.baseUrl,
+                chatModel = preset.chatModel,
+                visionModel = preset.visionModel,
+            )
+        }
+    }
+
     fun adjustTemperature(delta: Float) = _state.update {
         it.copy(temperature = (it.temperature + delta).coerceIn(0f, 2f))
     }

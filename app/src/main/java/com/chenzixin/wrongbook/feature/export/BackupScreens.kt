@@ -2,14 +2,18 @@ package com.chenzixin.wrongbook.feature.export
 
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -20,11 +24,17 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.chenzixin.wrongbook.ui.component.WbAlertDialog
+import com.chenzixin.wrongbook.ui.component.WbListRow
+import com.chenzixin.wrongbook.ui.component.WbPrimaryButton
 import com.chenzixin.wrongbook.ui.component.WbSection
 import com.chenzixin.wrongbook.ui.component.WbTopBar
 import com.chenzixin.wrongbook.ui.theme.wbColors
-import io.github.robinpcrd.cupertino.CupertinoButton
+import io.github.robinpcrd.cupertino.CupertinoIcon
 import io.github.robinpcrd.cupertino.CupertinoText
+import io.github.robinpcrd.cupertino.icons.CupertinoIcons
+import io.github.robinpcrd.cupertino.icons.outlined.Lock
+import io.github.robinpcrd.cupertino.icons.outlined.PlusCircle
+import io.github.robinpcrd.cupertino.icons.outlined.SquareAndArrowUp
 
 /** 导出题库：ZIP（JSON + 图片），通过系统文件选择器落盘，不申请存储权限。 */
 @Composable
@@ -45,23 +55,43 @@ fun ExportScreen(
 
     Column(modifier = Modifier.fillMaxSize()) {
         WbTopBar(title = "导出题库", onBack = onBack)
-        Column(modifier = Modifier.padding(16.dp)) {
-            WbSection(header = "导出内容", footer = "备份里不包含 API Key，可以放心分享给别的设备。") {
+
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .verticalScroll(rememberScrollState())
+                .padding(bottom = 28.dp),
+        ) {
+            WbSection(
+                header = "导出内容",
+                icon = CupertinoIcons.Outlined.SquareAndArrowUp,
+                footer = "备份里不包含 API Key，可以放心分享给别的设备。",
+            ) {
                 Column(modifier = Modifier.padding(16.dp)) {
                     CupertinoText(
                         text = "题目与图片、标签、AI 对话记录会打包成一个 ZIP 文件。",
                         fontSize = 14.sp,
+                        lineHeight = 21.sp,
                         color = colors.label,
                     )
                     Spacer(Modifier.height(16.dp))
-                    CupertinoButton(
+                    WbPrimaryButton(
+                        text = if (state.busy) "导出中…" else "选择保存位置",
                         onClick = { createLauncher.launch("wrongbook-backup.zip") },
+                        modifier = Modifier.fillMaxWidth(),
                         enabled = !state.busy,
-                    ) {
-                        CupertinoText(text = if (state.busy) "导出中…" else "选择保存位置")
-                    }
+                        icon = CupertinoIcons.Outlined.SquareAndArrowUp,
+                    )
                 }
             }
+
+            WbSection(header = "包含哪些数据", icon = CupertinoIcons.Outlined.Lock) {
+                WbListRow(title = "题目与图片", subtitle = "原图 + 200px 缩略图", showDivider = true)
+                WbListRow(title = "标签与关联", subtitle = "多标签、收藏夹", showDivider = true)
+                WbListRow(title = "AI 对话记录", subtitle = "不含 API Key", showDivider = false)
+            }
+
+            NoteRow("导出过程不联网；文件由系统文件选择器写入你指定的位置。")
         }
 
         if (state.message != null) {
@@ -92,34 +122,54 @@ fun ImportScreen(
 
     Column(modifier = Modifier.fillMaxSize()) {
         WbTopBar(title = "导入题库", onBack = onBack)
-        Column(modifier = Modifier.padding(16.dp)) {
-            WbSection(header = "从备份恢复", footer = "重复的题目会被跳过，不会产生两份。") {
+
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .verticalScroll(rememberScrollState())
+                .padding(bottom = 28.dp),
+        ) {
+            WbSection(
+                header = "从备份恢复",
+                icon = CupertinoIcons.Outlined.PlusCircle,
+                footer = "重复的题目会被跳过，不会产生两份。",
+            ) {
                 Column(modifier = Modifier.padding(16.dp)) {
                     CupertinoText(
                         text = "选择之前导出的 ZIP 文件，图片会一起恢复。",
                         fontSize = 14.sp,
+                        lineHeight = 21.sp,
                         color = colors.label,
                     )
                     Spacer(Modifier.height(16.dp))
-                    CupertinoButton(
-                        onClick = { openLauncher.launch(arrayOf("application/zip", "application/octet-stream", "*/*")) },
+                    WbPrimaryButton(
+                        text = if (state.busy) "导入中…" else "选择备份文件",
+                        onClick = {
+                            openLauncher.launch(
+                                arrayOf("application/zip", "application/octet-stream", "*/*"),
+                            )
+                        },
+                        modifier = Modifier.fillMaxWidth(),
                         enabled = !state.busy,
-                    ) {
-                        CupertinoText(text = if (state.busy) "导入中…" else "选择备份文件")
+                        icon = CupertinoIcons.Outlined.PlusCircle,
+                    )
+                    if (state.busy) {
+                        Spacer(Modifier.height(12.dp))
+                        CupertinoText(
+                            text = "正在解包并写入数据库，请保持页面打开…",
+                            fontSize = 12.sp,
+                            color = colors.secondaryLabel,
+                        )
                     }
                 }
             }
-        }
 
-        if (state.busy) {
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(60.dp),
-                contentAlignment = Alignment.Center,
-            ) {
-                CupertinoText(text = "正在处理，请稍候…", fontSize = 13.sp, color = colors.secondaryLabel)
+            WbSection(header = "判重规则") {
+                WbListRow(title = "按内容指纹判重", subtitle = "同一道题导入两次只会留一份", showDivider = true)
+                WbListRow(title = "版本校验", subtitle = "备份版本不兼容时会明确提示", showDivider = false)
             }
+
+            NoteRow("导入会合并到现有题库，不会清空已有数据。")
         }
 
         if (state.message != null) {
@@ -138,5 +188,23 @@ fun ImportScreen(
                 },
             )
         }
+    }
+}
+
+@Composable
+private fun NoteRow(text: String) {
+    val colors = wbColors()
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 28.dp, vertical = 12.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        CupertinoText(
+            text = text,
+            fontSize = 11.5.sp,
+            lineHeight = 16.sp,
+            color = colors.secondaryLabel,
+        )
     }
 }

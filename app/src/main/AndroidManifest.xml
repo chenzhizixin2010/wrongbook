@@ -3,13 +3,11 @@
 
     <!--
       最小权限原则：
-      1. CAMERA             —— 拍照扫描题目
-      2. POST_NOTIFICATIONS —— 复习提醒（Android 13+ 运行时申请，且仅在有复习功能后申请）
+      1. CAMERA —— 拍照扫描题目
       不申请 READ/WRITE_EXTERNAL_STORAGE：导出走 SAF（用户主动选目录）。
       INTERNET 由依赖库合并进最终清单。
     -->
     <uses-permission android:name="android.permission.CAMERA" />
-    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <!-- 调用用户自己配置的大模型接口、检查 GitHub 更新 -->
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />

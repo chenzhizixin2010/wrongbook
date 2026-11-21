@@ -53,6 +53,20 @@ class ManualQuestionViewModel @Inject constructor(
         it.copy(selectedTagIds = if (id in it.selectedTagIds) it.selectedTagIds - id else it.selectedTagIds + id)
     }
 
+    fun createTag(name: String) {
+        viewModelScope.launch {
+            when (val r = tagRepo.create(name = name)) {
+                is WbResult.Ok -> {
+                    val latest = runCatching { tagRepo.observeAll().first() }.getOrDefault(emptyList())
+                    _state.update {
+                        it.copy(tags = latest, selectedTagIds = it.selectedTagIds + r.value)
+                    }
+                }
+                is WbResult.Err -> _state.update { it.copy(message = r.message) }
+            }
+        }
+    }
+
     fun clearMessage() = _state.update { it.copy(message = null) }
 
     fun save() {

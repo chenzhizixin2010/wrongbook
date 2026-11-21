@@ -31,11 +31,6 @@ interface QuestionRepository {
     /** 覆盖式设置标签集合（先删后插，同一事务）。 */
     suspend fun setTags(questionId: Long, tagIds: List<Long>): WbResult<Unit>
 
-    suspend fun due(now: Long): List<QuestionEntity>
-
-    /** 复习结果落库：更新掌握度与下次复习时间。 */
-    suspend fun applyReview(question: QuestionEntity, correct: Boolean, now: Long): WbResult<Unit>
-
     suspend fun count(): Int
 
     /** 掌握度分布（0~5）。 */

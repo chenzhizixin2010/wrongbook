@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- 深色模式冷启动底色：与 Compose 极光画布的 canvasTop 对齐，避免白闪。 -->
+    <style name="Theme.WrongBook" parent="android:Theme.Material.NoActionBar">
+        <item name="android:windowBackground">#08090F</item>
+        <item name="android:statusBarColor">@android:color/transparent</item>
+        <item name="android:navigationBarColor">@android:color/transparent</item>
+        <item name="android:windowLightStatusBar">false</item>
+    </style>
+</resources>

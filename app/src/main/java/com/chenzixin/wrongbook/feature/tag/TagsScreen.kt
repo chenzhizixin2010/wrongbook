@@ -1,4 +1,4 @@
-package com.chenzixin.wrongbook.feature.tag
+﻿package com.chenzixin.wrongbook.feature.tag
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -16,7 +16,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -27,6 +26,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -34,13 +34,23 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.chenzixin.wrongbook.data.local.entity.TagEntity
+import com.chenzixin.wrongbook.ui.component.GlassSurface
 import com.chenzixin.wrongbook.ui.component.WbAlertDialog
-import com.chenzixin.wrongbook.ui.component.WbChip
+import com.chenzixin.wrongbook.ui.component.WbBadge
+import com.chenzixin.wrongbook.ui.component.WbGlassIconButton
+import com.chenzixin.wrongbook.ui.component.WbPrimaryButton
+import com.chenzixin.wrongbook.ui.component.WbSection
+import com.chenzixin.wrongbook.ui.component.WbSecondaryButton
 import com.chenzixin.wrongbook.ui.component.WbTextField
+import com.chenzixin.wrongbook.ui.component.WbTextButton
 import com.chenzixin.wrongbook.ui.component.WbTopBar
 import com.chenzixin.wrongbook.ui.theme.wbColors
-import io.github.robinpcrd.cupertino.CupertinoButton
+import io.github.robinpcrd.cupertino.CupertinoIcon
 import io.github.robinpcrd.cupertino.CupertinoText
+import io.github.robinpcrd.cupertino.icons.CupertinoIcons
+import io.github.robinpcrd.cupertino.icons.outlined.ChevronForward
+import io.github.robinpcrd.cupertino.icons.outlined.Star
+import io.github.robinpcrd.cupertino.icons.outlined.Trash
 
 /**
  * 标签 / 收藏夹管理：新建、改名、改色、调排序、删。
@@ -65,7 +75,7 @@ fun TagsScreen(
             title = "标签与收藏夹",
             onBack = onBack,
             actions = {
-                CupertinoButton(onClick = { creating = true }) { CupertinoText(text = "新建") }
+                WbTextButton(text = "新建", onClick = { creating = true })
             },
         )
 
@@ -73,50 +83,71 @@ fun TagsScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .verticalScroll(rememberScrollState())
-                .padding(horizontal = 16.dp, vertical = 8.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp),
+                .padding(bottom = 28.dp),
         ) {
             if (tags.isEmpty()) {
-                CupertinoText(
-                    text = "还没有标签。标签用来分类错题，「收藏夹」只是打了标记的标签。",
-                    modifier = Modifier.padding(16.dp),
-                    fontSize = 14.sp,
-                    color = colors.secondaryLabel,
-                )
-            }
-            flattenTree(tags).forEach { (tag, depth) ->
-                Row(
+                GlassSurface(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .clip(RoundedCornerShape(10.dp))
-                        .background(colors.cardBackground)
-                        .clickable { editing = tag }
-                        .padding(horizontal = 16.dp, vertical = 14.dp),
-                    verticalAlignment = Alignment.CenterVertically,
+                        .padding(horizontal = 16.dp),
+                    cornerRadius = 28.dp,
+                    elevation = 10.dp,
                 ) {
-                    if (depth > 0) Spacer(Modifier.width(16.dp))
-                    Box(
+                    Column(
                         modifier = Modifier
-                            .size(12.dp)
-                            .clip(CircleShape)
-                            .background(parseTagColor(tag.color)),
-                    )
-                    Spacer(Modifier.width(10.dp))
-                    CupertinoText(
-                        text = if (tag.isFolder) "📁 ${tag.name}" else tag.name,
-                        fontSize = 16.sp,
-                        color = colors.label,
-                    )
-                    Spacer(Modifier.width(8.dp))
-                    if (tag.isFolder) {
-                        CupertinoText(text = "收藏夹", fontSize = 11.sp, color = colors.tint)
+                            .fillMaxWidth()
+                            .padding(horizontal = 24.dp, vertical = 28.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(62.dp)
+                                .clip(CircleShape)
+                                .background(
+                                    Brush.linearGradient(
+                                        listOf(colors.accent, colors.accentEnd),
+                                    ),
+                                ),
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            CupertinoIcon(
+                                imageVector = CupertinoIcons.Outlined.Star,
+                                contentDescription = null,
+                                modifier = Modifier.size(26.dp),
+                                tint = Color.White,
+                            )
+                        }
+                        Spacer(Modifier.height(16.dp))
+                        CupertinoText(
+                            text = "还没有标签",
+                            fontSize = 16.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            color = colors.label,
+                        )
+                        Spacer(Modifier.height(5.dp))
+                        CupertinoText(
+                            text = "标签用来分类错题，「收藏夹」只是打了标记的标签",
+                            fontSize = 12.sp,
+                            lineHeight = 18.sp,
+                            color = colors.secondaryLabel,
+                        )
                     }
-                    Spacer(Modifier.weight(1f))
-                    CupertinoText(
-                        text = "排序 ${tag.sortOrder}",
-                        fontSize = 11.sp,
-                        color = colors.secondaryLabel,
-                    )
+                }
+            } else {
+                WbSection(
+                    header = "全部标签",
+                    icon = CupertinoIcons.Outlined.Star,
+                    footer = "两级结构；「收藏夹」会出现在题库顶部的筛选区。",
+                ) {
+                    val rows = flattenTree(tags)
+                    rows.forEachIndexed { index, (tag, depth) ->
+                        TagRow(
+                            tag = tag,
+                            depth = depth,
+                            showDivider = index != rows.lastIndex,
+                            onClick = { editing = tag },
+                        )
+                    }
                 }
             }
         }
@@ -174,6 +205,74 @@ fun TagsScreen(
     }
 }
 
+@Composable
+private fun TagRow(
+    tag: TagEntity,
+    depth: Int,
+    showDivider: Boolean,
+    onClick: () -> Unit,
+) {
+    val colors = wbColors()
+    Column(modifier = Modifier.fillMaxWidth()) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clickable(onClick = onClick)
+                .padding(start = 16.dp + (depth * 18).dp, end = 14.dp, top = 13.dp, bottom = 13.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(24.dp)
+                    .clip(CircleShape)
+                    .background(parseTagColor(tag.color).copy(alpha = 0.16f)),
+                contentAlignment = Alignment.Center,
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(10.dp)
+                        .clip(CircleShape)
+                        .background(parseTagColor(tag.color)),
+                )
+            }
+            Spacer(Modifier.width(11.dp))
+            CupertinoText(
+                text = tag.name,
+                fontSize = 15.5.sp,
+                fontWeight = FontWeight.Medium,
+                color = colors.label,
+                maxLines = 1,
+            )
+            if (tag.isFolder) {
+                Spacer(Modifier.width(8.dp))
+                WbBadge(text = "收藏夹", color = colors.warning)
+            }
+            Spacer(Modifier.weight(1f))
+            CupertinoText(
+                text = "排序 ${tag.sortOrder}",
+                fontSize = 10.sp,
+                color = colors.secondaryLabel.copy(alpha = 0.75f),
+            )
+            Spacer(Modifier.width(7.dp))
+            CupertinoIcon(
+                imageVector = CupertinoIcons.Outlined.ChevronForward,
+                contentDescription = null,
+                modifier = Modifier.size(13.dp),
+                tint = colors.secondaryLabel.copy(alpha = 0.5f),
+            )
+        }
+        if (showDivider) {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(start = if (depth > 0) 70.dp else 51.dp, end = 16.dp)
+                    .height(0.7.dp)
+                    .background(colors.separator),
+            )
+        }
+    }
+}
+
 /** 把标签按两级树展开成 (标签, 层级) 列表，保证父在子前。 */
 private fun flattenTree(tags: List<TagEntity>): List<Pair<TagEntity, Int>> {
     val byParent = tags.groupBy { it.parentId }
@@ -211,66 +310,126 @@ private fun TagFormDialog(
     var sortOrder by remember { mutableStateOf(initial?.sortOrder ?: 0) }
 
     Dialog(onDismissRequest = onDismiss) {
-        Column(
-            modifier = Modifier
-                .width(320.dp)
-                .clip(RoundedCornerShape(14.dp))
-                .background(colors.cardBackground)
-                .padding(20.dp),
+        GlassSurface(
+            modifier = Modifier.fillMaxWidth(),
+            cornerRadius = 28.dp,
+            elevation = 34.dp,
+            underlay = colors.dialogScrim,
         ) {
-            CupertinoText(text = title, fontSize = 17.sp, fontWeight = FontWeight.SemiBold, color = colors.label)
-            Spacer(Modifier.height(12.dp))
-
-            WbTextField(value = name, onValueChange = { name = it }, placeholder = "标签名，例如 函数")
-            Spacer(Modifier.height(14.dp))
-
-            CupertinoText(text = "颜色", fontSize = 13.sp, color = colors.secondaryLabel)
-            Spacer(Modifier.height(8.dp))
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                TAG_PALETTE.take(5).forEach { (hex, _) ->
-                    ColorDot(hex = hex, selected = color == hex, onClick = { color = hex })
-                }
-            }
-            Spacer(Modifier.height(8.dp))
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                TAG_PALETTE.drop(5).forEach { (hex, _) ->
-                    ColorDot(hex = hex, selected = color == hex, onClick = { color = hex })
-                }
-            }
-
-            Spacer(Modifier.height(14.dp))
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                CupertinoText(text = "排序", fontSize = 13.sp, color = colors.secondaryLabel)
-                Spacer(Modifier.width(12.dp))
-                CupertinoButton(onClick = { sortOrder -= 1 }) { CupertinoText(text = "－") }
-                CupertinoText(text = "$sortOrder", fontSize = 15.sp, color = colors.label)
-                CupertinoButton(onClick = { sortOrder += 1 }) { CupertinoText(text = "＋") }
-                Spacer(Modifier.weight(1f))
-                CupertinoText(text = "越小越靠前", fontSize = 11.sp, color = colors.secondaryLabel)
-            }
-
-            Spacer(Modifier.height(10.dp))
-            WbChip(
-                label = if (folder) "✓ 作为收藏夹" else "作为收藏夹",
-                selected = folder,
-                onClick = { folder = !folder },
-            )
-
-            Spacer(Modifier.height(18.dp))
-            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                if (onDelete != null) {
-                    CupertinoButton(onClick = onDelete, modifier = Modifier.weight(1f)) {
-                        CupertinoText(text = "删除", color = colors.danger)
+            Column(
+                modifier = Modifier
+                    .padding(20.dp)
+                    .verticalScroll(rememberScrollState()),
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    CupertinoText(
+                        text = title,
+                        modifier = Modifier.weight(1f),
+                        fontSize = 17.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = colors.label,
+                    )
+                    if (onDelete != null) {
+                        WbGlassIconButton(
+                            icon = CupertinoIcons.Outlined.Trash,
+                            contentDescription = "删除标签",
+                            onClick = onDelete,
+                            size = 34.dp,
+                            iconSize = 14.dp,
+                            tint = colors.danger,
+                        )
                     }
                 }
-                CupertinoButton(onClick = onDismiss, modifier = Modifier.weight(1f)) {
-                    CupertinoText(text = "取消")
+                Spacer(Modifier.height(14.dp))
+
+                WbTextField(value = name, onValueChange = { name = it }, placeholder = "标签名，例如 函数")
+                Spacer(Modifier.height(16.dp))
+
+                CupertinoText(
+                    text = "颜色",
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    letterSpacing = 0.5.sp,
+                    color = colors.secondaryLabel,
+                )
+                Spacer(Modifier.height(9.dp))
+                Row(horizontalArrangement = Arrangement.spacedBy(9.dp)) {
+                    TAG_PALETTE.take(5).forEach { (hex, _) ->
+                        ColorDot(hex = hex, selected = color == hex, onClick = { color = hex })
+                    }
                 }
-                CupertinoButton(
-                    onClick = { if (name.isNotBlank()) onConfirm(name.trim(), folder, color, sortOrder) },
-                    modifier = Modifier.weight(1f),
+                Spacer(Modifier.height(9.dp))
+                Row(horizontalArrangement = Arrangement.spacedBy(9.dp)) {
+                    TAG_PALETTE.drop(5).forEach { (hex, _) ->
+                        ColorDot(hex = hex, selected = color == hex, onClick = { color = hex })
+                    }
+                }
+
+                Spacer(Modifier.height(18.dp))
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    CupertinoText(
+                        text = "排序",
+                        modifier = Modifier.weight(1f),
+                        fontSize = 13.sp,
+                        color = colors.label,
+                    )
+                    StepperButton(text = "－") { sortOrder -= 1 }
+                    Box(
+                        modifier = Modifier.width(38.dp),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        CupertinoText(text = "$sortOrder", fontSize = 15.sp, color = colors.label)
+                    }
+                    StepperButton(text = "＋") { sortOrder += 1 }
+                }
+
+                Spacer(Modifier.height(14.dp))
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(androidx.compose.foundation.shape.RoundedCornerShape(16.dp))
+                        .background(colors.glassFill.copy(alpha = 0.4f))
+                        .clickable { folder = !folder }
+                        .padding(horizontal = 14.dp, vertical = 12.dp),
+                    verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    CupertinoText(text = "保存", fontWeight = FontWeight.SemiBold)
+                    CupertinoText(
+                        text = "作为收藏夹",
+                        modifier = Modifier.weight(1f),
+                        fontSize = 14.sp,
+                        color = colors.label,
+                    )
+                    Box(
+                        modifier = Modifier
+                            .width(44.dp)
+                            .height(26.dp)
+                            .clip(CircleShape)
+                            .background(if (folder) colors.tint else colors.secondaryLabel.copy(alpha = 0.22f)),
+                        contentAlignment = if (folder) Alignment.CenterEnd else Alignment.CenterStart,
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .padding(3.dp)
+                                .size(20.dp)
+                                .clip(CircleShape)
+                                .background(Color.White),
+                        )
+                    }
+                }
+
+                Spacer(Modifier.height(20.dp))
+                Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                    WbSecondaryButton(
+                        text = "取消",
+                        onClick = onDismiss,
+                        modifier = Modifier.weight(1f),
+                    )
+                    WbPrimaryButton(
+                        text = "保存",
+                        onClick = { if (name.isNotBlank()) onConfirm(name.trim(), folder, color, sortOrder) },
+                        modifier = Modifier.weight(1f),
+                        fontSize = 15,
+                    )
                 }
             }
         }
@@ -278,20 +437,51 @@ private fun TagFormDialog(
 }
 
 @Composable
+private fun StepperButton(text: String, onClick: () -> Unit) {
+    val colors = wbColors()
+    Box(
+        modifier = Modifier
+            .size(32.dp)
+            .clip(CircleShape)
+            .background(colors.tintSoft)
+            .clickable(onClick = onClick),
+        contentAlignment = Alignment.Center,
+    ) {
+        CupertinoText(
+            text = text,
+            fontSize = 15.sp,
+            fontWeight = FontWeight.SemiBold,
+            color = colors.tint,
+        )
+    }
+}
+
+@Composable
 private fun ColorDot(hex: String, selected: Boolean, onClick: () -> Unit) {
+    val colors = wbColors()
     val dotColor = parseTagColor(hex)
     Box(
         modifier = Modifier
-            .size(26.dp)
+            .size(30.dp)
             .clip(CircleShape)
             .background(dotColor)
             .then(
                 if (selected) {
-                    Modifier.border(2.dp, wbColors().label, CircleShape)
+                    Modifier.border(2.dp, colors.label, CircleShape)
                 } else {
-                    Modifier
+                    Modifier.border(1.dp, colors.glassStrokeTop.copy(alpha = 0.5f), CircleShape)
                 },
             )
             .clickable(onClick = onClick),
-    )
+        contentAlignment = Alignment.Center,
+    ) {
+        if (selected) {
+            CupertinoText(
+                text = "✓",
+                fontSize = 12.sp,
+                fontWeight = FontWeight.Bold,
+                color = Color.White,
+            )
+        }
+    }
 }

@@ -10,7 +10,6 @@ import com.chenzixin.wrongbook.data.local.entity.QuestionEntity
 import com.chenzixin.wrongbook.data.local.entity.QuestionTagCrossRef
 import com.chenzixin.wrongbook.data.local.model.QuestionWithTags
 import com.chenzixin.wrongbook.di.IoDispatcher
-import com.chenzixin.wrongbook.domain.review.ReviewScheduler
 import com.chenzixin.wrongbook.domain.tag.TagFilter
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -76,29 +75,6 @@ class QuestionRepositoryImpl @Inject constructor(
                 }
             }
         }
-
-    override suspend fun due(now: Long): List<QuestionEntity> = withContext(io) {
-        questionDao.getDue(now)
-    }
-
-    override suspend fun applyReview(
-        question: QuestionEntity,
-        correct: Boolean,
-        now: Long,
-    ): WbResult<Unit> = withContext(io) {
-        runCatchingWb("复习结果保存失败") {
-            val plan = ReviewScheduler.schedule(question.masteryLevel, correct, now)
-            questionDao.update(
-                question.copy(
-                    masteryLevel = plan.masteryLevel,
-                    reviewCount = question.reviewCount + 1,
-                    lastReviewAt = now,
-                    nextReviewAt = plan.nextReviewAt,
-                    updatedAt = now,
-                ),
-            )
-        }
-    }
 
     override suspend fun count(): Int = withContext(io) { questionDao.count() }
 

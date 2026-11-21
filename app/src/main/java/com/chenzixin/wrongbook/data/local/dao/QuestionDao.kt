@@ -72,15 +72,6 @@ interface QuestionDao {
     )
     fun observeByTags(tagIds: List<Long>, tagCount: Int): Flow<List<QuestionEntity>>
 
-    /** 到期待复习：只返回已排期且时间已到的题。 */
-    @Query(
-        """
-        SELECT * FROM questions
-        WHERE nextReviewAt IS NOT NULL AND nextReviewAt <= :now
-        ORDER BY nextReviewAt ASC
-        """,
-    )
-    suspend fun getDue(now: Long): List<QuestionEntity>
 
     @Query("SELECT COUNT(*) FROM questions")
     suspend fun count(): Int
@@ -91,6 +82,4 @@ interface QuestionDao {
     @Query("SELECT masteryLevel AS masteryLevel, COUNT(*) AS count FROM questions GROUP BY masteryLevel")
     suspend fun masteryCounts(): List<com.chenzixin.wrongbook.data.local.model.MasteryCount>
 
-    @Query("SELECT COUNT(*) FROM questions WHERE masteryLevel >= 4")
-    suspend fun countMastered(): Int
 }

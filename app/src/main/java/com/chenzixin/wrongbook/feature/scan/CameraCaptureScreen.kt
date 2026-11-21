@@ -4,6 +4,7 @@ import android.Manifest
 import android.content.pm.PackageManager
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.activity.compose.LocalActivity
 import androidx.camera.core.CameraSelector
 import androidx.camera.core.ImageCapture
 import androidx.camera.core.ImageCaptureException
@@ -13,6 +14,8 @@ import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.camera.view.PreviewView
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.rememberScrollState
@@ -21,15 +24,20 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBars
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -41,6 +49,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.drawscope.Stroke
@@ -48,19 +57,28 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLifecycleOwner
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.content.ContextCompat
+import androidx.core.view.WindowCompat
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.chenzixin.wrongbook.core.ImageUtils
 import com.chenzixin.wrongbook.core.awaitResult
 import com.chenzixin.wrongbook.ui.component.WbAlertDialog
+import com.chenzixin.wrongbook.ui.component.WbIcons
+import com.chenzixin.wrongbook.ui.component.WbPrimaryButton
 import com.chenzixin.wrongbook.ui.component.WbTopBar
 import com.chenzixin.wrongbook.ui.theme.wbColors
 import io.github.robinpcrd.cupertino.CupertinoButton
+import io.github.robinpcrd.cupertino.CupertinoIcon
 import io.github.robinpcrd.cupertino.CupertinoText
+import io.github.robinpcrd.cupertino.icons.CupertinoIcons
+import io.github.robinpcrd.cupertino.icons.outlined.ChevronBackward
+import io.github.robinpcrd.cupertino.icons.outlined.RectanglePortraitAndArrowForward
 import kotlin.math.min
 
 /**
@@ -76,6 +94,7 @@ fun CameraCaptureScreen(
 ) {
     val state by vm.state.collectAsState()
     val context = LocalContext.current
+    CameraSystemBars()
     var cropBitmap by remember { mutableStateOf<android.graphics.Bitmap?>(null) }
     var permissionGranted by remember {
         mutableStateOf(
@@ -114,6 +133,7 @@ fun CameraCaptureScreen(
                 stage = state.stage,
                 onCaptured = { bmp -> cropBitmap = bmp },
                 onError = vm::onError,
+                onBack = onBack,
             )
 
             state.stage == ScanViewModel.Stage.Selecting ||
@@ -123,6 +143,7 @@ fun CameraCaptureScreen(
                 onSelectAll = vm::selectAll,
                 onInvert = vm::invertSelection,
                 onToggleTag = vm::toggleTag,
+                onCreateTag = vm::createTag,
                 onSave = vm::save,
                 onDiscard = vm::discard,
             )
@@ -132,13 +153,53 @@ fun CameraCaptureScreen(
 
         // 顶栏（非 Idle 时也保留返回入口）
         if (state.stage == ScanViewModel.Stage.Selecting) {
-            WbTopBar(
-                title = "选择要入库的题目",
-                onBack = vm::discard,
+            // 相机页固定黑底，不能复用 WbTopBar（浅色主题下标题会是深色）。
+            Row(
                 modifier = Modifier
                     .align(Alignment.TopCenter)
-                    .background(Color(0xCC000000)),
-            )
+                    .fillMaxWidth()
+                    .background(
+                        Brush.verticalGradient(
+                            listOf(Color.Black.copy(alpha = 0.72f), Color.Transparent),
+                            endY = 220f,
+                        ),
+                    )
+                    .windowInsetsPadding(WindowInsets.statusBars)
+                    .padding(horizontal = 12.dp, vertical = 8.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(40.dp)
+                        .clip(CircleShape)
+                        .background(Color.Black.copy(alpha = 0.35f))
+                        .border(1.dp, Color.White.copy(alpha = 0.18f), CircleShape)
+                        .clickable(onClick = vm::discard),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    CupertinoIcon(
+                        imageVector = CupertinoIcons.Outlined.ChevronBackward,
+                        contentDescription = "返回",
+                        modifier = Modifier.size(17.dp),
+                        tint = Color.White,
+                    )
+                }
+                CupertinoText(
+                    text = "选择要入库的题目",
+                    modifier = Modifier
+                        .weight(1f)
+                        .padding(horizontal = 12.dp),
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    color = Color.White,
+                    maxLines = 1,
+                )
+                CupertinoText(
+                    text = "已选 ${state.selected.size}",
+                    fontSize = 11.sp,
+                    color = Color.White.copy(alpha = 0.65f),
+                )
+            }
         }
 
         state.message?.let { msg ->
@@ -172,10 +233,63 @@ fun CameraCaptureScreen(
 @Composable
 private fun PermissionRequest(onRequest: () -> Unit) {
     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            CupertinoText(text = "需要相机权限才能扫描题目", fontSize = 15.sp, color = Color.White)
-            Spacer(Modifier.height(16.dp))
-            CupertinoButton(onClick = onRequest) { CupertinoText(text = "允许使用相机") }
+        Column(
+            modifier = Modifier.padding(horizontal = 32.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(76.dp)
+                    .clip(CircleShape)
+                    .background(
+                        Brush.linearGradient(
+                            listOf(Color(0xFF0A84FF), Color(0xFF6C5CE7)),
+                        ),
+                    ),
+                contentAlignment = Alignment.Center,
+            ) {
+                CupertinoIcon(
+                    imageVector = WbIcons.Camera,
+                    contentDescription = null,
+                    modifier = Modifier.size(30.dp),
+                    tint = Color.White,
+                )
+            }
+            Spacer(Modifier.height(20.dp))
+            CupertinoText(
+                text = "需要相机权限",
+                fontSize = 18.sp,
+                fontWeight = FontWeight.SemiBold,
+                color = Color.White,
+            )
+            Spacer(Modifier.height(7.dp))
+            CupertinoText(
+                text = "只用于拍摄错题；识别在本机完成，不会上传图片。",
+                fontSize = 12.5.sp,
+                lineHeight = 18.sp,
+                color = Color.White.copy(alpha = 0.68f),
+                textAlign = TextAlign.Center,
+            )
+            Spacer(Modifier.height(22.dp))
+            WbPrimaryButton(text = "允许使用相机", onClick = onRequest)
+        }
+    }
+}
+
+/** 相机页是黑底，系统状态栏图标要强制用浅色。 */
+@Composable
+private fun CameraSystemBars() {
+    val activity = LocalActivity.current
+    DisposableEffect(activity) {
+        val window = activity?.window
+        val controller = window?.let { WindowCompat.getInsetsController(it, it.decorView) }
+        val previousStatus = controller?.isAppearanceLightStatusBars ?: false
+        val previousNav = controller?.isAppearanceLightNavigationBars ?: false
+        controller?.isAppearanceLightStatusBars = false
+        controller?.isAppearanceLightNavigationBars = false
+        onDispose {
+            controller?.isAppearanceLightStatusBars = previousStatus
+            controller?.isAppearanceLightNavigationBars = previousNav
         }
     }
 }
@@ -185,6 +299,7 @@ private fun CameraStage(
     stage: ScanViewModel.Stage,
     onCaptured: (android.graphics.Bitmap) -> Unit,
     onError: (String) -> Unit,
+    onBack: () -> Unit,
 ) {
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
@@ -212,23 +327,96 @@ private fun CameraStage(
         }
     }
 
-    AndroidView(factory = { previewView }, modifier = Modifier.fillMaxSize())
+    Box(modifier = Modifier.fillMaxSize()) {
+        AndroidView(factory = { previewView }, modifier = Modifier.fillMaxSize())
+
+        // 顶部压暗，保证状态栏与提示可读
+        Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(150.dp)
+            .align(Alignment.TopCenter)
+            .background(
+                Brush.verticalGradient(
+                    listOf(Color.Black.copy(alpha = 0.55f), Color.Transparent),
+                ),
+            ),
+    )
+    Box(
+        modifier = Modifier
+            .align(Alignment.TopCenter)
+            .fillMaxWidth()
+            .windowInsetsPadding(WindowInsets.statusBars)
+            .padding(horizontal = 16.dp, vertical = 10.dp),
+        contentAlignment = Alignment.CenterStart,
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(40.dp)
+                    .clip(CircleShape)
+                    .background(Color.Black.copy(alpha = 0.38f))
+                    .border(1.dp, Color.White.copy(alpha = 0.16f), CircleShape)
+                    .clickable(onClick = onBack),
+                contentAlignment = Alignment.Center,
+            ) {
+                CupertinoIcon(
+                    imageVector = CupertinoIcons.Outlined.ChevronBackward,
+                    contentDescription = "返回",
+                    modifier = Modifier.size(17.dp),
+                    tint = Color.White,
+                )
+            }
+            Spacer(Modifier.weight(1f))
+            Box(
+                modifier = Modifier
+                    .clip(RoundedCornerShape(percent = 50))
+                    .background(Color.Black.copy(alpha = 0.38f))
+                    .padding(horizontal = 14.dp, vertical = 7.dp),
+            ) {
+                CupertinoText(
+                    text = "整页入框 · 四角可见",
+                    fontSize = 11.5.sp,
+                    color = Color.White.copy(alpha = 0.85f),
+                )
+            }
+            Spacer(Modifier.weight(1f))
+            Spacer(Modifier.size(40.dp))
+        }
+    }
+
+    CameraFrameOverlay()
 
     // 取景框提示
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .padding(32.dp),
+            .padding(horizontal = 28.dp)
+            .windowInsetsPadding(WindowInsets.navigationBars)
+            .padding(bottom = 26.dp),
         contentAlignment = Alignment.BottomCenter,
     ) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
             if (stage == ScanViewModel.Stage.Recognizing) {
-                CupertinoText(text = "识别中…", fontSize = 15.sp, color = Color.White)
+                Box(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(percent = 50))
+                        .background(Color.Black.copy(alpha = 0.5f))
+                        .padding(horizontal = 14.dp, vertical = 7.dp),
+                ) {
+                    CupertinoText(text = "识别中…", fontSize = 12.sp, color = Color.White)
+                }
                 Spacer(Modifier.height(16.dp))
             }
             Box(
                 modifier = Modifier
-                    .size(72.dp)
+                    .size(84.dp)
+                    .clip(CircleShape)
+                    .border(4.dp, Color.White.copy(alpha = 0.92f), CircleShape)
+                    .padding(8.dp)
                     .clip(CircleShape)
                     .background(Color.White)
                     .pointerInput(Unit) {
@@ -251,9 +439,49 @@ private fun CameraStage(
                         }
                     },
             )
-            Spacer(Modifier.height(12.dp))
-            CupertinoText(text = "点按拍摄", fontSize = 13.sp, color = Color.White)
+            Spacer(Modifier.height(14.dp))
+            Box(
+                modifier = Modifier
+                    .clip(RoundedCornerShape(percent = 50))
+                    .background(Color.Black.copy(alpha = 0.38f))
+                    .padding(horizontal = 14.dp, vertical = 6.dp),
+            ) {
+                CupertinoText(
+                    text = "点按拍摄",
+                    fontSize = 11.5.sp,
+                    color = Color.White.copy(alpha = 0.85f),
+                )
+            }
         }
+    }
+    }
+}
+
+/** 取景框四角括号。 */
+@Composable
+private fun CameraFrameOverlay() {
+    Canvas(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(horizontal = 24.dp)
+            .padding(top = 96.dp, bottom = 150.dp),
+    ) {
+        val len = 26.dp.toPx()
+        val stroke = 2.5.dp.toPx()
+        val color = Color.White.copy(alpha = 0.8f)
+        val left = 0f
+        val top = 0f
+        val right = size.width
+        val bottom = size.height
+
+        fun corner(x: Float, y: Float, dx: Float, dy: Float) {
+            drawLine(color, Offset(x, y), Offset(x + dx * len, y), stroke)
+            drawLine(color, Offset(x, y), Offset(x, y + dy * len), stroke)
+        }
+        corner(left, top, 1f, 1f)
+        corner(right, top, -1f, 1f)
+        corner(left, bottom, 1f, -1f)
+        corner(right, bottom, -1f, -1f)
     }
 }
 
@@ -264,12 +492,14 @@ private fun SelectionStage(
     onSelectAll: () -> Unit,
     onInvert: () -> Unit,
     onToggleTag: (Long) -> Unit,
+    onCreateTag: (String) -> Unit,
     onSave: () -> Unit,
     onDiscard: () -> Unit,
 ) {
     val bitmap = state.bitmap ?: return
     val image = remember(bitmap) { bitmap.asImageBitmap() }
     val colors = wbColors()
+    var showTagDialog by remember { mutableStateOf(false) }
 
     Box(modifier = Modifier.fillMaxSize()) {
         BoxWithImageOverlay(
@@ -285,13 +515,39 @@ private fun SelectionStage(
             modifier = Modifier
                 .align(Alignment.BottomCenter)
                 .fillMaxWidth()
+                .clip(RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp))
                 .background(Color(0xE6000000))
-                .padding(16.dp),
+                .windowInsetsPadding(WindowInsets.navigationBars)
+                .padding(horizontal = 16.dp, vertical = 14.dp),
         ) {
-            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                CupertinoButton(onClick = onSelectAll) { CupertinoText(text = "全选", color = Color.White) }
-                CupertinoButton(onClick = onInvert) { CupertinoText(text = "反选", color = Color.White) }
-                CupertinoButton(onClick = onDiscard) { CupertinoText(text = "重拍", color = Color.White) }
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                com.chenzixin.wrongbook.ui.component.WbChip(
+                    label = "全选",
+                    selected = false,
+                    onClick = onSelectAll,
+                    onLight = true,
+                )
+                com.chenzixin.wrongbook.ui.component.WbChip(
+                    label = "反选",
+                    selected = false,
+                    onClick = onInvert,
+                    onLight = true,
+                )
+                com.chenzixin.wrongbook.ui.component.WbChip(
+                    label = "重拍",
+                    selected = false,
+                    onClick = onDiscard,
+                    onLight = true,
+                )
+                Spacer(Modifier.weight(1f))
+                CupertinoText(
+                    text = "已选 ${state.selected.size} 题",
+                    fontSize = 11.5.sp,
+                    color = Color.White.copy(alpha = 0.7f),
+                )
             }
             if (state.tags.isNotEmpty()) {
                 Spacer(Modifier.height(8.dp))
@@ -307,14 +563,34 @@ private fun SelectionStage(
                             onLight = true,
                         )
                     }
+                    com.chenzixin.wrongbook.ui.component.WbChip(
+                        label = "＋ 新建标签",
+                        selected = false,
+                        onClick = { showTagDialog = true },
+                        onLight = true,
+                    )
                 }
             }
             Spacer(Modifier.height(12.dp))
-            CupertinoButton(onClick = onSave) {
-                CupertinoText(text = "存入题库（${state.selected.size} 题）", fontSize = 16.sp)
-            }
+            WbPrimaryButton(
+                text = "存入题库（${state.selected.size} 题）",
+                onClick = onSave,
+                modifier = Modifier.fillMaxWidth(),
+                enabled = state.selected.isNotEmpty() && state.stage != ScanViewModel.Stage.Saving,
+            )
         }
     }
+
+    com.chenzixin.wrongbook.ui.component.WbInputDialog(
+        visible = showTagDialog,
+        title = "新建标签",
+        placeholder = "标签名，例如 函数",
+        onConfirm = { name ->
+            showTagDialog = false
+            onCreateTag(name)
+        },
+        onDismiss = { showTagDialog = false },
+    )
 }
 
 @Composable

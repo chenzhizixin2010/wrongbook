@@ -2,6 +2,7 @@ package com.chenzixin.wrongbook.feature.settings
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -26,12 +27,16 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.chenzixin.wrongbook.ui.component.WbAlertDialog
+import com.chenzixin.wrongbook.ui.component.WbChip
+import com.chenzixin.wrongbook.ui.component.WbDangerButton
+import com.chenzixin.wrongbook.ui.component.WbPrimaryButton
+import com.chenzixin.wrongbook.ui.component.WbSecondaryButton
+import com.chenzixin.wrongbook.ui.component.WbTextButton
 import com.chenzixin.wrongbook.ui.component.WbHintBar
 import com.chenzixin.wrongbook.ui.component.WbSection
 import com.chenzixin.wrongbook.ui.component.WbTextField
 import com.chenzixin.wrongbook.ui.component.WbTopBar
 import com.chenzixin.wrongbook.ui.theme.wbColors
-import io.github.robinpcrd.cupertino.CupertinoButton
 import io.github.robinpcrd.cupertino.CupertinoText
 
 /**
@@ -47,6 +52,7 @@ fun ProfileEditScreen(
     val state by vm.state.collectAsState()
     val colors = wbColors()
     var confirmDelete by remember { mutableStateOf(false) }
+    var guidePreset by remember { mutableStateOf<ProviderPreset?>(null) }
 
     LaunchedEffect(state.finished) {
         if (state.finished) onBack()
@@ -64,6 +70,27 @@ fun ProfileEditScreen(
                 .verticalScroll(rememberScrollState())
                 .padding(bottom = 32.dp),
         ) {
+            WbSection(
+                header = "快速填入",
+                footer = "点任意一个服务商，可以看到「去哪申请 Key」和领取步骤，再一键填入地址与模型名。Key 必须自己申请，额度以官网为准。",
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .horizontalScroll(rememberScrollState())
+                        .padding(16.dp),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    PROVIDER_PRESETS.forEach { preset ->
+                        WbChip(
+                            label = preset.name,
+                            selected = state.baseUrl == preset.baseUrl,
+                            onClick = { guidePreset = preset },
+                        )
+                    }
+                }
+            }
+
             WbSection(header = "基础") {
                 Column(modifier = Modifier.padding(16.dp)) {
                     WbTextField(
@@ -108,8 +135,8 @@ fun ProfileEditScreen(
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         CupertinoText(text = "温度 ${"%.1f".format(state.temperature)}", fontSize = 15.sp, color = colors.label)
                         Spacer(Modifier.width(16.dp))
-                        CupertinoButton(onClick = { vm.adjustTemperature(-0.1f) }) { CupertinoText(text = "－") }
-                        CupertinoButton(onClick = { vm.adjustTemperature(0.1f) }) { CupertinoText(text = "＋") }
+                        WbTextButton(text = "－", onClick = { vm.adjustTemperature(-0.1f) })
+                        WbTextButton(text = "＋", onClick = { vm.adjustTemperature(0.1f) })
                     }
                 }
             }
@@ -124,43 +151,47 @@ fun ProfileEditScreen(
                     .padding(horizontal = 16.dp, vertical = 12.dp),
                 horizontalArrangement = Arrangement.spacedBy(12.dp),
             ) {
-                CupertinoButton(
+                WbPrimaryButton(
+                    text = if (state.saving) "保存中…" else "保存",
                     onClick = vm::save,
                     modifier = Modifier.weight(1f),
                     enabled = !state.saving,
-                ) {
-                    CupertinoText(
-                        text = if (state.saving) "保存中…" else "保存",
-                        fontSize = 16.sp,
-                    )
-                }
-                CupertinoButton(
+                )
+                WbSecondaryButton(
+                    text = if (state.testing) "测试中…" else "测试连接",
                     onClick = vm::testConnection,
                     modifier = Modifier.weight(1f),
                     enabled = !state.testing,
-                ) {
-                    CupertinoText(
-                        text = if (state.testing) "测试中…" else "测试连接",
-                        fontSize = 16.sp,
-                    )
-                }
+                )
             }
 
             if (!state.isNew) {
                 WbSection {
                     Column(modifier = Modifier.padding(16.dp)) {
                         Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                            CupertinoButton(onClick = vm::setDefault, modifier = Modifier.weight(1f)) {
-                                CupertinoText(text = if (state.isDefault) "已是默认" else "设为默认")
-                            }
-                            CupertinoButton(onClick = { confirmDelete = true }, modifier = Modifier.weight(1f)) {
-                                CupertinoText(text = "删除", color = colors.danger)
-                            }
+                            WbSecondaryButton(
+                                text = if (state.isDefault) "已是默认" else "设为默认",
+                                onClick = vm::setDefault,
+                                modifier = Modifier.weight(1f),
+                            )
+                            WbDangerButton(
+                                text = "删除",
+                                onClick = { confirmDelete = true },
+                                modifier = Modifier.weight(1f),
+                            )
                         }
                     }
                 }
             }
         }
+    }
+
+    guidePreset?.let { preset ->
+        ProviderGuideDialog(
+            preset = preset,
+            onApply = { vm.applyPreset(preset) },
+            onDismiss = { guidePreset = null },
+        )
     }
 
     WbAlertDialog(

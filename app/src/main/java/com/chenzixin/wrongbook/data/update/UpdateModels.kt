@@ -15,7 +15,29 @@ data class DownloadProgress(
     val downloaded: Long,
     val total: Long,
     val sourceLabel: String,
+    /** 近似瞬时速度（字节/秒），做了平滑，UI 上不会跳来跳去 */
+    val bytesPerSecond: Long = 0L,
 ) {
     val percent: Int
         get() = if (total <= 0L) 0 else ((downloaded * 100) / total).toInt().coerceIn(0, 100)
+
+    /** 剩余秒数；总大小或速度未知时返回 null。 */
+    val etaSeconds: Long?
+        get() {
+            if (bytesPerSecond <= 0L || total <= 0L || downloaded >= total) return null
+            return ((total - downloaded) / bytesPerSecond).coerceAtLeast(0L)
+        }
+
+    fun speedText(): String = when {
+        bytesPerSecond <= 0L -> "计算中…"
+        bytesPerSecond < 1024 -> "${bytesPerSecond} B/s"
+        bytesPerSecond < 1024 * 1024 -> String.format("%.0f KB/s", bytesPerSecond / 1024f)
+        else -> String.format("%.1f MB/s", bytesPerSecond / 1024f / 1024f)
+    }
+
+    fun sizeText(): String = String.format(
+        "%.1f / %.1f MB",
+        downloaded / 1024f / 1024f,
+        total / 1024f / 1024f,
+    )
 }

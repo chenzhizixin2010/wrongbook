@@ -117,6 +117,21 @@ class ScanViewModel @Inject constructor(
         s.copy(selectedTagIds = if (id in s.selectedTagIds) s.selectedTagIds - id else s.selectedTagIds + id)
     }
 
+    /** 现场新建标签并自动勾选：标签数量不设上限。 */
+    fun createTag(name: String) {
+        viewModelScope.launch {
+            when (val r = tagRepo.create(name = name)) {
+                is WbResult.Ok -> {
+                    val latest = runCatching { tagRepo.observeAll().first() }.getOrDefault(emptyList())
+                    _state.update {
+                        it.copy(tags = latest, selectedTagIds = it.selectedTagIds + r.value)
+                    }
+                }
+                is WbResult.Err -> _state.update { it.copy(message = r.message) }
+            }
+        }
+    }
+
     fun clearMessage() = _state.update { it.copy(message = null) }
 
     fun onError(message: String) = _state.update { it.copy(stage = Stage.Idle, message = message) }
