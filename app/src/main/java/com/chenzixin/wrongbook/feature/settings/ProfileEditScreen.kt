@@ -1,0 +1,178 @@
+package com.chenzixin.wrongbook.feature.settings
+
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import androidx.hilt.navigation.compose.hiltViewModel
+import com.chenzixin.wrongbook.ui.component.WbAlertDialog
+import com.chenzixin.wrongbook.ui.component.WbHintBar
+import com.chenzixin.wrongbook.ui.component.WbSection
+import com.chenzixin.wrongbook.ui.component.WbTextField
+import com.chenzixin.wrongbook.ui.component.WbTopBar
+import com.chenzixin.wrongbook.ui.theme.wbColors
+import io.github.robinpcrd.cupertino.CupertinoButton
+import io.github.robinpcrd.cupertino.CupertinoText
+
+/**
+ * 新增 / 编辑一套 API 配置。
+ *
+ * 安全约定：Key 输入框永远不回显已保存的值，只显示「已保存，留空不修改」。
+ */
+@Composable
+fun ProfileEditScreen(
+    onBack: () -> Unit,
+    vm: ProfileEditViewModel = hiltViewModel(),
+) {
+    val state by vm.state.collectAsState()
+    val colors = wbColors()
+    var confirmDelete by remember { mutableStateOf(false) }
+
+    LaunchedEffect(state.finished) {
+        if (state.finished) onBack()
+    }
+
+    Column(modifier = Modifier.fillMaxSize()) {
+        WbTopBar(
+            title = if (state.isNew) "添加 API 配置" else "编辑 API 配置",
+            onBack = onBack,
+        )
+
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .verticalScroll(rememberScrollState())
+                .padding(bottom = 32.dp),
+        ) {
+            WbSection(header = "基础") {
+                Column(modifier = Modifier.padding(16.dp)) {
+                    WbTextField(
+                        value = state.name,
+                        onValueChange = vm::onNameChange,
+                        placeholder = "配置名称，例如 DeepSeek 主力",
+                    )
+                    Spacer(Modifier.height(12.dp))
+                    WbTextField(
+                        value = state.baseUrl,
+                        onValueChange = vm::onBaseUrlChange,
+                        placeholder = "接口地址，例如 https://api.deepseek.com/v1",
+                        keyboardType = KeyboardType.Uri,
+                    )
+                    Spacer(Modifier.height(12.dp))
+                    WbTextField(
+                        value = state.apiKeyInput,
+                        onValueChange = vm::onApiKeyChange,
+                        placeholder = if (state.hasSavedKey) "API Key 已保存，留空则不修改" else "API Key",
+                        visualTransformation = PasswordVisualTransformation(),
+                    )
+                }
+            }
+
+            WbSection(
+                header = "模型",
+                footer = "视觉模型留空 = 不支持识图，扫描流程将使用本地 OCR。",
+            ) {
+                Column(modifier = Modifier.padding(16.dp)) {
+                    WbTextField(
+                        value = state.chatModel,
+                        onValueChange = vm::onChatModelChange,
+                        placeholder = "对话模型，例如 deepseek-chat",
+                    )
+                    Spacer(Modifier.height(12.dp))
+                    WbTextField(
+                        value = state.visionModel,
+                        onValueChange = vm::onVisionModelChange,
+                        placeholder = "视觉模型（可空），例如 qwen-vl-plus",
+                    )
+                    Spacer(Modifier.height(12.dp))
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        CupertinoText(text = "温度 ${"%.1f".format(state.temperature)}", fontSize = 15.sp, color = colors.label)
+                        Spacer(Modifier.width(16.dp))
+                        CupertinoButton(onClick = { vm.adjustTemperature(-0.1f) }) { CupertinoText(text = "－") }
+                        CupertinoButton(onClick = { vm.adjustTemperature(0.1f) }) { CupertinoText(text = "＋") }
+                    }
+                }
+            }
+
+            state.message?.let { msg ->
+                WbHintBar(text = msg, onClick = vm::clearMessage)
+            }
+
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 12.dp),
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+            ) {
+                CupertinoButton(
+                    onClick = vm::save,
+                    modifier = Modifier.weight(1f),
+                    enabled = !state.saving,
+                ) {
+                    CupertinoText(
+                        text = if (state.saving) "保存中…" else "保存",
+                        fontSize = 16.sp,
+                    )
+                }
+                CupertinoButton(
+                    onClick = vm::testConnection,
+                    modifier = Modifier.weight(1f),
+                    enabled = !state.testing,
+                ) {
+                    CupertinoText(
+                        text = if (state.testing) "测试中…" else "测试连接",
+                        fontSize = 16.sp,
+                    )
+                }
+            }
+
+            if (!state.isNew) {
+                WbSection {
+                    Column(modifier = Modifier.padding(16.dp)) {
+                        Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                            CupertinoButton(onClick = vm::setDefault, modifier = Modifier.weight(1f)) {
+                                CupertinoText(text = if (state.isDefault) "已是默认" else "设为默认")
+                            }
+                            CupertinoButton(onClick = { confirmDelete = true }, modifier = Modifier.weight(1f)) {
+                                CupertinoText(text = "删除", color = colors.danger)
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    WbAlertDialog(
+        visible = confirmDelete,
+        title = "删除这套配置？",
+        message = "删除后需要重新填写 API Key。",
+        confirmText = "删除",
+        destructive = true,
+        onConfirm = {
+            confirmDelete = false
+            vm.delete()
+        },
+        onDismiss = { confirmDelete = false },
+    )
+}

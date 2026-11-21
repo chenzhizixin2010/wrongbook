@@ -1,0 +1,212 @@
+package com.chenzixin.wrongbook.data.update
+
+import android.content.Context
+import android.content.Intent
+import android.os.Build
+import androidx.core.content.FileProvider
+import com.chenzixin.wrongbook.BuildConfig
+import com.chenzixin.wrongbook.core.WbResult
+import com.chenzixin.wrongbook.di.IoDispatcher
+import dagger.hilt.android.qualifiers.ApplicationContext
+import java.io.File
+import java.io.IOException
+import javax.inject.Inject
+import javax.inject.Singleton
+import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.flowOn
+import kotlinx.coroutines.withContext
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.contentOrNull
+import kotlinx.serialization.json.jsonArray
+import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
+import okhttp3.OkHttpClient
+import okhttp3.Request
+
+/**
+ * 从 GitHub Releases 拉更新。
+ *
+ * 设计要点：
+ * 1. **只读 Releases API**，不依赖任何自建服务；
+ * 2. APK 下载支持镜像前缀（`https://ghproxy.net/` 之类），直连失败自动逐个换；
+ * 3. 下载完调系统安装器（FileProvider 授权临时读权限），不做静默安装。
+ */
+@Singleton
+class UpdateRepository @Inject constructor(
+    private val client: OkHttpClient,
+    @ApplicationContext private val context: Context,
+    @IoDispatcher private val io: CoroutineDispatcher,
+) {
+
+    private val json = Json { ignoreUnknownKeys = true; isLenient = true }
+
+    /** 检查最新 release；没有可用 APK 或版本不比当前新时返回 Ok(null)。 */
+    suspend fun check(
+        owner: String,
+        repo: String,
+        currentVersion: String,
+    ): WbResult<UpdateInfo?> = withContext(io) {
+        val url = "https://api.github.com/repos/$owner/$repo/releases/latest"
+        try {
+            val request = Request.Builder()
+                .url(url)
+                .header("Accept", "application/vnd.github+json")
+                .header("User-Agent", "WrongBook-Android")
+                .build()
+
+            client.newCall(request).execute().use { response ->
+                when {
+                    response.code == 404 -> return@withContext WbResult.Err("仓库还没有发布任何版本")
+                    response.code == 403 -> return@withContext WbResult.Err("GitHub 接口被限流，过一会儿再试")
+                    !response.isSuccessful -> return@withContext WbResult.Err("检查更新失败（HTTP ${response.code}）")
+                }
+
+                val root = runCatching {
+                    json.parseToJsonElement(response.body.string()).jsonObject
+                }.getOrNull() ?: return@withContext WbResult.Err("GitHub 返回内容无法解析")
+
+                val tag = root["tag_name"]?.jsonPrimitive?.contentOrNull.orEmpty()
+                if (tag.isBlank()) return@withContext WbResult.Err("最新版本没有 tag 信息")
+
+                val assets = root["assets"]?.jsonArray.orEmpty()
+                val apk = assets.mapNotNull { it.jsonObject }.firstOrNull { asset ->
+                    asset["name"]?.jsonPrimitive?.contentOrNull?.endsWith(".apk", ignoreCase = true) == true
+                }
+
+                if (apk == null) {
+                    return@withContext WbResult.Ok(null)
+                }
+
+                val info = UpdateInfo(
+                    version = tag,
+                    notes = root["body"]?.jsonPrimitive?.contentOrNull.orEmpty(),
+                    apkUrl = apk["browser_download_url"]?.jsonPrimitive?.contentOrNull.orEmpty(),
+                    pageUrl = root["html_url"]?.jsonPrimitive?.contentOrNull.orEmpty(),
+                    sizeBytes = apk["size"]?.jsonPrimitive?.contentOrNull?.toLongOrNull() ?: 0L,
+                    publishedAt = root["published_at"]?.jsonPrimitive?.contentOrNull.orEmpty(),
+                )
+
+                if (info.apkUrl.isBlank()) return@withContext WbResult.Ok(null)
+
+                val newer = com.chenzixin.wrongbook.domain.update.VersionComparator
+                    .isNewer(info.version, currentVersion)
+                if (newer) WbResult.Ok(info) else WbResult.Ok(null)
+            }
+        } catch (e: IOException) {
+            WbResult.Err("网络不可用，检查更新失败", e)
+        } catch (t: Throwable) {
+            WbResult.Err("检查更新失败：${t.message ?: "未知错误"}", t)
+        }
+    }
+
+    /** 候选下载地址：直连 + 镜像，按顺序尝试。 */
+    fun candidates(apkUrl: String): List<Pair<String, String>> {
+        val label = { url: String ->
+            when {
+                url == apkUrl -> "直连"
+                else -> url.substringBefore("https://", "").ifBlank { "镜像" }
+            }
+        }
+        val mirrors = BuildConfig.UPDATE_MIRRORS.split(',').map { it.trim() }.filter { it.isNotEmpty() }
+        return buildList {
+            add(apkUrl to "直连")
+            mirrors.forEach { mirror ->
+                val full = mirror.trimEnd('/') + "/" + apkUrl
+                add(full to label(mirror))
+            }
+        }
+    }
+
+    /**
+     * 下载 APK；失败会换下一个源。进度通过 [DownloadProgress] 回传。
+     */
+    fun download(info: UpdateInfo): Flow<DownloadProgress> = flow {
+        val dir = File(context.cacheDir, "updates").apply { if (!exists()) mkdirs() }
+        val target = File(dir, "wrongbook-${info.version}.apk")
+
+        var lastError: Throwable? = null
+        for ((url, label) in candidates(info.apkUrl)) {
+            try {
+                val request = Request.Builder()
+                    .url(url)
+                    .header("User-Agent", "WrongBook-Android")
+                    .build()
+
+                client.newCall(request).execute().use { response ->
+                    if (!response.isSuccessful) throw IOException("HTTP ${response.code}")
+
+                    val body = response.body
+                    val total = body.contentLength().takeIf { it > 0 } ?: info.sizeBytes
+                    var downloaded = 0L
+                    var lastEmit = 0L
+                    emit(DownloadProgress(0, total, label))
+
+                    body.byteStream().use { input ->
+                        target.outputStream().use { output ->
+                            val buffer = ByteArray(64 * 1024)
+                            while (true) {
+                                val read = input.read(buffer)
+                                if (read < 0) break
+                                output.write(buffer, 0, read)
+                                downloaded += read
+                                val now = System.currentTimeMillis()
+                                if (now - lastEmit > 120) {
+                                    lastEmit = now
+                                    emit(DownloadProgress(downloaded, total, label))
+                                }
+                            }
+                        }
+                    }
+                    emit(DownloadProgress(downloaded, total, label))
+                }
+                // 校验：至少 1MB，且不是 HTML 错误页
+                if (target.length() < 1024 * 1024) throw IOException("下载内容不完整")
+                return@flow
+            } catch (t: Throwable) {
+                lastError = t
+                target.delete()
+                continue
+            }
+        }
+        throw IOException(lastError?.message ?: "所有下载源都失败")
+    }.flowOn(io)
+
+    fun downloadedApk(info: UpdateInfo): File =
+        File(File(context.cacheDir, "updates"), "wrongbook-${info.version}.apk")
+
+    /** 拉起系统安装器；Android 8+ 需要用户允许「安装未知应用」。 */
+    fun install(apk: File): WbResult<Unit> {
+        if (!apk.exists()) return WbResult.Err("安装包不存在，请重新下载")
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O &&
+            !context.packageManager.canRequestPackageInstalls()
+        ) {
+            return WbResult.Err("需要先允许「安装未知应用」，请在系统设置里开启后重试")
+        }
+        return try {
+            val uri = FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", apk)
+            val intent = Intent(Intent.ACTION_VIEW)
+                .setDataAndType(uri, "application/vnd.android.package-archive")
+                .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_ACTIVITY_NEW_TASK)
+            context.startActivity(intent)
+            WbResult.Ok(Unit)
+        } catch (t: Throwable) {
+            WbResult.Err("拉起安装器失败：${t.message ?: "未知错误"}", t)
+        }
+    }
+
+    /** 跳转「安装未知应用」设置页（部分 ROM 需要用户手动找）。 */
+    fun openInstallSettings(): WbResult<Unit> = try {
+        val intent = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            Intent(android.provider.Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES)
+                .setData(android.net.Uri.parse("package:${context.packageName}"))
+        } else {
+            Intent(android.provider.Settings.ACTION_SETTINGS)
+        }.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        context.startActivity(intent)
+        WbResult.Ok(Unit)
+    } catch (t: Throwable) {
+        WbResult.Err("打不开设置页", t)
+    }
+}

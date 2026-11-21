@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!--
+      真正的配色由 Compose 的 CupertinoTheme 控制，这里只负责窗口层面的样式：
+      透明状态栏 + 浅色状态栏图标，避免启动瞬间闪出 Material 的系统栏。
+    -->
+    <style name="Theme.WrongBook" parent="android:Theme.Material.Light.NoActionBar">
+        <item name="android:windowBackground">@android:color/white</item>
+        <item name="android:statusBarColor">@android:color/transparent</item>
+        <item name="android:navigationBarColor">@android:color/transparent</item>
+        <item name="android:windowLightStatusBar">true</item>
+    </style>
+</resources>

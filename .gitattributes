@@ -1,0 +1,14 @@
+# 统一换行符，避免 Windows 提交的 CRLF 让 CI 的 shell 脚本失败
+* text=auto
+
+gradlew text eol=lf
+*.sh text eol=lf
+*.bat text eol=crlf
+*.cmd text eol=crlf
+
+# 二进制
+*.apk binary
+*.jar binary
+*.webp binary
+*.png binary
+*.jpg binary
