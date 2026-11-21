@@ -141,6 +141,53 @@ object ImageUtils {
         )
     }
 
+
+    /**
+     * 把题目图处理成「白底黑字」。
+     *
+     * 流程：灰度 → Sauvola 局部二值化 → 反相检查（保证字黑底白）→
+     * 二值化结果太极端（几乎全黑/全白）时退回灰度增强，避免把整题压成黑块。
+     */
+    fun Bitmap.toHighContrast(): Bitmap {
+        val src = scaledToMaxSide(1600)
+        val w = src.width
+        val h = src.height
+        if (w <= 0 || h <= 0) return src
+
+        val pixels = IntArray(w * h)
+        src.getPixels(pixels, 0, w, 0, 0, w, h)
+
+        val gray = IntArray(w * h)
+        for (i in pixels.indices) {
+            val c = pixels[i]
+            val r = (c shr 16) and 0xFF
+            val g = (c shr 8) and 0xFF
+            val b = c and 0xFF
+            gray[i] = ((0.299f * r + 0.587f * g + 0.114f * b).toInt()).coerceIn(0, 255)
+        }
+
+        val binary = Binarizer.ensureWhiteBackground(Binarizer.sauvola(gray, w, h))
+        val blackRatio = Binarizer.blackRatio(binary)
+
+        val out = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888)
+        if (blackRatio in 0.005f..0.55f) {
+            val buffer = IntArray(w * h) { i ->
+                if (binary[i] == 0) 0xFF000000.toInt() else 0xFFFFFFFF.toInt()
+            }
+            out.setPixels(buffer, 0, w, 0, 0, w, h)
+        } else {
+            // 二值化失败：整片过黑或过白，退回「灰度 + 拉对比度」，至少比原图清楚
+            val buffer = IntArray(w * h) { i ->
+                val v = ((gray[i] - 128) * 1.35f + 128f).toInt().coerceIn(0, 255)
+                (0xFF shl 24) or (v shl 16) or (v shl 8) or v
+            }
+            out.setPixels(buffer, 0, w, 0, 0, w, h)
+        }
+
+        if (src !== this) src.recycle()
+        return out
+    }
+
     fun Bitmap.toWebp(quality: Int = 82): ByteArray {
         val out = ByteArrayOutputStream()
         // WEBP_LOSSY 需要 API 30+，旧机型退回 WEBP（已废弃但可用）

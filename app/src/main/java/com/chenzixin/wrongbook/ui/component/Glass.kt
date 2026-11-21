@@ -55,6 +55,42 @@ import kotlin.math.sin
  * 性能说明：动画只走绘制阶段（不触发重组），周期 28s；低端机可传 animated = false。
  * TODO(人验)：低端机滚动时是否掉帧。
  */
+
+/**
+ * 每个页面的底层：不透明纯色 + 静态极光。
+ *
+ * 为什么每个页面都要一层：
+ * 全面屏手势返回时，系统会把两个页面同时做淡入淡出；如果页面本身透明，
+ * 上一页的文字会和下一页叠在一起（观感很差），也会透出壁纸。
+ * 这里给每页铺一层不透明底，转场时就是「一页盖一页」，不再互相透视。
+ */
+@Composable
+fun WbPageBase(modifier: Modifier = Modifier) {
+    val colors = wbColors()
+    Canvas(modifier = modifier.fillMaxSize()) {
+        drawRect(
+            brush = Brush.verticalGradient(listOf(colors.canvasTop, colors.canvasBottom)),
+        )
+        // 两团静态光斑：位置固定，避免每页动画不同步造成的闪烁
+        val first = colors.aurora.getOrNull(0) ?: colors.accent
+        val second = colors.aurora.getOrNull(1) ?: colors.accentEnd
+        drawRect(
+            brush = Brush.radialGradient(
+                colors = listOf(first.copy(alpha = if (colors.isDark) 0.35f else 0.5f), Color.Transparent),
+                center = Offset(size.width * 0.18f, size.height * 0.06f),
+                radius = size.minDimension * 0.85f,
+            ),
+        )
+        drawRect(
+            brush = Brush.radialGradient(
+                colors = listOf(second.copy(alpha = if (colors.isDark) 0.28f else 0.38f), Color.Transparent),
+                center = Offset(size.width * 0.86f, size.height * 0.72f),
+                radius = size.minDimension * 0.75f,
+            ),
+        )
+    }
+}
+
 @Composable
 fun WbAmbientBackground(
     modifier: Modifier = Modifier,

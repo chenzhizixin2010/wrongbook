@@ -146,9 +146,10 @@ class ScanViewModel @Inject constructor(
      * 取「识别出的有效字符最多」的那个（试卷文字远多于噪声，这个判据很稳）。
      */
     private suspend fun autoOrient(bitmap: Bitmap): Bitmap {
-        if (bitmap.height >= bitmap.width) return bitmap
-        val small = bitmap.scaledToMaxSide(1400)
-        val candidates = listOf(0, 90, 270)
+        val landscape = bitmap.width > bitmap.height
+        // 竖图也可能上下颠倒（拍反了），所以竖图比 0°/180°；横图比四个方向
+        val candidates = if (landscape) listOf(0, 90, 180, 270) else listOf(0, 180)
+        val small = bitmap.scaledToMaxSide(1200)
         var bestDeg = 0
         var bestScore = -1
         candidates.forEach { deg ->

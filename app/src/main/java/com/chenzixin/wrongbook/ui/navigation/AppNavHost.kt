@@ -50,6 +50,7 @@ import com.chenzixin.wrongbook.BuildConfig
 import com.chenzixin.wrongbook.feature.update.UpdateCheckViewModel
 import com.chenzixin.wrongbook.ui.component.UpdateRecommendedDialog
 import com.chenzixin.wrongbook.ui.component.WbAmbientBackground
+import com.chenzixin.wrongbook.ui.component.WbPageBase
 import com.chenzixin.wrongbook.ui.component.WbGlassTabBar
 import com.chenzixin.wrongbook.ui.component.WbIcons
 import com.chenzixin.wrongbook.ui.component.WbTabItem
@@ -170,7 +171,7 @@ fun AppNavHost() {
     val navBottom = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
     val colors = wbColors()
 
-    Box(modifier = Modifier.fillMaxSize()) {
+    Box(modifier = Modifier.fillMaxSize().background(colors.canvasBottom)) {
         WbAmbientBackground()
 
         NavHost(
@@ -376,6 +377,7 @@ private fun WbRoute(
     Box(
         modifier = Modifier
             .fillMaxSize()
+            .background(wbColors().canvasBottom)
             .then(
                 if (insetTop) Modifier.windowInsetsPadding(WindowInsets.statusBars) else Modifier,
             )
@@ -383,6 +385,8 @@ private fun WbRoute(
                 if (insetBottom) Modifier.windowInsetsPadding(WindowInsets.navigationBars) else Modifier,
             ),
     ) {
+        // 每页自带不透明底：侧滑返回转场时不会和上一页互相透视
+        WbPageBase()
         content()
     }
 }

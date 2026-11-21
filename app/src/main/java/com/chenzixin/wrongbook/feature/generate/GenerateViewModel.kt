@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.chenzixin.wrongbook.core.WbResult
 import com.chenzixin.wrongbook.data.generate.PracticeRepository
+import com.chenzixin.wrongbook.data.practice.PracticeSheetStore
 import com.chenzixin.wrongbook.data.local.entity.TagEntity
 import com.chenzixin.wrongbook.data.repository.SettingsRepository
 import com.chenzixin.wrongbook.data.repository.TagRepository
@@ -22,6 +23,7 @@ class GenerateViewModel @Inject constructor(
     private val practiceRepo: PracticeRepository,
     private val tagRepo: TagRepository,
     private val settings: SettingsRepository,
+    private val sheetStore: PracticeSheetStore,
 ) : ViewModel() {
 
     data class UiState(
@@ -40,6 +42,7 @@ class GenerateViewModel @Inject constructor(
         /** 生成后的提示（AI 失败等） */
         val warning: String? = null,
         val aiAvailable: Boolean = true,
+        val history: List<PracticeSheetStore.Record> = emptyList(),
     ) {
         val filter: TagFilter get() = TagFilter(tagIds = selectedTagIds, matchAll = matchAll)
         val askFill: Boolean get() = pendingPlan != null
@@ -55,6 +58,7 @@ class GenerateViewModel @Inject constructor(
             }
             val available = runCatching { settings.resolveActive() }.getOrNull() != null
             _state.update { it.copy(aiAvailable = available) }
+            refreshHistory()
         }
     }
 
@@ -118,7 +122,17 @@ class GenerateViewModel @Inject constructor(
         val request = _state.value.toRequest()
         when (val result = practiceRepo.generate(plan, request, fillMissing)) {
             is WbResult.Ok -> {
-                val html = practiceRepo.renderHtml(result.value.sheet)
+                val sheet = result.value.sheet
+                val html = practiceRepo.renderHtml(sheet)
+                // 存一份历史，方便以后重新打印/另存 PDF
+                runCatching {
+                    sheetStore.save(
+                        html = html,
+                        title = sheet.title,
+                        subtitle = sheet.subtitle,
+                        count = sheet.items.size,
+                    )
+                }
                 _state.update {
                     it.copy(
                         generating = false,
@@ -126,6 +140,7 @@ class GenerateViewModel @Inject constructor(
                         warning = result.value.warning,
                     )
                 }
+                refreshHistory()
             }
             is WbResult.Err -> _state.update { it.copy(generating = false, message = result.message) }
         }
@@ -138,4 +153,37 @@ class GenerateViewModel @Inject constructor(
         withAnswers = withAnswers,
         title = sheetTitle.ifBlank { "错题巩固练习" },
     )
+
+    // ---------------------------------------------------------------- 历史记录
+
+    private fun refreshHistory() {
+        viewModelScope.launch {
+            val list = runCatching { sheetStore.list() }.getOrDefault(emptyList())
+            _state.update { it.copy(history = list) }
+        }
+    }
+
+    /** 打开一份历史卷：直接进预览，可再次打印或另存 PDF。 */
+    fun openHistory(record: PracticeSheetStore.Record) {
+        viewModelScope.launch {
+            val html = runCatching { sheetStore.read(record.id) }.getOrNull()
+            if (html == null) {
+                _state.update { it.copy(message = "这份历史记录的文件不在了") }
+            } else {
+                _state.update { it.copy(html = html) }
+            }
+        }
+    }
+
+    fun deleteHistory(record: PracticeSheetStore.Record) {
+        viewModelScope.launch {
+            when (val r = sheetStore.delete(record.id)) {
+                is WbResult.Ok -> {
+                    refreshHistory()
+                    _state.update { it.copy(message = "已删除这条历史记录") }
+                }
+                is WbResult.Err -> _state.update { it.copy(message = r.message) }
+            }
+        }
+    }
 }

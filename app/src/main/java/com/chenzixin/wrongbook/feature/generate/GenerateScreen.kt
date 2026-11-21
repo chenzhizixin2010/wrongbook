@@ -84,6 +84,8 @@ fun GenerateScreen(vm: GenerateViewModel = hiltViewModel()) {
             onUseAi = vm::setUseAi,
             onTitle = vm::onTitleChange,
             onGenerate = vm::generate,
+            onOpenHistory = vm::openHistory,
+            onDeleteHistory = vm::deleteHistory,
         )
     } else {
         PreviewContent(
@@ -144,6 +146,8 @@ private fun SetupContent(
     onUseAi: (Boolean) -> Unit,
     onTitle: (String) -> Unit,
     onGenerate: () -> Unit,
+    onOpenHistory: (com.chenzixin.wrongbook.data.practice.PracticeSheetStore.Record) -> Unit,
+    onDeleteHistory: (com.chenzixin.wrongbook.data.practice.PracticeSheetStore.Record) -> Unit,
 ) {
     val colors = wbColors()
     val bottomSpace = wbTabBarSpace()
@@ -304,6 +308,52 @@ private fun SetupContent(
                                 .size(22.dp)
                                 .clip(RoundedCornerShape(percent = 50))
                                 .background(Color.White),
+                        )
+                    }
+                }
+            }
+        }
+
+        if (state.history.isNotEmpty()) {
+            WbSection(
+                header = "历史练习卷",
+                footer = "点开可以重新打印或另存 PDF；最多保留 30 份。",
+            ) {
+                state.history.forEachIndexed { index, record ->
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { onOpenHistory(record) }
+                            .padding(horizontal = 16.dp, vertical = 12.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            CupertinoText(
+                                text = record.title,
+                                fontSize = 14.sp,
+                                color = colors.label,
+                                maxLines = 1,
+                            )
+                            CupertinoText(
+                                text = "${formatSheetTime(record.createdAt)} · ${record.count} 题",
+                                modifier = Modifier.padding(top = 2.dp),
+                                fontSize = 11.sp,
+                                color = colors.secondaryLabel,
+                            )
+                        }
+                        WbTextButton(
+                            text = "删除",
+                            fontSize = 12,
+                            onClick = { onDeleteHistory(record) },
+                        )
+                    }
+                    if (index != state.history.lastIndex) {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 16.dp)
+                                .height(1.dp)
+                                .background(colors.secondaryLabel.copy(alpha = 0.12f)),
                         )
                     }
                 }
@@ -499,4 +549,18 @@ private fun printSheet(context: Context, webView: WebView) {
         .setMediaSize(PrintAttributes.MediaSize.ISO_A4)
         .build()
     printManager.print("Errata 练习卷", adapter, attributes)
+}
+
+/** 历史记录时间：今天显示时分，其余显示月-日 时:分。 */
+private fun formatSheetTime(millis: Long): String {
+    val cal = java.util.Calendar.getInstance().apply { timeInMillis = millis }
+    val now = java.util.Calendar.getInstance()
+    val sameDay = cal.get(java.util.Calendar.YEAR) == now.get(java.util.Calendar.YEAR) &&
+        cal.get(java.util.Calendar.DAY_OF_YEAR) == now.get(java.util.Calendar.DAY_OF_YEAR)
+    val hh = "%02d".format(cal.get(java.util.Calendar.HOUR_OF_DAY))
+    val mm = "%02d".format(cal.get(java.util.Calendar.MINUTE))
+    return if (sameDay) "今天 $hh:$mm" else "%02d-%02d $hh:$mm".format(
+        cal.get(java.util.Calendar.MONTH) + 1,
+        cal.get(java.util.Calendar.DAY_OF_MONTH),
+    )
 }
