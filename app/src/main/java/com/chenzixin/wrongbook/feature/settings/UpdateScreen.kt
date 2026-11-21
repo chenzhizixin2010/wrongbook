@@ -25,6 +25,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.chenzixin.wrongbook.BuildConfig
+import com.chenzixin.wrongbook.domain.update.ReleaseNotesFormatter
 import com.chenzixin.wrongbook.ui.component.GlassSurface
 import com.chenzixin.wrongbook.ui.component.WbAlertDialog
 import com.chenzixin.wrongbook.ui.component.WbBadge
@@ -86,7 +87,7 @@ fun UpdateScreen(
                     icon = CupertinoIcons.Outlined.InfoCircle,
                 ) {
                     CupertinoText(
-                        text = info.notes.ifBlank { "这个版本没有写更新说明" }.take(1500),
+                        text = ReleaseNotesFormatter.toPlainText(info.notes, 2000).ifBlank { "这个版本没有写更新说明" },
                         modifier = Modifier.padding(16.dp),
                         fontSize = 13.5.sp,
                         lineHeight = 21.sp,

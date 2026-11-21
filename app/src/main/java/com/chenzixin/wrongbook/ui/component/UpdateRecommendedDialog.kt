@@ -20,6 +20,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import com.chenzixin.wrongbook.data.update.UpdateInfo
+import com.chenzixin.wrongbook.domain.update.ReleaseNotesFormatter
 import com.chenzixin.wrongbook.ui.theme.wbColors
 import io.github.robinpcrd.cupertino.CupertinoText
 
@@ -62,11 +63,11 @@ fun UpdateRecommendedDialog(
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .heightIn(max = 200.dp)
+                        .heightIn(max = 240.dp)
                         .verticalScroll(rememberScrollState()),
                 ) {
                     CupertinoText(
-                        text = info.notes.take(800),
+                        text = ReleaseNotesFormatter.toPlainText(info.notes, maxChars = 1500),
                         fontSize = 13.sp,
                         color = colors.secondaryLabel,
                     )

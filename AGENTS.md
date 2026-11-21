@@ -46,7 +46,7 @@
 | 7 | 不在主线程做 IO / OCR / 图片解码 | 卡顿与 ANR |
 | 8 | 图片入库前必须压缩（长边 ≤1600px，WebP），并生成 200px 缩略图 | 包体与列表性能 |
 | 9 | 危险操作（删题/删标签/删会话/清空数据）必须二次确认 | 误操作不可逆 |
-| 10 | 权限只申请 `CAMERA` 和 `POST_NOTIFICATIONS`，且在使用时申请；导出用 SAF，不申请存储权限 | 上架合规 |
+| 10 | 权限只保留 `CAMERA` / `INTERNET` / `ACCESS_NETWORK_STATE` / `REQUEST_INSTALL_PACKAGES`；导出用 SAF，不申请存储权限 | 上架合规（复习提醒已下线，不再申请通知权限） |
 | 11 | 不改 P0 已定的目录分层（feature → domain → data） | 保持可维护性 |
 | 12 | 每阶段结束必须能 `gradle :app:assembleDebug` 与 `gradle :app:testDebugUnitTest` 通过 | 编译失败等于没做 |
 
@@ -97,7 +97,8 @@ app/src/main/java/com/chenzixin/wrongbook/
 │   ├── ocr/              ML Kit OCR 引擎
 │   ├── export/           备份 DTO 与 ZIP 读写
 │   ├── security/         Keystore AES/GCM
-│   └── work/             每日复习提醒
+│   ├── prefs/             主题与更新提示的 DataStore
+│   └── generate/          练习卷生成
 ├── domain/               UseCase：SegmentQuestions、SaveQuestions、ReviewScheduler、RefineQuestion
 ├── feature/{home,scan,chat,review,settings,questiondetail,export}/
 ├── ui/{theme,component,navigation}/
@@ -184,7 +185,7 @@ data class QuestionRegion(
 | **P6** AI 对话 | 会话/消息、SSE 流式、Markdown+LaTeX、上下文摘要 | ✅ 代码完成；**待真 Key 验流式** |
 | **P7** AI 整理 | 结构化 JSON 回填、生成同类题入库、三段式容错 | ✅ 代码完成 + 解析单测；**成功率待真 Key 验** |
 | **P7.5** 导出导入 | ZIP 导出、SAF 导入、判重幂等、版本校验 | ✅ 代码完成 + 往返单测 |
-| **P8** 巩固/打磨/上架 | 复习队列、统计图表、每日提醒、透视矫正、手动建题、上架材料 | ✅ 代码与材料完成；图标与备案待你定稿 |
+| **P8** 生成/打磨/上架 | 练习卷生成、统计图表、透视矫正、手动建题、主题切换、上架材料 | ✅ 代码与材料完成；图标与备案待你定稿 |
 
 每张任务卡的完整版见 [`docs/task-cards.md`](docs/task-cards.md)。
 
@@ -255,3 +256,17 @@ gradle :app:assembleDebug :app:testDebugUnitTest
 - 依赖默认走 `D:\dev-tools\maven-mirrors.gradle`；没有该文件时用 google()/mavenCentral()，速度可能很慢。
 - 实验性开关与版本约束见第 3 节，**不要**为了让某个警告消失而删掉那三行 `gradle.properties`。
 - **API Key 只在运行时由用户输入**：任何情况下都不要把测试 Key 写进源码、文档、注释或提交记录。
+
+---
+
+## 13. 发版约定（每次发版都要照做）
+
+1. `app/build.gradle.kts`：`versionCode` +1，`versionName` 改成新版本。
+2. **写更新日志**：`docs/release-notes/<tag>.md`（例如 `v0.4.1.md`）。
+   - CI 会把这个文件作为 Release 正文；
+   - App 的「大版本更新弹窗」和「检查更新」页显示的就是它，所以要用**用户能看懂的中文**，`## 新增 / ## 修复 / ## 移除` 分块。
+3. 本地验证：`gradle :app:assembleDebug :app:testDebugUnitTest`。
+4. 提交 → 推 `main` → 打 tag 并推 tag（CI 自动构建并发布）。
+5. 发布后核对：Release 里有 `wrongbook-<tag>.apk`，且正文是中文更新日志。
+
+> 更新提示分级：主版本/次版本变化弹「建议更新」；只有修订号变化不弹窗。

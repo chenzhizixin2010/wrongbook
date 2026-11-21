@@ -1,7 +1,8 @@
 name: Build & Release APK
 
-# 打 tag（v0.3.0 这种）时自动构建 APK 并挂到 GitHub Release。
-# App 内「设置 → 检查更新」读的就是这个 Release。
+# 打 tag（v0.4.0 这种）时自动构建 APK 并挂到 GitHub Release。
+# App 内「设置 → 检查更新」和「大版本提示弹窗」读的就是这个 Release 的正文。
+# 正文优先用 docs/release-notes/<tag>.md（中文更新日志），没有才退回自动生成。
 on:
   push:
     tags:
@@ -15,7 +16,6 @@ jobs:
   build:
     runs-on: ubuntu-latest
     env:
-      # runner 自带 Android SDK，直接复用，避免 setup-android 的 sdkmanager 版本坑
       ANDROID_HOME: /usr/local/lib/android/sdk
       ANDROID_SDK_ROOT: /usr/local/lib/android/sdk
     steps:
@@ -63,16 +63,31 @@ jobs:
           cp app/build/outputs/apk/debug/app-debug.apk "dist/wrongbook-${GITHUB_REF_NAME}.apk"
           ls -lh dist
 
+      # 更新日志：docs/release-notes/<tag>.md 存在就用它，保证 App 弹窗里是中文说明
+      - name: Resolve release notes
+        id: notes
+        run: |
+          f="docs/release-notes/${GITHUB_REF_NAME}.md"
+          if [ -f "$f" ]; then
+            echo "body_path=$f" >> "$GITHUB_OUTPUT"
+            echo "custom=true" >> "$GITHUB_OUTPUT"
+            echo "使用自定义更新日志: $f"
+          else
+            echo "custom=false" >> "$GITHUB_OUTPUT"
+            echo "没有 $f，使用自动生成的说明"
+          fi
+
       - name: Publish release
         uses: softprops/action-gh-release@v2
         with:
           files: dist/*.apk
-          generate_release_notes: true
+          body_path: ${{ steps.notes.outputs.body_path }}
+          generate_release_notes: ${{ steps.notes.outputs.custom == 'false' }}
           fail_on_unmatched_files: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-# 说明：
-# 1. 这里发布的是 debug 签名 APK，能直接安装升级（同签名覆盖安装）。
-# 2. 若要上架或对外分发，建议在仓库 Secrets 里放 keystore，改成 assembleRelease 并配置 signingConfig。
-# 3. App 内下载后会校验文件 > 1MB，然后调系统安装器。
+# 发版约定：
+# 1. 改 app/build.gradle.kts 的 versionCode(+1) 与 versionName
+# 2. 写 docs/release-notes/<tag>.md（这份正文会显示在 App 的更新弹窗里）
+# 3. 推 tag，CI 自动构建并发布
