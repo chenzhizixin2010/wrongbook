@@ -2,8 +2,10 @@ package com.chenzixin.wrongbook.data.ocr
 
 import android.graphics.Bitmap
 import com.chenzixin.wrongbook.core.awaitTask
+import com.chenzixin.wrongbook.core.ImageUtils.prepareForOcr
 import com.chenzixin.wrongbook.di.IoDispatcher
 import com.chenzixin.wrongbook.domain.scan.OcrLine
+import com.chenzixin.wrongbook.domain.scan.OcrLineCleaner
 import com.chenzixin.wrongbook.domain.scan.OcrResult
 import com.google.mlkit.vision.common.InputImage
 import com.google.mlkit.vision.text.TextRecognition
@@ -34,7 +36,9 @@ class MlKitOcrEngine @Inject constructor(
     }
 
     override suspend fun recognize(bitmap: Bitmap): OcrResult = withContext(io) {
-        val image = InputImage.fromBitmap(bitmap, 0)
+        // 先灰度 + 拉对比度 + 补足分辨率，手写/低光照片的细笔画才不会被吞掉
+        val prepared = bitmap.prepareForOcr()
+        val image = InputImage.fromBitmap(prepared, 0)
         val text = recognizer.process(image).awaitTask()
 
         val lines = mutableListOf<OcrLine>()
@@ -52,6 +56,7 @@ class MlKitOcrEngine @Inject constructor(
                 )
             }
         }
-        OcrResult(imageWidth = bitmap.width, imageHeight = bitmap.height, lines = lines)
+        val cleaned = OcrLineCleaner.clean(lines)
+        OcrResult(imageWidth = prepared.width, imageHeight = prepared.height, lines = cleaned)
     }
 }

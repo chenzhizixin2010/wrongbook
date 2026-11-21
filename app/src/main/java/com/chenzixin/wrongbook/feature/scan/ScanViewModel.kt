@@ -68,17 +68,41 @@ class ScanViewModel @Inject constructor(
                 var regions: List<QuestionRegion>? = null
                 var engine = "本地识别"
 
-                // 第一层：配置了视觉模型就先用它（失败/为空自动降级）
+                // 第一层：配置了视觉模型就先用它（失败/为空自动降级，但要把原因说出来）
+                var visionTried = false
+                var visionError: String? = null
                 if (active != null && active.profile.visionModel.isNotBlank()) {
-                    regions = vision.segment(active.profile, active.apiKey, bitmap)
+                    visionTried = true
+                    val outcome = runCatching {
+                        vision.segment(active.profile, active.apiKey, bitmap)
+                    }.getOrNull()
+                    when (outcome) {
+                        is WbResult.Ok -> {
+                            val value = outcome.value
+                            if (value.any { it.text.isNotBlank() }) {
+                                regions = value
+                            } else {
+                                visionError = "模型返回了题目框但没有文字"
+                            }
+                        }
+                        is WbResult.Err -> visionError = outcome.message
+                        null -> visionError = "调用过程抛出异常"
+                    }
                     if (!regions.isNullOrEmpty()) engine = "AI 识图"
                 }
 
                 // 第二层：本地 ML Kit OCR + 规则切分
+                var fallbackHint: String? = null
                 if (regions.isNullOrEmpty()) {
                     val ocrResult = ocr.recognize(bitmap)
                     regions = QuestionSegmenter.segment(ocrResult)
                     engine = "本地识别"
+                    // 降级要让用户知道原因，否则只会觉得「识别很烂」
+                    fallbackHint = if (visionTried) {
+                        "AI 识图失败：${visionError ?: "模型没返回可解析的题目"}。已改用本地识别，文字可在详情页手动改。"
+                    } else {
+                        "当前用本地识别。想更准可以在设置里配置支持图片的模型（如 deepseek-flash、豆包）。"
+                    }
                 }
 
                 if (regions.isEmpty()) {
@@ -89,7 +113,13 @@ class ScanViewModel @Inject constructor(
                 }
                 val selectable = regions.indices.filter { !regions[it].isSectionHeader }.toSet()
                 _state.update {
-                    it.copy(stage = Stage.Selecting, regions = regions, selected = selectable, engine = engine)
+                    it.copy(
+                        stage = Stage.Selecting,
+                        regions = regions,
+                        selected = selectable,
+                        engine = engine,
+                        message = fallbackHint,
+                    )
                 }
             } catch (t: Throwable) {
                 _state.update {

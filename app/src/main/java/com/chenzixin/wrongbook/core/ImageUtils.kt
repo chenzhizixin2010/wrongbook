@@ -64,6 +64,51 @@ object ImageUtils {
         return Base64.encodeToString(out.toByteArray(), Base64.NO_WRAP)
     }
 
+
+    /**
+     * OCR 前预处理：灰度 + 提高对比度 + 保证足够分辨率。
+     *
+     * 实测：手写/倾斜的试卷照片直接丢给 ML Kit，二值化不足会让细笔画被吞掉；
+     * 先灰度+拉对比度、并保证短边不低（≥1200px）能明显提升中文识别率。
+     */
+    fun Bitmap.prepareForOcr(maxSide: Int = 2200, minWidth: Int = 1200): Bitmap {
+        var work = scaledToMaxSide(maxSide)
+        if (work.width < minWidth) {
+            val ratio = minWidth.toFloat() / work.width
+            val up = Bitmap.createScaledBitmap(
+                work,
+                minWidth,
+                (work.height * ratio).toInt().coerceAtLeast(1),
+                true,
+            )
+            if (up !== work) {
+                if (work !== this) work.recycle()
+                work = up
+            }
+        }
+
+        val out = Bitmap.createBitmap(work.width, work.height, Bitmap.Config.ARGB_8888)
+        val matrix = android.graphics.ColorMatrix().apply {
+            setSaturation(0f)
+            postConcat(
+                android.graphics.ColorMatrix(
+                    floatArrayOf(
+                        1.45f, 0f, 0f, 0f, -55f,
+                        0f, 1.45f, 0f, 0f, -55f,
+                        0f, 0f, 1.45f, 0f, -55f,
+                        0f, 0f, 0f, 1f, 0f,
+                    ),
+                ),
+            )
+        }
+        val paint = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG).apply {
+            colorFilter = android.graphics.ColorMatrixColorFilter(matrix)
+        }
+        android.graphics.Canvas(out).drawBitmap(work, 0f, 0f, paint)
+        if (work !== this) work.recycle()
+        return out
+    }
+
     fun Bitmap.toWebp(quality: Int = 82): ByteArray {
         val out = ByteArrayOutputStream()
         // WEBP_LOSSY 需要 API 30+，旧机型退回 WEBP（已废弃但可用）

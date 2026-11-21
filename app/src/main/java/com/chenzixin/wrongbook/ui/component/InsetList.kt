@@ -38,6 +38,8 @@ fun WbSection(
     footer: String? = null,
     modifier: Modifier = Modifier,
     icon: ImageVector? = null,
+    /** 标题行右侧的操作区（比如「编辑」按钮） */
+    action: (@Composable () -> Unit)? = null,
     content: @Composable ColumnScope.() -> Unit,
 ) {
     val colors = wbColors()
@@ -57,12 +59,17 @@ fun WbSection(
                 }
                 CupertinoText(
                     text = header,
+                    modifier = Modifier.weight(1f, fill = false),
                     fontSize = 12.sp,
                     fontWeight = FontWeight.SemiBold,
                     letterSpacing = 0.5.sp,
                     color = colors.secondaryLabel,
                     maxLines = 1,
                 )
+                if (action != null) {
+                    Spacer(Modifier.weight(1f))
+                    action()
+                }
             }
         }
         GlassSurface(

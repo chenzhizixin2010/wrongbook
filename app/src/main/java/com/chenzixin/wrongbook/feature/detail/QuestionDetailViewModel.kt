@@ -145,6 +145,18 @@ class QuestionDetailViewModel @Inject constructor(
         }
     }
 
+    /** 手动编辑题干：OCR 再差也有兜底，用户改完立即生效。 */
+    fun saveText(text: String) {
+        val question = item.value?.question ?: return
+        if (text.isBlank()) return
+        viewModelScope.launch {
+            when (repo.update(question.copy(refinedText = text.trim()))) {
+                is WbResult.Ok -> _message.value = "已保存"
+                is WbResult.Err -> _message.value = "保存失败，请重试"
+            }
+        }
+    }
+
     fun saveRefined(refined: RefinedQuestion) {
         val question = item.value?.question ?: return
         viewModelScope.launch {

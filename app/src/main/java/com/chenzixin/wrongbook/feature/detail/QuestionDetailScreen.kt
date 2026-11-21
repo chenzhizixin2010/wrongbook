@@ -45,7 +45,9 @@ import com.chenzixin.wrongbook.ui.component.WbGlassIconButton
 import com.chenzixin.wrongbook.ui.component.WbListRow
 import com.chenzixin.wrongbook.ui.component.WbPrimaryButton
 import com.chenzixin.wrongbook.ui.component.WbSecondaryButton
+import com.chenzixin.wrongbook.ui.component.WbInputDialog
 import com.chenzixin.wrongbook.ui.component.WbSection
+import com.chenzixin.wrongbook.ui.component.WbTextButton
 import com.chenzixin.wrongbook.ui.component.WbTextField
 import com.chenzixin.wrongbook.ui.component.WbTopBar
 import com.chenzixin.wrongbook.ui.theme.wbColors
@@ -76,6 +78,8 @@ fun QuestionDetailScreen(
     val colors = wbColors()
     val context = LocalContext.current
     var confirmDelete by remember { mutableStateOf(false) }
+    var editingText by remember { mutableStateOf(false) }
+    var editingValue by remember { mutableStateOf("") }
     var editingRefined by remember { mutableStateOf<RefinedQuestion?>(null) }
     var variantsToSave by remember { mutableStateOf<List<RefinedQuestion>?>(null) }
 
@@ -150,6 +154,16 @@ fun QuestionDetailScreen(
             WbSection(
                 header = if (question.refinedText != null) "题干 · AI 整理" else "题目原文",
                 icon = CupertinoIcons.Outlined.ListBullet,
+                footer = "识别不准可以手动改，改完按保存。",
+                action = {
+                    WbTextButton(
+                        text = "编辑",
+                        onClick = {
+                            editingValue = question.refinedText ?: question.rawOcrText
+                            editingText = true
+                        },
+                    )
+                },
             ) {
                 SelectionContainer {
                     CupertinoText(
@@ -320,6 +334,20 @@ fun QuestionDetailScreen(
             },
         )
     }
+
+    WbInputDialog(
+        visible = editingText,
+        title = "编辑题目文字",
+        placeholder = "把识别错的地方改对",
+        confirmText = "保存",
+        initialValue = editingValue,
+        multiline = true,
+        onConfirm = { text ->
+            editingText = false
+            vm.saveText(text)
+        },
+        onDismiss = { editingText = false },
+    )
 
     WbAlertDialog(
         visible = confirmDelete,

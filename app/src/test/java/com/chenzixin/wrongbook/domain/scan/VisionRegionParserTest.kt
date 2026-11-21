@@ -74,4 +74,45 @@ class VisionRegionParserTest {
         assertEquals(1f, rect.right, 0.0001f)
         assertEquals(1f, rect.bottom, 0.0001f)
     }
+
+    @Test
+    fun `bbox 写成字符串也能解析`() {
+        val raw = """{"questions":[{"index":1,"label":"1.","bbox":"0.1,0.2,0.5,0.4","text":"string box"}]}"""
+        val regions = VisionRegionParser.parse(raw, 1000, 1000)
+        assertEquals(1, regions?.size)
+        assertEquals(0.1f, regions!![0].rect.left, 0.001f)
+        assertEquals(0.4f, regions[0].rect.bottom, 0.001f)
+    }
+
+    @Test
+    fun `bbox 写成对象也能解析`() {
+        val raw = """{"questions":[{"index":2,"label":"2.","bbox":{"left":0.2,"top":0.3,"right":0.6,"bottom":0.5},"text":"object box"}]}"""
+        val regions = VisionRegionParser.parse(raw, 1000, 1000)
+        assertEquals(1, regions?.size)
+        assertEquals(0.2f, regions!![0].rect.left, 0.001f)
+        assertEquals(0.6f, regions[0].rect.right, 0.001f)
+    }
+
+    @Test
+    fun `bbox 用宽高也能换算`() {
+        val raw = """{"questions":[{"index":3,"bbox":{"x":0.1,"y":0.2,"width":0.3,"height":0.2},"text":"wh"}]}"""
+        val regions = VisionRegionParser.parse(raw, 1000, 1000)
+        assertEquals(1, regions?.size)
+        assertEquals(0.4f, regions!![0].rect.right, 0.001f)
+    }
+
+    @Test
+    fun `题号带点也能取到数字`() {
+        val raw = """{"questions":[{"index":"12.","bbox":[0.1,0.1,0.5,0.3],"text":"twelve"}]}"""
+        val regions = VisionRegionParser.parse(raw, 1000, 1000)
+        assertEquals(12, regions!![0].index)
+    }
+
+    @Test
+    fun `代码块包裹的 JSON 能解析`() {
+        val raw = "```json\n{\"questions\":[{\"index\":1,\"bbox\":[0.1,0.1,0.5,0.3],\"text\":\"fenced\"}]}\n```"
+        val regions = VisionRegionParser.parse(raw, 1000, 1000)
+        assertEquals(1, regions?.size)
+        assertEquals("fenced", regions!![0].text)
+    }
 }

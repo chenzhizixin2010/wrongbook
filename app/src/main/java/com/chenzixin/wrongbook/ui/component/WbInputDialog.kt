@@ -5,6 +5,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.runtime.Composable
@@ -28,6 +29,8 @@ fun WbInputDialog(
     placeholder: String,
     confirmText: String = "确定",
     initialValue: String = "",
+    /** 多行模式：编辑题目正文时用，输入框拉高、允许换行 */
+    multiline: Boolean = false,
     onConfirm: (String) -> Unit,
     onDismiss: () -> Unit,
 ) {
@@ -54,6 +57,12 @@ fun WbInputDialog(
                     value = value,
                     onValueChange = { value = it },
                     placeholder = placeholder,
+                    singleLine = !multiline,
+                    modifier = if (multiline) {
+                        Modifier.fillMaxWidth().heightIn(min = 120.dp, max = 260.dp)
+                    } else {
+                        Modifier.fillMaxWidth()
+                    },
                 )
                 Spacer(Modifier.height(20.dp))
                 Row(modifier = Modifier.fillMaxWidth()) {

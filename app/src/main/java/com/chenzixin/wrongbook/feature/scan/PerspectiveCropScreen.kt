@@ -78,7 +78,8 @@ fun PerspectiveCropScreen(
     var working by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
     val density = androidx.compose.ui.platform.LocalDensity.current
-    val hitRadius = with(density) { 44.dp.toPx() }
+    val hitRadius = with(density) { 56.dp.toPx() }
+    val currentQuad by androidx.compose.runtime.rememberUpdatedState(quad)
 
     // 画布内图片的缩放与偏移（触摸与绘制共用同一套计算）
     fun layout(size: IntSize): Triple<Float, Float, Float> {
@@ -94,11 +95,13 @@ fun PerspectiveCropScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .onSizeChanged { canvasSize = it }
-                .pointerInput(quad, canvasSize) {
+                // 注意：key 只能放 canvasSize。之前把 quad 也放进 key，
+                // 拖动时 quad 一变就重启 pointerInput，手势立刻被取消 —— 表现就是「拖不动」。
+                .pointerInput(canvasSize) {
                     detectDragGestures(
                         onDragStart = { start ->
                             val (scale, ox, oy) = layout(canvasSize)
-                            dragging = quad.indexOfFirst { p ->
+                            dragging = currentQuad.indexOfFirst { p ->
                                 val sx = ox + p.first * scale
                                 val sy = oy + p.second * scale
                                 (Offset(sx, sy) - start).getDistance() < hitRadius
@@ -112,10 +115,10 @@ fun PerspectiveCropScreen(
                             if (index < 0) return@detectDragGestures
                             val (scale, _, _) = layout(canvasSize)
                             if (scale <= 0f) return@detectDragGestures
-                            val current = quad[index]
+                            val current = currentQuad[index]
                             val nx = (current.first + dragAmount.x / scale).coerceIn(0f, imgW)
                             val ny = (current.second + dragAmount.y / scale).coerceIn(0f, imgH)
-                            quad = quad.toMutableList().also { it[index] = nx to ny }
+                            quad = currentQuad.toMutableList().also { it[index] = nx to ny }
                         },
                     )
                 },

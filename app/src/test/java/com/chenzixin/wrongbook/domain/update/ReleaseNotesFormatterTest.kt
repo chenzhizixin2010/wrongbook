@@ -45,4 +45,11 @@ class ReleaseNotesFormatterTest {
         val text = ReleaseNotesFormatter.toPlainText(raw)
         assertEquals("修复\n• 透视矫正手柄过小\n• 按钮对比度", text)
     }
+
+    @Test
+    fun `去掉加粗标记与引用符号`() {
+        val raw = "> 测试版说明\n\n- **新增**：免费服务商"
+        val text = ReleaseNotesFormatter.toPlainText(raw)
+        assertEquals("测试版说明\n\n• 新增：免费服务商", text)
+    }
 }

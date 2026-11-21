@@ -2,6 +2,8 @@ package com.chenzixin.wrongbook.domain.scan
 
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
+import kotlinx.serialization.json.JsonElement
+import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.jsonArray
@@ -33,9 +35,7 @@ object VisionRegionParser {
 
         val regions = array.mapNotNull { element ->
             val obj = element as? JsonObject ?: return@mapNotNull null
-            val bbox = obj["bbox"]?.jsonArray ?: return@mapNotNull null
-            if (bbox.size < 4) return@mapNotNull null
-            val values = bbox.mapNotNull { it.jsonPrimitive.contentOrNull?.toFloatOrNull() }
+            val values = parseBox(obj["bbox"]) ?: return@mapNotNull null
             if (values.size < 4) return@mapNotNull null
 
             val pixelLike = values.take(4).any { it > 1.5f }
@@ -53,7 +53,7 @@ object VisionRegionParser {
 
             val text = obj["text"]?.jsonPrimitive?.contentOrNull.orEmpty()
             QuestionRegion(
-                index = obj["index"]?.jsonPrimitive?.contentOrNull?.toIntOrNull() ?: -1,
+                index = parseIndex(obj["index"]?.jsonPrimitive?.contentOrNull),
                 label = obj["label"]?.jsonPrimitive?.contentOrNull.orEmpty(),
                 rect = rect,
                 text = text,
@@ -63,6 +63,48 @@ object VisionRegionParser {
         }
 
         return regions.takeIf { it.isNotEmpty() }
+    }
+
+    /**
+     * 兼容模型的各种 bbox 写法：
+     * - 数组 [l,t,r,b]（标准）
+     * - 字符串 "0.1,0.2,0.3,0.4"
+     * - 对象 {left,top,right,bottom} 或 {x,y,width,height}
+     */
+    private fun parseBox(element: JsonElement?): List<Float>? {
+        when (element) {
+            is JsonArray -> return element.mapNotNull { it.jsonPrimitive.contentOrNull?.toFloatOrNull() }
+            is JsonPrimitive -> {
+                val text = element.contentOrNull ?: return null
+                return text.split(',', ',', '，')
+                    .mapNotNull { it.trim().toFloatOrNull() }
+            }
+            is JsonObject -> {
+                fun num(vararg keys: String): Float? {
+                    keys.forEach { k -> element[k]?.jsonPrimitive?.contentOrNull?.toFloatOrNull()?.let { return it } }
+                    return null
+                }
+                val left = num("left", "x1", "x")
+                val top = num("top", "y1", "y")
+                val right = num("right", "x2")
+                val bottom = num("bottom", "y2")
+                if (left != null && top != null && right != null && bottom != null) {
+                    return listOf(left, top, right, bottom)
+                }
+                val w = num("width", "w")
+                val h = num("height", "h")
+                if (left != null && top != null && w != null && h != null) {
+                    return listOf(left, top, left + w, top + h)
+                }
+                return null
+            }
+            else -> return null
+        }
+    }
+
+    private fun parseIndex(text: String?): Int {
+        if (text.isNullOrBlank()) return -1
+        return text.toIntOrNull() ?: text.filter { it.isDigit() }.toIntOrNull() ?: -1
     }
 
     private fun extractQuestions(raw: String): JsonArray? {

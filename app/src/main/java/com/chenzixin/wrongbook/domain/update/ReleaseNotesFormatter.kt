@@ -16,10 +16,15 @@ object ReleaseNotesFormatter {
                 line.startsWith("# ") -> line.removePrefix("# ").trim()
                 line.startsWith("- ") -> "• " + line.removePrefix("- ").trim()
                 line.startsWith("* ") -> "• " + line.removePrefix("* ").trim()
+                line.startsWith("> ") -> line.removePrefix("> ").trim()
+                line == ">" -> ""
                 else -> line
             }
         }
         val text = lines.joinToString("\n")
+            // 去掉加粗/斜体标记，弹窗里不渲染 Markdown，留着就是裸符号
+            .replace("**", "")
+            .replace("__", "")
             .replace(Regex("\n{3,}"), "\n\n")
             .trim()
         return if (text.length <= maxChars) text else text.take(maxChars).trimEnd() + "…"
