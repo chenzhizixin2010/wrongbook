@@ -7,6 +7,8 @@
 - 视觉风格：iOS / Cupertino
 - 数据：纯本地（Room + 私有目录图片），手动导出 ZIP
 
+**仓库**：https://github.com/chenzhizixin2010/wrongbook ｜ **最新发布**：v0.3.0（Actions 自动构建，APK 62.8 MB）
+
 ## 当前状态
 
 P0~P8 **功能全部落地**，编译与单元测试通过；真实模型链路已用 DeepSeek 实测。
@@ -88,6 +90,8 @@ git push origin v0.3.1
 ```
 
 推 tag 后 GitHub Actions（[`.github/workflows/release.yml`](.github/workflows/release.yml)）会自动跑单测、构建 APK、创建 Release 并上传 `wrongbook-v0.3.1.apk`。
+
+已实测：`v0.3.0` 的 tag 触发 CI 成功，Release 页有 `wrongbook-v0.3.0.apk`（62.8 MB）；直连与 `ghproxy.net` 镜像均可下载。
 
 也可以手动触发：仓库 → Actions → Build & Release APK → Run workflow。
 
