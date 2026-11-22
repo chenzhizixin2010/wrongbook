@@ -148,7 +148,20 @@ class UpdateRepository @Inject constructor(
                 val started = System.currentTimeMillis()
                 client.newCall(request).execute().use { response ->
                     if (!response.isSuccessful) return@use null
-                    val read = response.body.byteStream().use { it.readNBytes(PROBE_BYTES + 1).size }
+                    val read = response.body.byteStream().use { input ->
+                        // 不能用 InputStream.readNBytes：那是 API 33 才有的方法，
+                        // minSdk 24 的机器上会抛 NoSuchMethodError（之前点下载就崩在这）
+                        val buffer = ByteArray(8 * 1024)
+                        var total = 0
+                        var remaining = PROBE_BYTES + 1
+                        while (remaining > 0) {
+                            val n = input.read(buffer, 0, minOf(buffer.size, remaining))
+                            if (n <= 0) break
+                            total += n
+                            remaining -= n
+                        }
+                        total
+                    }
                     if (read < 1024) null else (System.currentTimeMillis() - started).toInt()
                 }
             }.getOrNull()
@@ -163,6 +176,7 @@ class UpdateRepository @Inject constructor(
         val target = File(dir, "wrongbook-${info.version}.apk")
 
         var lastError: Throwable? = null
+        emit(DownloadProgress(0, info.sizeBytes, "正在测速选择最快的源…"))
         for ((url, label) in rankedCandidates(info.apkUrl)) {
             try {
                 val request = Request.Builder()
