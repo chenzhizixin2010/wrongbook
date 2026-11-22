@@ -1,16 +1,16 @@
-<?xml version="1.0" encoding="utf-8"?>
+﻿<?xml version="1.0" encoding="utf-8"?>
 <resources>
     <!--
       Android 12+ 的系统启动画面：只支持纯色底 + 一个图标，
-      所以这里用和极光顶部接近的颜色 + Errata 标记；随后 Compose 的开屏接上极光与字标。
+      所以这里用品牌蓝 + Errata 标记；随后 Compose 的开屏接上字标。
     -->
     <style name="Theme.WrongBook" parent="android:Theme.Material.Light.NoActionBar">
-        <item name="android:windowSplashScreenBackground">#F7F9FF</item>
-        <item name="android:windowSplashScreenAnimatedIcon">@drawable/ic_splash_mark</item>
+        <item name="android:windowSplashScreenBackground">#3482FF</item>
+        <item name="android:windowSplashScreenAnimatedIcon">@drawable/ic_splash</item>
         <item name="android:windowSplashScreenAnimationDuration">0</item>
         <item name="android:windowBackground">@drawable/splash_background</item>
         <item name="android:statusBarColor">@android:color/transparent</item>
         <item name="android:navigationBarColor">@android:color/transparent</item>
-        <item name="android:windowLightStatusBar">true</item>
+        <item name="android:windowLightStatusBar">false</item>
     </style>
 </resources>

@@ -27,6 +27,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.layout.ContentScale
@@ -38,30 +39,31 @@ import androidx.compose.ui.window.Dialog
 import androidx.hilt.navigation.compose.hiltViewModel
 import coil3.compose.AsyncImage
 import com.chenzixin.wrongbook.domain.ai.RefinedQuestion
-import com.chenzixin.wrongbook.ui.component.GlassSurface
+import com.chenzixin.wrongbook.ui.component.WbSurface
 import com.chenzixin.wrongbook.ui.component.WbAlertDialog
 import com.chenzixin.wrongbook.ui.component.WbBadge
-import com.chenzixin.wrongbook.ui.component.WbGlassIconButton
+import com.chenzixin.wrongbook.ui.component.WbIconButton
 import com.chenzixin.wrongbook.ui.component.WbListRow
 import com.chenzixin.wrongbook.ui.component.WbPrimaryButton
 import com.chenzixin.wrongbook.ui.component.WbSecondaryButton
 import com.chenzixin.wrongbook.ui.component.WbInputDialog
+import com.chenzixin.wrongbook.ui.component.MarkdownText
 import com.chenzixin.wrongbook.ui.component.WbSection
 import com.chenzixin.wrongbook.ui.component.WbTagEditorDialog
 import com.chenzixin.wrongbook.ui.component.WbTextButton
 import com.chenzixin.wrongbook.ui.component.WbTextField
 import com.chenzixin.wrongbook.ui.component.WbTopBar
 import com.chenzixin.wrongbook.ui.theme.wbColors
-import io.github.robinpcrd.cupertino.CupertinoIcon
-import io.github.robinpcrd.cupertino.CupertinoText
-import io.github.robinpcrd.cupertino.icons.CupertinoIcons
-import io.github.robinpcrd.cupertino.icons.outlined.CheckmarkCircle
-import io.github.robinpcrd.cupertino.icons.outlined.ListBullet
-import io.github.robinpcrd.cupertino.icons.outlined.Paperplane
-import io.github.robinpcrd.cupertino.icons.outlined.SquareAndPencil
-import io.github.robinpcrd.cupertino.icons.outlined.Star
-import io.github.robinpcrd.cupertino.icons.outlined.Trash
-import io.github.robinpcrd.cupertino.icons.outlined.WrenchAndScrewdriver
+import com.chenzixin.wrongbook.ui.component.WbIcon
+import com.chenzixin.wrongbook.ui.component.WbText
+import top.yukonga.miuix.kmp.icon.MiuixIcons
+import top.yukonga.miuix.kmp.icon.extended.Ok
+import top.yukonga.miuix.kmp.icon.extended.Notes
+import top.yukonga.miuix.kmp.icon.extended.Send
+import top.yukonga.miuix.kmp.icon.extended.Create
+import top.yukonga.miuix.kmp.icon.extended.Favorites
+import top.yukonga.miuix.kmp.icon.extended.Delete
+import top.yukonga.miuix.kmp.icon.extended.Tune
 import java.io.File
 
 /** 题目详情：原图、OCR 文本、标签、掌握度，以及三个 AI 动作。 */
@@ -111,8 +113,8 @@ fun QuestionDetailScreen(
             onBack = onBack,
             actions = {
                 if (item != null) {
-                    WbGlassIconButton(
-                        icon = CupertinoIcons.Outlined.Trash,
+                    WbIconButton(
+                        icon = MiuixIcons.Delete,
                         contentDescription = "删除题目",
                         onClick = { confirmDelete = true },
                         size = 40.dp,
@@ -134,7 +136,7 @@ fun QuestionDetailScreen(
                 .padding(bottom = 28.dp),
         ) {
             if (question.imagePath.isNotBlank()) {
-                GlassSurface(
+                WbSurface(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(horizontal = 16.dp),
@@ -156,7 +158,7 @@ fun QuestionDetailScreen(
 
             WbSection(
                 header = if (question.refinedText != null) "题干 · AI 整理" else "题目原文",
-                icon = CupertinoIcons.Outlined.ListBullet,
+                icon = MiuixIcons.Notes,
                 footer = "识别不准可以手动改，改完按保存。",
                 action = {
                     WbTextButton(
@@ -168,22 +170,23 @@ fun QuestionDetailScreen(
                     )
                 },
             ) {
-                SelectionContainer {
-                    CupertinoText(
-                        text = (question.refinedText ?: question.rawOcrText).ifBlank { "（没有识别到文字）" },
-                        modifier = Modifier.padding(16.dp),
-                        fontSize = 15.sp,
-                        lineHeight = 23.sp,
-                        color = colors.label,
-                    )
-                }
+                // 用 Markdown/LaTeX 渲染：题干里的 $x^2$、$$\int$$ 会被排版成公式
+                MarkdownText(
+                    markdown = (question.refinedText ?: question.rawOcrText)
+                        .ifBlank { "（没有识别到文字）" },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp),
+                    textColor = colors.label.toArgb(),
+                    textSizeSp = 15f,
+                )
             }
 
             if (!question.answer.isNullOrBlank() || !question.analysis.isNullOrBlank()) {
-                WbSection(header = "答案与解析", icon = CupertinoIcons.Outlined.CheckmarkCircle) {
+                WbSection(header = "答案与解析", icon = MiuixIcons.Ok) {
                     Column(modifier = Modifier.padding(16.dp)) {
                         if (!question.answer.isNullOrBlank()) {
-                            CupertinoText(
+                            WbText(
                                 text = "答案",
                                 fontSize = 11.sp,
                                 fontWeight = FontWeight.SemiBold,
@@ -191,7 +194,7 @@ fun QuestionDetailScreen(
                                 color = colors.tint,
                             )
                             Spacer(Modifier.height(4.dp))
-                            CupertinoText(
+                            WbText(
                                 text = question.answer.orEmpty(),
                                 fontSize = 15.sp,
                                 lineHeight = 22.sp,
@@ -210,7 +213,7 @@ fun QuestionDetailScreen(
                             Spacer(Modifier.height(14.dp))
                         }
                         if (!question.analysis.isNullOrBlank()) {
-                            CupertinoText(
+                            WbText(
                                 text = "解析",
                                 fontSize = 11.sp,
                                 fontWeight = FontWeight.SemiBold,
@@ -218,7 +221,7 @@ fun QuestionDetailScreen(
                                 color = colors.secondaryLabel,
                             )
                             Spacer(Modifier.height(4.dp))
-                            CupertinoText(
+                            WbText(
                                 text = question.analysis.orEmpty(),
                                 fontSize = 14.sp,
                                 lineHeight = 22.sp,
@@ -231,7 +234,7 @@ fun QuestionDetailScreen(
 
             WbSection(
                 header = "标签",
-                icon = CupertinoIcons.Outlined.Star,
+                icon = MiuixIcons.Favorites,
                 footer = if (tags.isEmpty()) "还没打标签，点「编辑」可以随时补。" else null,
                 action = {
                     WbTextButton(text = "编辑", onClick = { editingTags = true })
@@ -245,7 +248,7 @@ fun QuestionDetailScreen(
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
                     if (tags.isEmpty()) {
-                        CupertinoText(
+                        WbText(
                             text = "未分类",
                             fontSize = 14.sp,
                             color = colors.secondaryLabel,
@@ -259,18 +262,18 @@ fun QuestionDetailScreen(
 
             WbSection(
                 header = "掌握状态",
-                icon = CupertinoIcons.Outlined.CheckmarkCircle,
+                icon = MiuixIcons.Ok,
                 footer = "掌握度用于统计与生成练习卷的抽题权重。",
             ) {
                 Column(modifier = Modifier.padding(16.dp)) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        CupertinoText(
+                        WbText(
                             text = "${question.masteryLevel}",
                             fontSize = 34.sp,
                             fontWeight = FontWeight.Bold,
                             color = colors.tint,
                         )
-                        CupertinoText(
+                        WbText(
                             text = " / 5",
                             fontSize = 15.sp,
                             color = colors.secondaryLabel,
@@ -279,7 +282,7 @@ fun QuestionDetailScreen(
                         MasteryBars(level = question.masteryLevel)
                     }
                     Spacer(Modifier.height(10.dp))
-                    CupertinoText(
+                    WbText(
                         text = "已整理 ${question.reviewCount} 次",
                         fontSize = 12.sp,
                         color = colors.secondaryLabel,
@@ -287,23 +290,23 @@ fun QuestionDetailScreen(
                 }
             }
 
-            WbSection(header = "AI 工具", icon = CupertinoIcons.Outlined.Paperplane) {
+            WbSection(header = "AI 工具", icon = MiuixIcons.Send) {
                 WbListRow(
                     title = "AI 讲解",
                     subtitle = "用对话讲清这道题的思路",
-                    icon = CupertinoIcons.Outlined.Paperplane,
+                    icon = MiuixIcons.Send,
                     onClick = { vm.askAi(QuestionDetailViewModel.AskAiKind.EXPLAIN) },
                 )
                 WbListRow(
                     title = "AI 整理",
                     subtitle = "把 OCR 原文整理成干净题干与解析",
-                    icon = CupertinoIcons.Outlined.WrenchAndScrewdriver,
+                    icon = MiuixIcons.Tune,
                     onClick = vm::refine,
                 )
                 WbListRow(
                     title = "生成同类题",
                     subtitle = "换数字再练一遍，可全部入库",
-                    icon = CupertinoIcons.Outlined.SquareAndPencil,
+                    icon = MiuixIcons.Create,
                     showDivider = false,
                     onClick = vm::generateVariants,
                 )
@@ -410,25 +413,16 @@ private fun MasteryBars(level: Int) {
                     .height(22.dp)
                     .clip(CircleShape)
                     .background(
-                        if (lit) {
-                            Brush.linearGradient(listOf(colors.accent, colors.accentEnd))
-                        } else {
-                            Brush.linearGradient(
-                                listOf(
-                                    colors.secondaryLabel.copy(alpha = 0.18f),
-                                    colors.secondaryLabel.copy(alpha = 0.18f),
-                                ),
-                            )
-                        },
+                        if (lit) colors.tint else colors.secondaryLabel.copy(alpha = 0.18f),
                     ),
             )
         }
     }
 }
 
-private fun parseTagColor(hex: String): androidx.compose.ui.graphics.Color = runCatching {
+private fun parseTagColor(hex: String): androidx.compose.ui.graphics.Color? = runCatching {
     androidx.compose.ui.graphics.Color(android.graphics.Color.parseColor(hex))
-}.getOrDefault(androidx.compose.ui.graphics.Color(0xFF0A84FF))
+}.getOrNull()
 
 @Composable
 private fun RefinePreviewDialog(
@@ -442,7 +436,7 @@ private fun RefinePreviewDialog(
     val colors = wbColors()
 
     Dialog(onDismissRequest = onDismiss) {
-        GlassSurface(
+        WbSurface(
             modifier = Modifier.fillMaxWidth(),
             cornerRadius = 28.dp,
             elevation = 34.dp,
@@ -496,7 +490,7 @@ private fun VariantsPreviewDialog(
 ) {
     val colors = wbColors()
     Dialog(onDismissRequest = onDismiss) {
-        GlassSurface(
+        WbSurface(
             modifier = Modifier.fillMaxWidth(),
             cornerRadius = 28.dp,
             elevation = 34.dp,
@@ -517,7 +511,7 @@ private fun VariantsPreviewDialog(
                     ) {
                         WbBadge(text = "${index + 1}", color = colors.tint)
                         Spacer(Modifier.width(8.dp))
-                        CupertinoText(
+                        WbText(
                             text = variant.stem.take(90),
                             fontSize = 13.5.sp,
                             lineHeight = 19.sp,
@@ -546,7 +540,7 @@ private fun VariantsPreviewDialog(
 
 @Composable
 private fun DialogTitle(text: String) {
-    CupertinoText(
+    WbText(
         text = text,
         fontSize = 17.sp,
         fontWeight = FontWeight.SemiBold,

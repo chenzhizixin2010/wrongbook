@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import com.chenzixin.wrongbook.core.WbResult
 import com.chenzixin.wrongbook.data.generate.PracticeRepository
 import com.chenzixin.wrongbook.data.practice.PracticeSheetStore
+import com.chenzixin.wrongbook.domain.generate.DocxWriter
 import com.chenzixin.wrongbook.data.local.entity.TagEntity
 import com.chenzixin.wrongbook.data.repository.SettingsRepository
 import com.chenzixin.wrongbook.data.repository.TagRepository
@@ -43,6 +44,7 @@ class GenerateViewModel @Inject constructor(
         val warning: String? = null,
         val aiAvailable: Boolean = true,
         val history: List<PracticeSheetStore.Record> = emptyList(),
+        val lastSheet: com.chenzixin.wrongbook.domain.generate.PracticeSheet? = null,
     ) {
         val filter: TagFilter get() = TagFilter(tagIds = selectedTagIds, matchAll = matchAll)
         val askFill: Boolean get() = pendingPlan != null
@@ -131,6 +133,7 @@ class GenerateViewModel @Inject constructor(
                         title = sheet.title,
                         subtitle = sheet.subtitle,
                         count = sheet.items.size,
+                        sheetJson = sheetJsonOf(sheet),
                     )
                 }
                 _state.update {
@@ -138,6 +141,7 @@ class GenerateViewModel @Inject constructor(
                         generating = false,
                         html = html,
                         warning = result.value.warning,
+                        lastSheet = sheet,
                     )
                 }
                 refreshHistory()
@@ -170,7 +174,8 @@ class GenerateViewModel @Inject constructor(
             if (html == null) {
                 _state.update { it.copy(message = "这份历史记录的文件不在了") }
             } else {
-                _state.update { it.copy(html = html) }
+                val sheet = parseSheet(record.sheetJson)
+                _state.update { it.copy(html = html, lastSheet = sheet) }
             }
         }
     }
@@ -185,5 +190,25 @@ class GenerateViewModel @Inject constructor(
                 is WbResult.Err -> _state.update { it.copy(message = r.message) }
             }
         }
+    }
+
+    /** 导出 Word：返回 docx 字节；没有卷子时返回 null。 */
+    fun buildDocx(): ByteArray? {
+        val sheet = _state.value.lastSheet ?: return null
+        return runCatching { DocxWriter.build(sheet) }.getOrNull()
+    }
+
+    private fun sheetJsonOf(sheet: com.chenzixin.wrongbook.domain.generate.PracticeSheet): String =
+        runCatching { kotlinx.serialization.json.Json.encodeToString(
+            com.chenzixin.wrongbook.domain.generate.PracticeSheet.serializer(), sheet,
+        ) }.getOrDefault("")
+
+    private fun parseSheet(json: String): com.chenzixin.wrongbook.domain.generate.PracticeSheet? {
+        if (json.isBlank()) return null
+        return runCatching {
+            kotlinx.serialization.json.Json.decodeFromString(
+                com.chenzixin.wrongbook.domain.generate.PracticeSheet.serializer(), json,
+            )
+        }.getOrNull()
     }
 }

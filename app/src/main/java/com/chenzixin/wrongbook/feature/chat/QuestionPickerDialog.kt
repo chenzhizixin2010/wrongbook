@@ -1,4 +1,4 @@
-package com.chenzixin.wrongbook.feature.chat
+﻿package com.chenzixin.wrongbook.feature.chat
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
@@ -21,11 +21,11 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import com.chenzixin.wrongbook.data.local.model.QuestionWithTags
-import com.chenzixin.wrongbook.ui.component.GlassSurface
+import com.chenzixin.wrongbook.ui.component.WbSurface
 import com.chenzixin.wrongbook.ui.component.WbTextButton
 import com.chenzixin.wrongbook.ui.component.WbTextField
 import com.chenzixin.wrongbook.ui.theme.wbColors
-import io.github.robinpcrd.cupertino.CupertinoText
+import com.chenzixin.wrongbook.ui.component.WbText
 
 /**
  * 从题库挑一道题带进对话：搜索 + 列表，选中后把题干插进输入框。
@@ -49,7 +49,7 @@ fun QuestionPickerDialog(
     }
 
     Dialog(onDismissRequest = onDismiss) {
-        GlassSurface(
+        WbSurface(
             modifier = Modifier.fillMaxWidth(),
             cornerRadius = 28.dp,
             elevation = 30.dp,
@@ -57,7 +57,7 @@ fun QuestionPickerDialog(
         ) {
             Column(modifier = Modifier.padding(18.dp)) {
                 Row {
-                    CupertinoText(
+                    WbText(
                         text = "从题库选题",
                         modifier = Modifier.weight(1f),
                         fontSize = 17.sp,
@@ -76,7 +76,7 @@ fun QuestionPickerDialog(
                 Spacer(Modifier.height(10.dp))
 
                 if (filtered.isEmpty()) {
-                    CupertinoText(
+                    WbText(
                         text = if (questions.isEmpty()) "题库还是空的" else "没有匹配的题目",
                         modifier = Modifier.padding(vertical = 24.dp),
                         fontSize = 13.sp,
@@ -91,7 +91,7 @@ fun QuestionPickerDialog(
                                     .clickable { onPick(item) }
                                     .padding(vertical = 10.dp),
                             ) {
-                                CupertinoText(
+                                WbText(
                                     text = (item.question.refinedText ?: item.question.rawOcrText)
                                         .replace("\n", " ")
                                         .take(60),
@@ -100,7 +100,7 @@ fun QuestionPickerDialog(
                                     maxLines = 2,
                                 )
                                 if (item.tags.isNotEmpty()) {
-                                    CupertinoText(
+                                    WbText(
                                         text = item.tags.joinToString(" · ") { it.name },
                                         modifier = Modifier.padding(top = 2.dp),
                                         fontSize = 11.sp,

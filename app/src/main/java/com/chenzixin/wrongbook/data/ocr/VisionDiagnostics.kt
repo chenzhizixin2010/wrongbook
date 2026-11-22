@@ -1,4 +1,4 @@
-package com.chenzixin.wrongbook.data.ocr
+﻿package com.chenzixin.wrongbook.data.ocr
 
 import android.graphics.Bitmap
 import android.graphics.Canvas
@@ -38,6 +38,7 @@ class VisionDiagnostics @Inject constructor(
         val height = 720
         val bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
         val canvas = Canvas(bitmap)
+        // 诊断用合成位图，白底黑字是 OCR 输入约定，不是 UI 主题色。
         canvas.drawColor(Color.WHITE)
 
         val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply {

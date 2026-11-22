@@ -1,11 +1,9 @@
-<?xml version="1.0" encoding="utf-8"?>
+﻿<?xml version="1.0" encoding="utf-8"?>
 <layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- 启动窗口：Miuix 浅底 + Errata 标记，无渐变。 -->
     <item>
         <shape android:shape="rectangle">
-            <gradient
-                android:angle="270"
-                android:startColor="#0B0C14"
-                android:endColor="#05060B" />
+            <solid android:color="#F5F5F5" />
         </shape>
     </item>
     <item

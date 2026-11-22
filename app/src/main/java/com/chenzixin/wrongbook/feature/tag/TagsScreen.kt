@@ -34,10 +34,10 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.chenzixin.wrongbook.data.local.entity.TagEntity
-import com.chenzixin.wrongbook.ui.component.GlassSurface
+import com.chenzixin.wrongbook.ui.component.WbSurface
 import com.chenzixin.wrongbook.ui.component.WbAlertDialog
 import com.chenzixin.wrongbook.ui.component.WbBadge
-import com.chenzixin.wrongbook.ui.component.WbGlassIconButton
+import com.chenzixin.wrongbook.ui.component.WbIconButton
 import com.chenzixin.wrongbook.ui.component.WbPrimaryButton
 import com.chenzixin.wrongbook.ui.component.WbSection
 import com.chenzixin.wrongbook.ui.component.WbSecondaryButton
@@ -45,12 +45,13 @@ import com.chenzixin.wrongbook.ui.component.WbTextField
 import com.chenzixin.wrongbook.ui.component.WbTextButton
 import com.chenzixin.wrongbook.ui.component.WbTopBar
 import com.chenzixin.wrongbook.ui.theme.wbColors
-import io.github.robinpcrd.cupertino.CupertinoIcon
-import io.github.robinpcrd.cupertino.CupertinoText
-import io.github.robinpcrd.cupertino.icons.CupertinoIcons
-import io.github.robinpcrd.cupertino.icons.outlined.ChevronForward
-import io.github.robinpcrd.cupertino.icons.outlined.Star
-import io.github.robinpcrd.cupertino.icons.outlined.Trash
+import top.yukonga.miuix.kmp.theme.MiuixTheme
+import com.chenzixin.wrongbook.ui.component.WbIcon
+import com.chenzixin.wrongbook.ui.component.WbText
+import top.yukonga.miuix.kmp.icon.MiuixIcons
+import top.yukonga.miuix.kmp.icon.extended.ChevronForward
+import top.yukonga.miuix.kmp.icon.extended.Favorites
+import top.yukonga.miuix.kmp.icon.extended.Delete
 
 /**
  * 标签 / 收藏夹管理：新建、改名、改色、调排序、删。
@@ -86,57 +87,37 @@ fun TagsScreen(
                 .padding(bottom = 28.dp),
         ) {
             if (tags.isEmpty()) {
-                GlassSurface(
+                Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 16.dp),
-                    cornerRadius = 28.dp,
-                    elevation = 10.dp,
+                        .padding(horizontal = 32.dp, vertical = 64.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
                 ) {
-                    Column(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 24.dp, vertical = 28.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                    ) {
-                        Box(
-                            modifier = Modifier
-                                .size(62.dp)
-                                .clip(CircleShape)
-                                .background(
-                                    Brush.linearGradient(
-                                        listOf(colors.accent, colors.accentEnd),
-                                    ),
-                                ),
-                            contentAlignment = Alignment.Center,
-                        ) {
-                            CupertinoIcon(
-                                imageVector = CupertinoIcons.Outlined.Star,
-                                contentDescription = null,
-                                modifier = Modifier.size(26.dp),
-                                tint = Color.White,
-                            )
-                        }
-                        Spacer(Modifier.height(16.dp))
-                        CupertinoText(
-                            text = "还没有标签",
-                            fontSize = 16.sp,
-                            fontWeight = FontWeight.SemiBold,
-                            color = colors.label,
-                        )
-                        Spacer(Modifier.height(5.dp))
-                        CupertinoText(
-                            text = "标签用来分类错题，「收藏夹」只是打了标记的标签",
-                            fontSize = 12.sp,
-                            lineHeight = 18.sp,
-                            color = colors.secondaryLabel,
-                        )
-                    }
+                    WbIcon(
+                        imageVector = MiuixIcons.Favorites,
+                        contentDescription = null,
+                        modifier = Modifier.size(52.dp),
+                        tint = colors.secondaryLabel,
+                    )
+                    Spacer(Modifier.height(16.dp))
+                    WbText(
+                        text = "还没有标签",
+                        fontSize = 18.sp,
+                        fontWeight = FontWeight.Medium,
+                        color = colors.label,
+                    )
+                    Spacer(Modifier.height(6.dp))
+                    WbText(
+                        text = "标签用来分类错题，「收藏夹」只是打了标记的标签",
+                        fontSize = 14.sp,
+                        lineHeight = 20.sp,
+                        color = colors.secondaryLabel,
+                    )
                 }
             } else {
                 WbSection(
                     header = "全部标签",
-                    icon = CupertinoIcons.Outlined.Star,
+                    icon = MiuixIcons.Favorites,
                     footer = "两级结构；「收藏夹」会出现在题库顶部的筛选区。",
                 ) {
                     val rows = flattenTree(tags)
@@ -236,7 +217,7 @@ private fun TagRow(
                 )
             }
             Spacer(Modifier.width(11.dp))
-            CupertinoText(
+            WbText(
                 text = tag.name,
                 fontSize = 15.5.sp,
                 fontWeight = FontWeight.Medium,
@@ -248,14 +229,14 @@ private fun TagRow(
                 WbBadge(text = "收藏夹", color = colors.warning)
             }
             Spacer(Modifier.weight(1f))
-            CupertinoText(
+            WbText(
                 text = "排序 ${tag.sortOrder}",
                 fontSize = 10.sp,
                 color = colors.secondaryLabel.copy(alpha = 0.75f),
             )
             Spacer(Modifier.width(7.dp))
-            CupertinoIcon(
-                imageVector = CupertinoIcons.Outlined.ChevronForward,
+            WbIcon(
+                imageVector = MiuixIcons.ChevronForward,
                 contentDescription = null,
                 modifier = Modifier.size(13.dp),
                 tint = colors.secondaryLabel.copy(alpha = 0.5f),
@@ -291,9 +272,10 @@ private fun flattenTree(tags: List<TagEntity>): List<Pair<TagEntity, Int>> {
     return result
 }
 
+@Composable
 private fun parseTagColor(hex: String): Color = runCatching {
     Color(android.graphics.Color.parseColor(hex))
-}.getOrDefault(Color(0xFF007AFF))
+}.getOrDefault(MiuixTheme.colorScheme.primary)
 
 @Composable
 private fun TagFormDialog(
@@ -310,7 +292,7 @@ private fun TagFormDialog(
     var sortOrder by remember { mutableStateOf(initial?.sortOrder ?: 0) }
 
     Dialog(onDismissRequest = onDismiss) {
-        GlassSurface(
+        WbSurface(
             modifier = Modifier.fillMaxWidth(),
             cornerRadius = 28.dp,
             elevation = 34.dp,
@@ -322,7 +304,7 @@ private fun TagFormDialog(
                     .verticalScroll(rememberScrollState()),
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    CupertinoText(
+                    WbText(
                         text = title,
                         modifier = Modifier.weight(1f),
                         fontSize = 17.sp,
@@ -330,8 +312,8 @@ private fun TagFormDialog(
                         color = colors.label,
                     )
                     if (onDelete != null) {
-                        WbGlassIconButton(
-                            icon = CupertinoIcons.Outlined.Trash,
+                        WbIconButton(
+                            icon = MiuixIcons.Delete,
                             contentDescription = "删除标签",
                             onClick = onDelete,
                             size = 34.dp,
@@ -345,7 +327,7 @@ private fun TagFormDialog(
                 WbTextField(value = name, onValueChange = { name = it }, placeholder = "标签名，例如 函数")
                 Spacer(Modifier.height(16.dp))
 
-                CupertinoText(
+                WbText(
                     text = "颜色",
                     fontSize = 11.sp,
                     fontWeight = FontWeight.SemiBold,
@@ -367,7 +349,7 @@ private fun TagFormDialog(
 
                 Spacer(Modifier.height(18.dp))
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    CupertinoText(
+                    WbText(
                         text = "排序",
                         modifier = Modifier.weight(1f),
                         fontSize = 13.sp,
@@ -378,7 +360,7 @@ private fun TagFormDialog(
                         modifier = Modifier.width(38.dp),
                         contentAlignment = Alignment.Center,
                     ) {
-                        CupertinoText(text = "$sortOrder", fontSize = 15.sp, color = colors.label)
+                        WbText(text = "$sortOrder", fontSize = 15.sp, color = colors.label)
                     }
                     StepperButton(text = "＋") { sortOrder += 1 }
                 }
@@ -393,7 +375,7 @@ private fun TagFormDialog(
                         .padding(horizontal = 14.dp, vertical = 12.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    CupertinoText(
+                    WbText(
                         text = "作为收藏夹",
                         modifier = Modifier.weight(1f),
                         fontSize = 14.sp,
@@ -412,7 +394,7 @@ private fun TagFormDialog(
                                 .padding(3.dp)
                                 .size(20.dp)
                                 .clip(CircleShape)
-                                .background(Color.White),
+                                .background(MiuixTheme.colorScheme.onPrimary),
                         )
                     }
                 }
@@ -447,7 +429,7 @@ private fun StepperButton(text: String, onClick: () -> Unit) {
             .clickable(onClick = onClick),
         contentAlignment = Alignment.Center,
     ) {
-        CupertinoText(
+        WbText(
             text = text,
             fontSize = 15.sp,
             fontWeight = FontWeight.SemiBold,
@@ -476,11 +458,11 @@ private fun ColorDot(hex: String, selected: Boolean, onClick: () -> Unit) {
         contentAlignment = Alignment.Center,
     ) {
         if (selected) {
-            CupertinoText(
+            WbText(
                 text = "✓",
                 fontSize = 12.sp,
                 fontWeight = FontWeight.Bold,
-                color = Color.White,
+                color = MiuixTheme.colorScheme.onPrimary,
             )
         }
     }

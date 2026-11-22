@@ -7,6 +7,7 @@ import androidx.lifecycle.viewModelScope
 import com.chenzixin.wrongbook.data.local.entity.ApiProfileEntity
 import com.chenzixin.wrongbook.data.prefs.ThemeMode
 import com.chenzixin.wrongbook.data.prefs.ThemePrefs
+import com.chenzixin.wrongbook.data.prefs.UiStyle
 import com.chenzixin.wrongbook.data.repository.SettingsRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
@@ -68,7 +69,17 @@ class SettingsViewModel @Inject constructor(
         initialValue = ThemeMode.SYSTEM,
     )
 
+    val uiStyle: StateFlow<UiStyle> = themePrefs.uiStyle.stateIn(
+        scope = viewModelScope,
+        started = SharingStarted.WhileSubscribed(5_000),
+        initialValue = UiStyle.MIUIX,
+    )
+
     fun setThemeMode(mode: ThemeMode) {
         viewModelScope.launch { themePrefs.setMode(mode) }
+    }
+
+    fun setUiStyle(style: UiStyle) {
+        viewModelScope.launch { themePrefs.setUiStyle(style) }
     }
 }

@@ -1,6 +1,7 @@
-package com.chenzixin.wrongbook.ui.component
+﻿package com.chenzixin.wrongbook.ui.component
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -11,27 +12,26 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.chenzixin.wrongbook.data.prefs.UiStyle
 import com.chenzixin.wrongbook.ui.theme.wbColors
-import io.github.robinpcrd.cupertino.CupertinoText
-import io.github.robinpcrd.cupertino.icons.CupertinoIcons
-import io.github.robinpcrd.cupertino.icons.outlined.ChevronBackward
+import com.chenzixin.wrongbook.ui.theme.wbUiStyle
+import top.yukonga.miuix.kmp.basic.IconButton
+import top.yukonga.miuix.kmp.icon.MiuixIcons
+import top.yukonga.miuix.kmp.icon.extended.ChevronBackward
+import top.yukonga.miuix.kmp.theme.MiuixTheme
 
 /**
- * 二级页面顶栏：玻璃返回按钮 + 居中标题 + 右侧操作。
- *
- * 不做整条玻璃栏：iOS 26 的导航栏在静止时是「隐形」的，
- * 只有返回键和操作项浮在极光背景上，滚动时再补一层材质。
+ * 二级页顶栏。
+ * Miuix：56dp + 居中标题 + 底部分隔线。
+ * iOS：44dp nav bar + 左侧返回 + 状态栏下方毛玻璃底。
  */
 @Composable
 fun WbTopBar(
@@ -40,44 +40,77 @@ fun WbTopBar(
     onBack: (() -> Unit)? = null,
     actions: @Composable RowScope.() -> Unit = {},
 ) {
-    val colors = wbColors()
-    Box(
+    val style = wbUiStyle()
+    val ios = style == UiStyle.IOS
+    val v090 = style == UiStyle.V090
+    val c = wbColors()
+
+    Column(
         modifier = modifier
             .fillMaxWidth()
-            .padding(horizontal = 14.dp, vertical = 9.dp),
+            .background(if (ios || v090) c.barScrim else c.cardBackground),
     ) {
-        if (onBack != null) {
-            WbGlassIconButton(
-                icon = CupertinoIcons.Outlined.ChevronBackward,
-                contentDescription = "返回",
-                onClick = onBack,
-                modifier = Modifier.align(Alignment.CenterStart),
-                size = 40.dp,
-                iconSize = 17.dp,
-                tint = colors.tint,
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(if (ios) 44.dp else if (v090) 52.dp else 56.dp)
+                .padding(horizontal = if (ios) 4.dp else 8.dp),
+        ) {
+            if (onBack != null) {
+                if (ios) {
+                    Box(
+                        modifier = Modifier
+                            .align(Alignment.CenterStart)
+                            .size(44.dp)
+                            .clickable(onClick = onBack),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        WbIcon(
+                            imageVector = MiuixIcons.ChevronBackward,
+                            contentDescription = "返回",
+                            modifier = Modifier.size(23.dp),
+                            tint = c.accent,
+                        )
+                    }
+                } else {
+                    IconButton(
+                        onClick = onBack,
+                        modifier = Modifier
+                            .align(Alignment.CenterStart)
+                            .size(40.dp),
+                    ) {
+                        WbIcon(
+                            imageVector = MiuixIcons.ChevronBackward,
+                            contentDescription = "返回",
+                            modifier = Modifier.size(22.dp),
+                            tint = MiuixTheme.colorScheme.onSurface,
+                        )
+                    }
+                }
+            }
+            WbText(
+                text = title,
+                modifier = Modifier
+                    .align(Alignment.Center)
+                    .padding(horizontal = 56.dp),
+                fontSize = 17.sp,
+                fontWeight = FontWeight.SemiBold,
+                color = c.label,
+                textAlign = TextAlign.Center,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+            Row(
+                modifier = Modifier.align(Alignment.CenterEnd),
+                verticalAlignment = Alignment.CenterVertically,
+                content = actions,
             )
         }
-        CupertinoText(
-            text = title,
-            modifier = Modifier
-                .align(Alignment.Center)
-                .padding(horizontal = 58.dp),
-            fontSize = 17.sp,
-            fontWeight = FontWeight.SemiBold,
-            color = colors.label,
-            textAlign = TextAlign.Center,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-        )
-        Row(
-            modifier = Modifier.align(Alignment.CenterEnd),
-            verticalAlignment = Alignment.CenterVertically,
-            content = actions,
-        )
+        WbDivider()
     }
 }
 
-/** 页面内的超大标题（iOS Large Title），可带 eyebrow 与副标题。 */
+/** 页面大标题：iOS largeTitle 34 / Miuix 28。 */
 @Composable
 fun WbLargeTitle(
     text: String,
@@ -85,57 +118,54 @@ fun WbLargeTitle(
     subtitle: String? = null,
     kicker: String? = null,
 ) {
-    val colors = wbColors()
+    val style = wbUiStyle()
+    val ios = style == UiStyle.IOS
+    val v090 = style == UiStyle.V090
+    val c = wbColors()
     Column(modifier = modifier) {
         if (kicker != null) {
-            Row(
-                modifier = Modifier.padding(bottom = 7.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Box(
-                    modifier = Modifier
-                        .size(6.dp)
-                        .clip(CircleShape)
-                        .background(
-                            Brush.linearGradient(listOf(colors.accent, colors.accentEnd)),
-                        ),
-                )
-                Spacer(Modifier.width(6.dp))
-                CupertinoText(
-                    text = kicker,
-                    fontSize = 11.sp,
-                    fontWeight = FontWeight.SemiBold,
-                    letterSpacing = 1.1.sp,
-                    color = colors.tint,
-                    maxLines = 1,
-                )
-            }
+            WbText(
+                text = when {
+                    v090 -> "• $kicker"
+                    ios -> kicker.uppercase()
+                    else -> kicker
+                },
+                modifier = Modifier.padding(bottom = if (ios) 2.dp else 4.dp),
+                fontSize = 11.sp,
+                letterSpacing = if (ios) 1.sp else 0.sp,
+                color = if (ios || v090) c.secondaryLabel else c.tint,
+                maxLines = 1,
+            )
         }
-        CupertinoText(
+        WbText(
             text = text,
-            fontSize = 34.sp,
+            fontSize = when {
+                ios -> 34.sp
+                v090 -> 30.sp
+                else -> 28.sp
+            },
             fontWeight = FontWeight.Bold,
-            letterSpacing = (-0.7).sp,
-            lineHeight = 40.sp,
-            color = colors.label,
+            lineHeight = when {
+                ios -> 41.sp
+                v090 -> 36.sp
+                else -> 34.sp
+            },
+            color = c.label,
             maxLines = 1,
         )
         if (subtitle != null) {
-            CupertinoText(
+            WbText(
                 text = subtitle,
-                modifier = Modifier.padding(top = 5.dp),
-                fontSize = 13.sp,
-                lineHeight = 18.sp,
-                color = colors.secondaryLabel,
+                modifier = Modifier.padding(top = if (ios) 2.dp else 4.dp),
+                fontSize = if (ios) 15.sp else 13.sp,
+                lineHeight = if (ios) 20.sp else 18.sp,
+                color = c.secondaryLabel,
             )
         }
     }
 }
 
-/**
- * 主 Tab 页统一的页面头：eyebrow + 大标题 + 副标题 + 右侧操作。
- * 左右 20dp、顶部 14dp，和悬浮标签栏的 16dp 边距形成同一套栅格。
- */
+/** 主 Tab 页统一的页面头。 */
 @Composable
 fun WbPageHeader(
     title: String,
@@ -144,10 +174,18 @@ fun WbPageHeader(
     subtitle: String? = null,
     trailing: (@Composable () -> Unit)? = null,
 ) {
+    val style = wbUiStyle()
+    val ios = style == UiStyle.IOS
+    val v090 = style == UiStyle.V090
     Row(
         modifier = modifier
             .fillMaxWidth()
-            .padding(start = 20.dp, end = 20.dp, top = 14.dp, bottom = 10.dp),
+            .padding(
+                start = 16.dp,
+                end = 16.dp,
+                top = if (ios) 8.dp else if (v090) 10.dp else 12.dp,
+                bottom = if (ios) 8.dp else 8.dp,
+            ),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         WbLargeTitle(
@@ -163,14 +201,7 @@ fun WbPageHeader(
     }
 }
 
-/** 极简分隔线：给「说明」「脚注」这类区域用。 */
 @Composable
 fun WbHairline(modifier: Modifier = Modifier) {
-    val colors = wbColors()
-    Box(
-        modifier = modifier
-            .fillMaxWidth()
-            .height(0.7.dp)
-            .background(colors.separator),
-    )
+    WbDivider(modifier = modifier)
 }

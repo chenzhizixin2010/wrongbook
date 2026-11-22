@@ -1,4 +1,4 @@
-package com.chenzixin.wrongbook.feature.settings
+﻿package com.chenzixin.wrongbook.feature.settings
 
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
@@ -40,7 +40,7 @@ import com.chenzixin.wrongbook.ui.component.WbSection
 import com.chenzixin.wrongbook.ui.component.WbTextField
 import com.chenzixin.wrongbook.ui.component.WbTopBar
 import com.chenzixin.wrongbook.ui.theme.wbColors
-import io.github.robinpcrd.cupertino.CupertinoText
+import com.chenzixin.wrongbook.ui.component.WbText
 
 /**
  * 新增 / 编辑一套 API 配置。
@@ -116,7 +116,7 @@ fun ProfileEditScreen(
                     )
                     Spacer(Modifier.height(12.dp))
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        CupertinoText(
+                        WbText(
                             text = "温度 ${"%.1f".format(state.temperature)}",
                             fontSize = 15.sp,
                             color = colors.label,
@@ -127,7 +127,7 @@ fun ProfileEditScreen(
                     }
 
                     Spacer(Modifier.height(14.dp))
-                    CupertinoText(
+                    WbText(
                         text = if (state.maxTokens <= 0) {
                             "最大输出：不限制"
                         } else {
@@ -154,7 +154,7 @@ fun ProfileEditScreen(
                             onClick = { vm.setMaxTokens(0) },
                         )
                     }
-                    CupertinoText(
+                    WbText(
                         text = "回答被截断时调大这一项；模型自身的上限以服务商文档为准。",
                         modifier = Modifier.padding(top = 6.dp),
                         fontSize = 11.sp,
@@ -179,7 +179,7 @@ fun ProfileEditScreen(
                         onClick = { guidePreset = preset },
                         trailing = {
                             if (state.baseUrl == preset.baseUrl) {
-                                CupertinoText(text = "使用中", fontSize = 11.sp, color = colors.tint)
+                                WbText(text = "使用中", fontSize = 11.sp, color = colors.tint)
                             }
                         },
                     )

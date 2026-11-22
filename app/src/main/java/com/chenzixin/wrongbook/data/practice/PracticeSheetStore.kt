@@ -32,6 +32,8 @@ class PracticeSheetStore @Inject constructor(
         val subtitle: String,
         val count: Int,
         val createdAt: Long,
+        /** 卷子的结构化副本，用来导出 Word；老记录可能没有 */
+        val sheetJson: String = "",
     )
 
     private val json = Json { ignoreUnknownKeys = true; prettyPrint = true }
@@ -39,7 +41,13 @@ class PracticeSheetStore @Inject constructor(
     private val dir: File get() = File(context.filesDir, "practice").apply { if (!exists()) mkdirs() }
     private val indexFile: File get() = File(dir, "index.json")
 
-    suspend fun save(html: String, title: String, subtitle: String, count: Int): WbResult<Record> =
+    suspend fun save(
+        html: String,
+        title: String,
+        subtitle: String,
+        count: Int,
+        sheetJson: String = "",
+    ): WbResult<Record> =
         withContext(io) {
             runCatching {
                 val record = Record(
@@ -48,6 +56,7 @@ class PracticeSheetStore @Inject constructor(
                     subtitle = subtitle,
                     count = count,
                     createdAt = System.currentTimeMillis(),
+                    sheetJson = sheetJson,
                 )
                 File(dir, "${record.id}.html").writeText(html, Charsets.UTF_8)
                 val list = (readIndex() + record).sortedByDescending { it.createdAt }

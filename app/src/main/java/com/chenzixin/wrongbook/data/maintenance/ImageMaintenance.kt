@@ -5,6 +5,7 @@ import android.graphics.BitmapFactory
 import com.chenzixin.wrongbook.core.ImageUtils.rotated
 import com.chenzixin.wrongbook.core.ImageUtils.scaledToMaxSide
 import com.chenzixin.wrongbook.core.ImageUtils.toPaperClean
+import com.chenzixin.wrongbook.core.OrientationDetector
 import com.chenzixin.wrongbook.core.ImageUtils.toWebp
 import com.chenzixin.wrongbook.core.WbResult
 import com.chenzixin.wrongbook.data.local.QuestionImageStore
@@ -108,11 +109,18 @@ class ImageMaintenance @Inject constructor(
         return true
     }
 
-    /** 和扫描流程同一套判据：哪个方向识别出的有效字符最多就用哪个。 */
+    /**
+     * 判断方向并转正。
+     *
+     * 优先用 OCR 打分（能区分 0/90/180/270）；但老图经常低清到 OCR 一个字都读不出，
+     * 这时用投影轮廓判断「横排还是竖排」，至少能把 90° 歪的打正。
+     */
     private suspend fun autoOrient(bitmap: android.graphics.Bitmap): android.graphics.Bitmap {
-        val landscape = bitmap.width > bitmap.height
-        val candidates = if (landscape) listOf(0, 90, 180, 270) else listOf(0, 180)
         val small = bitmap.scaledToMaxSide(1000)
+        val landscape = small.width > small.height
+
+        // 1) OCR 打分
+        val candidates = if (landscape) listOf(0, 90, 180, 270) else listOf(0, 180)
         var bestDeg = 0
         var bestScore = -1
         candidates.forEach { deg ->
@@ -125,6 +133,41 @@ class ImageMaintenance @Inject constructor(
                 bestDeg = deg
             }
         }
+
+        // 2) OCR 读不出东西时，用投影判断横/竖排
+        if (bestScore < MIN_OCR_CHARS) {
+            val vertical = runCatching {
+                val gray = small.toGrayscaleArray()
+                OrientationDetector.isVerticalText(gray, small.width, small.height)
+            }.getOrDefault(false)
+
+            if (vertical) {
+                // 竖向文字：在 90 与 270 之间再比一次（读不出就用 90）
+                bestDeg = if (bestScore > 0) bestDeg else 90
+            } else if (!landscape) {
+                bestDeg = 0
+            }
+        }
+
         return if (bestDeg == 0) bitmap else bitmap.rotated(bestDeg.toFloat())
+    }
+
+    private fun android.graphics.Bitmap.toGrayscaleArray(): IntArray {
+        val w = width
+        val h = height
+        val pixels = IntArray(w * h)
+        getPixels(pixels, 0, w, 0, 0, w, h)
+        return IntArray(w * h) { i ->
+            val c = pixels[i]
+            val r = (c shr 16) and 0xFF
+            val g = (c shr 8) and 0xFF
+            val b = c and 0xFF
+            (0.299f * r + 0.587f * g + 0.114f * b).toInt().coerceIn(0, 255)
+        }
+    }
+
+    private companion object {
+        /** OCR 总共读不到这么多字符时，认为打分不可信 */
+        const val MIN_OCR_CHARS = 8
     }
 }

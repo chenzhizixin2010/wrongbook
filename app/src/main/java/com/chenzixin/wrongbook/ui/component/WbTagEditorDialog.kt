@@ -1,4 +1,4 @@
-package com.chenzixin.wrongbook.ui.component
+﻿package com.chenzixin.wrongbook.ui.component
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -31,7 +31,7 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import com.chenzixin.wrongbook.data.local.entity.TagEntity
 import com.chenzixin.wrongbook.ui.theme.wbColors
-import io.github.robinpcrd.cupertino.CupertinoText
+import com.chenzixin.wrongbook.ui.component.WbText
 
 /**
  * 标签编辑弹窗：点一下立即生效（不再要求「保存」），
@@ -53,7 +53,7 @@ fun WbTagEditorDialog(
     var newName by remember { mutableStateOf("") }
 
     Dialog(onDismissRequest = onDismiss) {
-        GlassSurface(
+        WbSurface(
             modifier = Modifier.fillMaxWidth(),
             cornerRadius = 28.dp,
             elevation = 30.dp,
@@ -61,7 +61,7 @@ fun WbTagEditorDialog(
         ) {
             Column(modifier = Modifier.padding(20.dp)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    CupertinoText(
+                    WbText(
                         text = "编辑标签",
                         modifier = Modifier.weight(1f),
                         fontSize = 17.sp,
@@ -74,7 +74,7 @@ fun WbTagEditorDialog(
                 Spacer(Modifier.height(12.dp))
 
                 if (allTags.isEmpty()) {
-                    CupertinoText(
+                    WbText(
                         text = "还没有标签，先建一个吧",
                         fontSize = 13.sp,
                         color = colors.secondaryLabel,
@@ -134,7 +134,7 @@ fun WbTagEditorDialog(
                             .clickable { creating = true }
                             .padding(horizontal = 14.dp, vertical = 12.dp),
                     ) {
-                        CupertinoText(
+                        WbText(
                             text = "＋ 新建标签",
                             fontSize = 14.sp,
                             color = colors.tint,

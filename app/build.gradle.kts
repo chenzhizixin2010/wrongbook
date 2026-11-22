@@ -19,8 +19,8 @@ android {
         applicationId = "com.chenzixin.wrongbook"
         minSdk = 24
         targetSdk = 37
-        versionCode = 12
-        versionName = "0.10.1"
+        versionCode = 13
+        versionName = "0.11.0"
 
         // 更新源：仓库信息与镜像前缀。owner/repo 也可以在设置页里改。
         buildConfigField("String", "GITHUB_OWNER", "\"chenzhizixin2010\"")
@@ -101,7 +101,11 @@ dependencies {
     implementation(libs.compose.ui.tooling.preview)
     debugImplementation(libs.compose.ui.tooling)
 
-    // Cupertino（iOS 风格）
+
+    // Miuix（小米 HyperOS 风格）
+    implementation(libs.miuix.ui)
+    implementation(libs.miuix.preference)
+    implementation(libs.miuix.icons)
     implementation(libs.cupertino)
 
     // Hilt

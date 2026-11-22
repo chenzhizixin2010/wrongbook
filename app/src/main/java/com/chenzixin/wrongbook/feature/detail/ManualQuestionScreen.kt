@@ -1,4 +1,4 @@
-package com.chenzixin.wrongbook.feature.detail
+﻿package com.chenzixin.wrongbook.feature.detail
 
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
@@ -31,8 +31,7 @@ import com.chenzixin.wrongbook.ui.component.WbTextField
 import com.chenzixin.wrongbook.ui.component.WbTextButton
 import com.chenzixin.wrongbook.ui.component.WbTopBar
 import com.chenzixin.wrongbook.ui.theme.wbColors
-import io.github.robinpcrd.cupertino.CupertinoButton
-import io.github.robinpcrd.cupertino.CupertinoText
+import com.chenzixin.wrongbook.ui.component.WbText
 
 /**
  * 手动新建题目：没有图片也能建，适合抄错题本或老师口头讲的题。

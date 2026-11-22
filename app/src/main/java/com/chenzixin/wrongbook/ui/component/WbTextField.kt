@@ -1,7 +1,6 @@
-package com.chenzixin.wrongbook.ui.component
+﻿package com.chenzixin.wrongbook.ui.component
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -17,24 +16,21 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.TextStyle
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.chenzixin.wrongbook.data.prefs.UiStyle
 import com.chenzixin.wrongbook.ui.theme.wbColors
-import io.github.robinpcrd.cupertino.CupertinoIcon
-import io.github.robinpcrd.cupertino.CupertinoText
+import com.chenzixin.wrongbook.ui.theme.wbUiStyle
+import top.yukonga.miuix.kmp.theme.MiuixTheme
 
 /**
- * iOS 风格输入框，液态玻璃版：半透明底 + 1dp 受光描边。
- *
- * 不用 CupertinoTextField：它的参数在不同版本间漂移，自己用 BasicTextField 包一层更稳，
- * 也让视觉与 [GlassSurface] 保持一致。
+ * HyperOS 风格输入框：浅色 surfaceContainer 填充、无描边、无渐变。
+ * 用 BasicTextField 包一层是为了保留现有的 String + placeholder + leadingIcon API。
  */
 @Composable
 fun WbTextField(
@@ -49,8 +45,12 @@ fun WbTextField(
     leadingIcon: ImageVector? = null,
     trailing: @Composable (() -> Unit)? = null,
 ) {
-    val colors = wbColors()
-    val shape = RoundedCornerShape(16.dp)
+    val style = wbUiStyle()
+    val ios = style == UiStyle.IOS
+    val v090 = style == UiStyle.V090
+    val c = MiuixTheme.colorScheme
+    val wb = wbColors()
+    val body = MiuixTheme.textStyles.body1
 
     BasicTextField(
         value = value,
@@ -59,51 +59,48 @@ fun WbTextField(
         enabled = enabled,
         singleLine = singleLine,
         textStyle = TextStyle(
-            fontSize = 16.sp,
-            lineHeight = 22.sp,
-            fontWeight = FontWeight.Normal,
-            color = colors.label,
+            color = if (ios) wb.label else c.onSurface,
+            fontSize = body.fontSize,
+            fontFamily = body.fontFamily,
+            lineHeight = body.lineHeight,
         ),
-        cursorBrush = SolidColor(colors.tint),
+        cursorBrush = SolidColor(if (ios) wb.accent else c.primary),
         keyboardOptions = KeyboardOptions(keyboardType = keyboardType),
         visualTransformation = visualTransformation,
         decorationBox = { innerTextField ->
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .clip(shape)
+                    .clip(RoundedCornerShape(if (v090) 18.dp else if (ios) 10.dp else 12.dp))
                     .background(
-                        Brush.verticalGradient(
-                            listOf(colors.glassTop, colors.glassBottom),
-                            startY = 0f,
-                        ),
+                        if (v090) {
+                            wb.glassFill
+                        } else if (ios) {
+                            wb.cardBackground
+                        } else {
+                            if (enabled) c.secondaryContainer else c.surfaceContainerHigh
+                        },
                     )
-                    .border(
-                        width = 1.dp,
-                        color = colors.glassStrokeTop.copy(alpha = 0.5f),
-                        shape = shape,
-                    )
-                    .padding(horizontal = 13.dp, vertical = 13.dp)
+                    .padding(horizontal = 14.dp, vertical = 12.dp)
                     .heightIn(min = 22.dp),
                 verticalAlignment = if (singleLine) Alignment.CenterVertically else Alignment.Top,
             ) {
                 if (leadingIcon != null) {
-                    CupertinoIcon(
+                    WbIcon(
                         imageVector = leadingIcon,
                         contentDescription = null,
-                        modifier = Modifier.size(17.dp),
-                        tint = colors.secondaryLabel,
+                        modifier = Modifier.size(18.dp),
+                        tint = if (v090) wb.accent else if (ios) wb.secondaryLabel else c.onSurfaceVariantSummary,
                     )
-                    Spacer(Modifier.width(9.dp))
+                    Spacer(Modifier.width(8.dp))
                 }
                 Box(modifier = Modifier.weight(1f)) {
                     if (value.isEmpty()) {
-                        CupertinoText(
+                        WbText(
                             text = placeholder,
-                            fontSize = 15.sp,
-                            color = colors.secondaryLabel.copy(alpha = 0.85f),
-                            maxLines = if (singleLine) 1 else 3,
-                            overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+                            fontSize = 16.sp,
+                            color = if (ios) wb.secondaryLabel else c.onSurfaceVariantSummary,
+                            maxLines = if (singleLine) 1 else 2,
                         )
                     }
                     innerTextField()

@@ -1,4 +1,4 @@
-package com.chenzixin.wrongbook.feature.settings
+﻿package com.chenzixin.wrongbook.feature.settings
 
 import android.content.Context
 import android.content.Intent
@@ -29,7 +29,7 @@ import com.chenzixin.wrongbook.ui.component.WbDangerButton
 import com.chenzixin.wrongbook.ui.component.WbPrimaryButton
 import com.chenzixin.wrongbook.ui.component.WbSecondaryButton
 import com.chenzixin.wrongbook.ui.theme.wbColors
-import io.github.robinpcrd.cupertino.CupertinoText
+import com.chenzixin.wrongbook.ui.component.WbText
 
 /**
  * 服务商引导：申请入口 + 领取步骤 + 一键填入。
@@ -53,14 +53,14 @@ fun ProviderGuideDialog(
                 .background(colors.cardBackground)
                 .padding(20.dp),
         ) {
-            CupertinoText(
+            WbText(
                 text = preset.name,
                 fontSize = 17.sp,
                 fontWeight = FontWeight.SemiBold,
                 color = colors.label,
             )
             if (preset.needsVpn) {
-                CupertinoText(
+                WbText(
                     text = "需要网络可达（国内请自备代理）",
                     modifier = Modifier.padding(top = 4.dp),
                     fontSize = 12.sp,
@@ -68,7 +68,7 @@ fun ProviderGuideDialog(
                 )
             }
 
-            CupertinoText(
+            WbText(
                 text = preset.quota,
                 modifier = Modifier.padding(top = 8.dp),
                 fontSize = 13.sp,
@@ -76,7 +76,7 @@ fun ProviderGuideDialog(
             )
 
             Spacer(Modifier.height(16.dp))
-            CupertinoText(
+            WbText(
                 text = "怎么拿 Key",
                 fontSize = 14.sp,
                 fontWeight = FontWeight.SemiBold,
@@ -90,13 +90,13 @@ fun ProviderGuideDialog(
             ) {
                 preset.steps.forEachIndexed { index, step ->
                     Row {
-                        CupertinoText(
+                        WbText(
                             text = "${index + 1}.",
                             modifier = Modifier.width(22.dp),
                             fontSize = 13.sp,
                             color = colors.tint,
                         )
-                        CupertinoText(
+                        WbText(
                             text = step,
                             modifier = Modifier.weight(1f),
                             fontSize = 13.sp,
@@ -117,16 +117,16 @@ fun ProviderGuideDialog(
                         .padding(horizontal = 12.dp, vertical = 10.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    CupertinoText(
+                    WbText(
                         text = "去申请 Key",
                         modifier = Modifier.weight(1f),
                         fontSize = 14.sp,
                         color = colors.tint,
                         fontWeight = FontWeight.SemiBold,
                     )
-                    CupertinoText(text = "↗", fontSize = 14.sp, color = colors.tint)
+                    WbText(text = "↗", fontSize = 14.sp, color = colors.tint)
                 }
-                CupertinoText(
+                WbText(
                     text = preset.applyUrl,
                     modifier = Modifier.padding(top = 4.dp, start = 4.dp),
                     fontSize = 11.sp,

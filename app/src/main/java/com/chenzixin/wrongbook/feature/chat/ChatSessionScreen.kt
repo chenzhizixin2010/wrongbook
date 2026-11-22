@@ -1,4 +1,4 @@
-package com.chenzixin.wrongbook.feature.chat
+﻿package com.chenzixin.wrongbook.feature.chat
 
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -7,6 +7,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -22,7 +23,6 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -40,30 +40,31 @@ import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import coil3.compose.AsyncImage
 import com.chenzixin.wrongbook.data.local.entity.ChatMessageEntity
-import com.chenzixin.wrongbook.ui.component.GlassSurface
 import com.chenzixin.wrongbook.ui.component.MarkdownText
 import com.chenzixin.wrongbook.ui.component.WbAlertDialog
-import com.chenzixin.wrongbook.ui.component.WbChip
-import com.chenzixin.wrongbook.ui.component.WbGlassIconButton
+import com.chenzixin.wrongbook.ui.component.WbIcon
+import com.chenzixin.wrongbook.ui.component.WbIconButton
+import com.chenzixin.wrongbook.ui.component.WbSurface
+import com.chenzixin.wrongbook.ui.component.WbListRow
+import com.chenzixin.wrongbook.ui.component.WbText
+import com.chenzixin.wrongbook.ui.component.WbTextField
 import com.chenzixin.wrongbook.ui.component.WbTopBar
-import com.chenzixin.wrongbook.ui.component.WbTextButton
-import com.chenzixin.wrongbook.data.local.entity.TagEntity
+import com.chenzixin.wrongbook.data.prefs.UiStyle
 import com.chenzixin.wrongbook.ui.theme.wbColors
-import io.github.robinpcrd.cupertino.CupertinoIcon
-import io.github.robinpcrd.cupertino.CupertinoText
-import io.github.robinpcrd.cupertino.icons.CupertinoIcons
-import io.github.robinpcrd.cupertino.icons.outlined.Paperplane
-import io.github.robinpcrd.cupertino.icons.outlined.PlusCircle
-import io.github.robinpcrd.cupertino.icons.outlined.Xmark
-import java.io.File
+import com.chenzixin.wrongbook.ui.theme.wbUiStyle
 import kotlinx.coroutines.launch
+import top.yukonga.miuix.kmp.icon.MiuixIcons
+import top.yukonga.miuix.kmp.icon.extended.AddCircle
+import top.yukonga.miuix.kmp.icon.extended.Close
+import top.yukonga.miuix.kmp.icon.extended.Send
+import top.yukonga.miuix.kmp.theme.MiuixTheme
+import java.io.File
 
 /** 单个会话：消息流 + 输入框；AI 回复走 SSE 流式渲染。 */
 @Composable
@@ -74,13 +75,9 @@ fun ChatSessionScreen(
     val session by vm.session.collectAsState()
     val messages by vm.messages.collectAsState()
     val streaming by vm.streaming.collectAsState()
-    val allTags by vm.allTags.collectAsState()
-    var savingText by remember { mutableStateOf<String?>(null) }
-    var pickingQuestion by remember { mutableStateOf(false) }
-    val questions by vm.questions.collectAsState()
     val thinking by vm.thinking.collectAsState()
     val status by vm.status.collectAsState()
-    val colors = wbColors()
+    val c = wbColors()
     var input by remember { mutableStateOf("") }
     var pendingImages by remember { mutableStateOf<List<String>>(emptyList()) }
     val listState = rememberLazyListState()
@@ -104,19 +101,7 @@ fun ChatSessionScreen(
             .fillMaxSize()
             .imePadding(),
     ) {
-        WbTopBar(
-            title = session?.title ?: "对话",
-            onBack = onBack,
-            actions = {
-                WbTextButton(text = "选题", onClick = { pickingQuestion = true })
-                if (streaming == null) {
-                    WbTextButton(
-                        text = "继续",
-                        onClick = { vm.send("请从上次中断的地方继续，不要重复已经给过的内容。") },
-                    )
-                }
-            },
-        )
+        WbTopBar(title = session?.title ?: "对话", onBack = onBack)
 
         LazyColumn(
             modifier = Modifier
@@ -124,12 +109,7 @@ fun ChatSessionScreen(
                 .fillMaxWidth(),
             state = listState,
             verticalArrangement = Arrangement.spacedBy(10.dp),
-            contentPadding = androidx.compose.foundation.layout.PaddingValues(
-                start = 14.dp,
-                end = 14.dp,
-                top = 6.dp,
-                bottom = 10.dp,
-            ),
+            contentPadding = PaddingValues(start = 14.dp, end = 14.dp, top = 8.dp, bottom = 10.dp),
         ) {
             if (messages.isEmpty() && streaming == null) {
                 item(key = "welcome") {
@@ -137,10 +117,7 @@ fun ChatSessionScreen(
                 }
             }
             items(messages, key = { it.id }) { message ->
-                MessageBubble(
-                    message = message,
-                    onSaveAsQuestion = { text -> savingText = text },
-                )
+                MessageBubble(message = message)
             }
             if (streaming != null) {
                 item(key = "streaming") {
@@ -149,86 +126,91 @@ fun ChatSessionScreen(
             }
         }
 
-        if (pickingQuestion) {
-            QuestionPickerDialog(
-                questions = questions,
-                onPick = { item ->
-                    val stem = (item.question.refinedText ?: item.question.rawOcrText).trim()
-                    input = "【题目】$stem\n\n【我的问题】"
-                    pickingQuestion = false
-                },
-                onDismiss = { pickingQuestion = false },
-            )
-        }
-
-        SaveQuestionFromChatHost(
-            vm = vm,
-            savingText = savingText,
-            allTags = allTags,
-            onDismiss = { savingText = null },
-        )
-
         if (pendingImages.isNotEmpty()) {
-            GlassSurface(
+            Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 12.dp)
-                    .padding(bottom = 6.dp),
-                cornerRadius = 18.dp,
-                elevation = 4.dp,
+                    .background(c.cardBackground)
+                    .padding(horizontal = 12.dp, vertical = 8.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
             ) {
-                Row(
-                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 8.dp),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                ) {
-                    pendingImages.forEach { relative ->
-                        Box {
-                            AsyncImage(
-                                model = File(context.filesDir, relative),
-                                contentDescription = null,
-                                modifier = Modifier
-                                    .size(52.dp)
-                                    .clip(RoundedCornerShape(12.dp)),
-                                contentScale = ContentScale.Crop,
+                pendingImages.forEach { relative ->
+                    Box {
+                        AsyncImage(
+                            model = File(context.filesDir, relative),
+                            contentDescription = null,
+                            modifier = Modifier
+                                .size(52.dp)
+                                .clip(RoundedCornerShape(10.dp)),
+                            contentScale = ContentScale.Crop,
+                        )
+                        Box(
+                            modifier = Modifier
+                                .align(Alignment.TopEnd)
+                                .padding(2.dp)
+                                .size(18.dp)
+                                .clip(CircleShape)
+                                .background(c.groupedBackground)
+                                .clickable { pendingImages = pendingImages - relative },
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            WbIcon(
+                                imageVector = MiuixIcons.Close,
+                                contentDescription = "移除图片",
+                                modifier = Modifier.size(12.dp),
+                                tint = c.label,
                             )
-                            Box(
-                                modifier = Modifier
-                                    .align(Alignment.TopEnd)
-                                    .padding(2.dp)
-                                    .size(17.dp)
-                                    .clip(CircleShape)
-                                    .background(Color.Black.copy(alpha = 0.55f))
-                                    .clickable { pendingImages = pendingImages - relative },
-                                contentAlignment = Alignment.Center,
-                            ) {
-                                CupertinoIcon(
-                                    imageVector = CupertinoIcons.Outlined.Xmark,
-                                    contentDescription = "移除图片",
-                                    modifier = Modifier.size(8.dp),
-                                    tint = Color.White,
-                                )
-                            }
                         }
                     }
-                    Spacer(Modifier.weight(1f))
                 }
+                Spacer(Modifier.weight(1f))
             }
         }
 
-        Composer(
-            input = input,
-            onInputChange = { input = it },
-            streaming = streaming != null,
-            onPickImage = { pickImage.launch("image/*") },
-            onStop = vm::stop,
-            onSend = {
-                val text = input
-                val images = pendingImages
-                input = ""
-                pendingImages = emptyList()
-                vm.send(text, images)
-            },
-        )
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(c.cardBackground)
+                .padding(horizontal = 10.dp, vertical = 8.dp),
+            verticalAlignment = Alignment.Bottom,
+        ) {
+            WbIconButton(
+                icon = MiuixIcons.AddCircle,
+                contentDescription = "添加图片",
+                onClick = { pickImage.launch("image/*") },
+                size = 40.dp,
+                iconSize = 24.dp,
+                tint = c.accent,
+            )
+            Spacer(Modifier.width(6.dp))
+            WbTextField(
+                value = input,
+                onValueChange = { input = it },
+                placeholder = "问思路、要同类题…",
+                modifier = Modifier.weight(1f),
+                singleLine = false,
+            )
+            Spacer(Modifier.width(6.dp))
+            WbIconButton(
+                icon = if (streaming != null) MiuixIcons.Close else MiuixIcons.Send,
+                contentDescription = if (streaming != null) "停止生成" else "发送",
+                onClick = {
+                    if (streaming != null) {
+                        vm.stop()
+                    } else if (input.isNotBlank()) {
+                        val text = input
+                        val images = pendingImages
+                        input = ""
+                        pendingImages = emptyList()
+                        vm.send(text, images)
+                    }
+                },
+                size = 40.dp,
+                iconSize = 20.dp,
+                tint = c.onAccent,
+                containerColor = if (streaming != null) c.danger else c.accent,
+            )
+        }
     }
 
     if (status != null) {
@@ -243,207 +225,70 @@ fun ChatSessionScreen(
     }
 }
 
-/** 输入区：玻璃胶囊，左附图、右发送。 */
-@Composable
-private fun Composer(
-    input: String,
-    onInputChange: (String) -> Unit,
-    streaming: Boolean,
-    onPickImage: () -> Unit,
-    onStop: () -> Unit,
-    onSend: () -> Unit,
-) {
-    val colors = wbColors()
-    GlassSurface(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 12.dp)
-            .padding(top = 6.dp, bottom = 10.dp),
-        cornerRadius = 26.dp,
-        elevation = 12.dp,
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 8.dp, vertical = 7.dp),
-            verticalAlignment = Alignment.Bottom,
-        ) {
-            WbGlassIconButton(
-                icon = CupertinoIcons.Outlined.PlusCircle,
-                contentDescription = "添加图片",
-                onClick = onPickImage,
-                size = 38.dp,
-                iconSize = 17.dp,
-                tint = colors.secondaryLabel,
-            )
-            Spacer(Modifier.width(6.dp))
-
-            BasicTextField(
-                value = input,
-                onValueChange = onInputChange,
-                modifier = Modifier
-                    .weight(1f)
-                    .padding(vertical = 9.dp),
-                textStyle = TextStyle(
-                    fontSize = 15.sp,
-                    lineHeight = 21.sp,
-                    color = colors.label,
-                ),
-                cursorBrush = SolidColor(colors.tint),
-                maxLines = 4,
-                decorationBox = { inner ->
-                    Box {
-                        if (input.isEmpty()) {
-                            CupertinoText(
-                                text = "问思路、要同类题…",
-                                fontSize = 15.sp,
-                                color = colors.secondaryLabel.copy(alpha = 0.8f),
-                                maxLines = 1,
-                            )
-                        }
-                        inner()
-                    }
-                },
-            )
-
-            Spacer(Modifier.width(8.dp))
-
-            Box(
-                modifier = Modifier
-                    .size(40.dp)
-                    .clip(CircleShape)
-                    .background(
-                        if (streaming) {
-                            Brush.linearGradient(
-                                listOf(colors.danger, colors.danger.copy(alpha = 0.8f)),
-                            )
-                        } else {
-                            Brush.linearGradient(listOf(colors.accent, colors.accentEnd))
-                        },
-                    )
-                    .clickable {
-                        if (streaming) onStop() else if (input.isNotBlank()) onSend()
-                    },
-                contentAlignment = Alignment.Center,
-            ) {
-                CupertinoIcon(
-                    imageVector = if (streaming) CupertinoIcons.Outlined.Xmark else CupertinoIcons.Outlined.Paperplane,
-                    contentDescription = if (streaming) "停止生成" else "发送",
-                    modifier = Modifier.size(16.dp),
-                    tint = Color.White,
-                )
-            }
-        }
-    }
-}
-
-@Composable
-private fun SaveQuestionFromChatHost(
-    vm: ChatSessionViewModel,
-    savingText: String?,
-    allTags: List<TagEntity>,
-    onDismiss: () -> Unit,
-) {
-    val text = savingText ?: return
-    SaveQuestionFromChatDialog(
-        rawText = text,
-        allTags = allTags,
-        onSave = { stem, answer, analysis, tagIds ->
-            vm.saveAsQuestion(stem, answer, analysis, tagIds)
-            onDismiss()
-        },
-        onDismiss = onDismiss,
-    )
-}
-
 @Composable
 private fun ChatWelcome(onPick: (String) -> Unit) {
-    val colors = wbColors()
+    val c = wbColors()
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(top = 26.dp),
+            .padding(top = 32.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         Box(
             modifier = Modifier
-                .size(72.dp)
+                .size(64.dp)
                 .clip(CircleShape)
-                .background(
-                    Brush.linearGradient(
-                        listOf(colors.accent.copy(alpha = 0.95f), colors.accentEnd.copy(alpha = 0.9f)),
-                    ),
-                ),
+                .background(c.tintSoft),
             contentAlignment = Alignment.Center,
         ) {
-            CupertinoIcon(
-                imageVector = CupertinoIcons.Outlined.Paperplane,
+            WbIcon(
+                imageVector = MiuixIcons.Send,
                 contentDescription = null,
                 modifier = Modifier.size(28.dp),
-                tint = Color.White,
+                tint = c.accent,
             )
         }
         Spacer(Modifier.height(16.dp))
-        CupertinoText(
+        WbText(
             text = "想从哪里开始？",
             fontSize = 18.sp,
-            fontWeight = FontWeight.SemiBold,
-            color = colors.label,
+            fontWeight = FontWeight.Medium,
+            color = c.label,
         )
         Spacer(Modifier.height(6.dp))
-        CupertinoText(
+        WbText(
             text = "可以带图提问，也可以从题库带题进来",
-            fontSize = 12.5.sp,
-            color = colors.secondaryLabel,
+            fontSize = 14.sp,
+            color = c.secondaryLabel,
         )
-        Spacer(Modifier.height(18.dp))
-        Column(
+        Spacer(Modifier.height(20.dp))
+        WbSurface(
             modifier = Modifier.fillMaxWidth(),
-            verticalArrangement = Arrangement.spacedBy(8.dp),
+            cornerRadius = 16.dp,
+            contentPadding = PaddingValues(0.dp),
         ) {
+            Column {
             listOf(
                 "这道题的第二步为什么成立？",
-                "帮我把这道错题整理成干净题干和解析",
-                "出两道同类题，换几个数字练手",
-            ).forEach { prompt ->
-                GlassSurface(
-                    modifier = Modifier.fillMaxWidth(),
-                    cornerRadius = 18.dp,
-                    elevation = 3.dp,
+                "整理成干净题干和解析",
+                "出两道同类题练手",
+            ).forEachIndexed { index, prompt ->
+                WbListRow(
+                    title = prompt,
+                    showDivider = index != 2,
                     onClick = { onPick(prompt) },
-                ) {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 14.dp, vertical = 12.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        CupertinoText(
-                            text = prompt,
-                            modifier = Modifier.weight(1f),
-                            fontSize = 13.sp,
-                            color = colors.label,
-                            maxLines = 1,
-                        )
-                        CupertinoIcon(
-                            imageVector = CupertinoIcons.Outlined.Paperplane,
-                            contentDescription = null,
-                            modifier = Modifier.size(13.dp),
-                            tint = colors.tint.copy(alpha = 0.7f),
-                        )
-                    }
-                }
+                )
+            }
             }
         }
     }
 }
 
 @Composable
-private fun MessageBubble(
-    message: ChatMessageEntity,
-    onSaveAsQuestion: ((String) -> Unit)? = null,
-) {
+private fun MessageBubble(message: ChatMessageEntity) {
     if (message.role == "user") {
+        val c = wbColors()
+        val v090 = wbUiStyle() == UiStyle.V090
         val context = LocalContext.current
         Column(
             modifier = Modifier.fillMaxWidth(),
@@ -456,122 +301,106 @@ private fun MessageBubble(
                     modifier = Modifier
                         .size(140.dp)
                         .padding(vertical = 4.dp)
-                        .clip(RoundedCornerShape(18.dp)),
+                        .clip(RoundedCornerShape(12.dp)),
                     contentScale = ContentScale.Crop,
                 )
             }
             Box(
                 modifier = Modifier
                     .widthIn(max = 300.dp)
-                    .clip(RoundedCornerShape(20.dp, 20.dp, 6.dp, 20.dp))
+                    .clip(RoundedCornerShape(16.dp, 16.dp, 4.dp, 16.dp))
                     .background(
-                        Brush.linearGradient(
-                            listOf(
-                                wbColors().accent.copy(alpha = 0.92f),
-                                wbColors().accentEnd.copy(alpha = 0.88f),
-                            ),
-                        ),
+                        if (v090) {
+                            Brush.linearGradient(listOf(c.accent, c.accentEnd))
+                        } else {
+                            SolidColor(c.accent)
+                        },
                     )
                     .padding(horizontal = 14.dp, vertical = 10.dp),
             ) {
-                CupertinoText(
+                WbText(
                     text = message.content,
-                    fontSize = 15.sp,
-                    lineHeight = 21.sp,
-                    color = Color.White,
+                    fontSize = 16.sp,
+                    lineHeight = 22.sp,
+                    color = c.onAccent,
                 )
             }
         }
     } else {
-        Column(modifier = Modifier.fillMaxWidth()) {
-            AssistantBubble(text = message.content, streaming = false)
-            if (onSaveAsQuestion != null && message.content.isNotBlank()) {
-                Row(
-                    modifier = Modifier.padding(start = 8.dp, top = 2.dp),
-                    horizontalArrangement = Arrangement.spacedBy(6.dp),
-                ) {
-                    WbTextButton(
-                        text = "存为错题",
-                        onClick = { onSaveAsQuestion(message.content) },
-                        fontSize = 12,
-                    )
-                }
-            }
-        }
+        AssistantBubble(text = message.content, streaming = false)
     }
 }
 
 @Composable
 private fun AssistantBubble(text: String, streaming: Boolean, thinking: String = "") {
-    val colors = wbColors()
-    GlassSurface(
+    val c = wbColors()
+    WbSurface(
         modifier = Modifier.fillMaxWidth(),
-        cornerRadius = 22.dp,
-        elevation = 4.dp,
+        cornerRadius = 16.dp,
+        contentPadding = PaddingValues(horizontal = 14.dp, vertical = 12.dp),
     ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 14.dp, vertical = 12.dp),
-        ) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Box(
-                    modifier = Modifier
-                        .size(18.dp)
-                        .clip(CircleShape)
-                        .background(
-                            Brush.linearGradient(listOf(colors.accent, colors.accentEnd)),
-                        ),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    CupertinoText(text = "A", fontSize = 9.sp, fontWeight = FontWeight.Bold, color = Color.White)
-                }
-                Spacer(Modifier.width(7.dp))
-                CupertinoText(
-                    text = "AI",
+        Column {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Box(
+                modifier = Modifier
+                    .size(18.dp)
+                    .clip(CircleShape)
+                    .background(c.accent),
+                contentAlignment = Alignment.Center,
+            ) {
+                WbText(
+                    text = "A",
                     fontSize = 11.sp,
-                    fontWeight = FontWeight.SemiBold,
-                    color = colors.tint,
+                    fontWeight = FontWeight.Bold,
+                    color = c.onAccent,
                 )
-                if (streaming) {
-                    CupertinoText(
-                        text = " · 生成中…",
-                        fontSize = 10.5.sp,
-                        color = colors.secondaryLabel,
-                    )
-                }
             }
+            Spacer(Modifier.width(6.dp))
+            WbText(
+                text = "AI",
+                fontSize = 11.sp,
+                fontWeight = FontWeight.Medium,
+                color = c.accent,
+            )
+            if (streaming) {
+                WbText(
+                    text = " · 生成中…",
+                    fontSize = 11.sp,
+                    color = c.secondaryLabel,
+                )
+            }
+        }
+        Spacer(Modifier.height(8.dp))
+        if (text.isBlank()) {
+            WbText(
+                text = if (thinking.isNotBlank()) "思考中…" else "…",
+                fontSize = 16.sp,
+                color = c.secondaryLabel,
+            )
+            if (thinking.isNotBlank()) {
+                Spacer(Modifier.height(6.dp))
+                WbText(
+                    text = thinking.takeLast(240),
+                    fontSize = 13.sp,
+                    lineHeight = 19.sp,
+                    color = c.secondaryLabel,
+                )
+            }
+        } else {
+            MarkdownText(
+                markdown = text,
+                textColor = c.label.toArgb(),
+                textSizeSp = 16f,
+            )
+        }
+        if (text.isNotBlank()) {
             Spacer(Modifier.height(8.dp))
-            if (text.isBlank()) {
-                CupertinoText(
-                    text = if (thinking.isNotBlank()) "思考中…" else "…",
-                    fontSize = 15.sp,
-                    color = colors.secondaryLabel,
-                )
-                if (thinking.isNotBlank()) {
-                    Spacer(Modifier.height(6.dp))
-                    CupertinoText(
-                        text = thinking.takeLast(240),
-                        fontSize = 11.5.sp,
-                        lineHeight = 17.sp,
-                        color = colors.secondaryLabel.copy(alpha = 0.8f),
-                    )
-                }
-            } else {
-                MarkdownText(
-                    markdown = text,
-                    textColor = colors.label.toArgb(),
-                    textSizeSp = 15.5f,
-                )
-            }
-            if (text.isNotBlank()) {
-                Spacer(Modifier.height(8.dp))
-                CupertinoText(
-                    text = "内容由 AI 生成，请自行核对",
-                    fontSize = 10.sp,
-                    color = colors.secondaryLabel.copy(alpha = 0.75f),
-                )
-            }
+            WbText(
+                text = "内容由 AI 生成，请自行核对",
+                fontSize = 11.sp,
+                color = c.secondaryLabel,
+            )
+        }
         }
     }
 }

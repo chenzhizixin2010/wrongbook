@@ -127,7 +127,8 @@ class PracticeRepository @Inject constructor(
         if (request.useAi) {
             when (val result = generateVariants(plan.sources, request.count)) {
                 is WbResult.Ok -> {
-                    items = result.value
+                    // AI 吐出来的选项同样可能挤一行，这里统一再过一遍换行
+                    items = result.value.map { it.copy(stem = OptionFormatter.wrap(it.stem)) }
                     modeLabel = "AI 生成变式题"
                 }
                 is WbResult.Err -> {

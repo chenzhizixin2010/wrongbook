@@ -1,25 +1,14 @@
 <?xml version="1.0" encoding="utf-8"?>
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:aapt="http://schemas.android.com/aapt"
     android:width="108dp"
     android:height="108dp"
     android:viewportWidth="108"
     android:viewportHeight="108">
 
-    <!-- Errata 品牌图标：蓝紫渐变底 + 三条白色圆头横杠组成的 E。
-         全出血绘制，由启动器自行做圆角/圆形遮罩。 -->
-    <path android:pathData="M0,0h108v108h-108z">
-        <aapt:attr name="android:fillColor">
-            <gradient
-                android:type="linear"
-                android:startX="0"
-                android:startY="0"
-                android:endX="108"
-                android:endY="108"
-                android:startColor="#0A84FF"
-                android:endColor="#6C5CE7" />
-        </aapt:attr>
-    </path>
+    <!-- Errata 品牌图标：Miuix 主色纯色底 + 白色三横杠 E。无渐变。 -->
+    <path
+        android:fillColor="#3482FF"
+        android:pathData="M0,0h108v108h-108z" />
 
     <path
         android:pathData="M32,34 L76,34"

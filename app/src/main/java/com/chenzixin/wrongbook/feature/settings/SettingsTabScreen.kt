@@ -1,22 +1,19 @@
 package com.chenzixin.wrongbook.feature.settings
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -24,45 +21,41 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.chenzixin.wrongbook.BuildConfig
 import com.chenzixin.wrongbook.data.prefs.ThemeMode
-import com.chenzixin.wrongbook.ui.component.GlassSurface
-import com.chenzixin.wrongbook.ui.component.WbBadge
-import com.chenzixin.wrongbook.ui.component.WbGlassIconButton
+import com.chenzixin.wrongbook.data.prefs.UiStyle
+import com.chenzixin.wrongbook.ui.component.ErrataMark
 import com.chenzixin.wrongbook.ui.component.WbAlertDialog
+import com.chenzixin.wrongbook.ui.component.WbBadge
+import com.chenzixin.wrongbook.ui.component.WbDivider
+import com.chenzixin.wrongbook.ui.component.WbHintBar
+import com.chenzixin.wrongbook.ui.component.WbIcon
 import com.chenzixin.wrongbook.ui.component.WbListRow
 import com.chenzixin.wrongbook.ui.component.WbPageHeader
 import com.chenzixin.wrongbook.ui.component.WbSection
-import com.chenzixin.wrongbook.ui.component.WbSecondaryButton
+import com.chenzixin.wrongbook.ui.component.WbSurface
+import com.chenzixin.wrongbook.ui.component.WbText
 import com.chenzixin.wrongbook.ui.component.WbTextButton
-import com.chenzixin.wrongbook.ui.component.wbTabBarSpace
+import com.chenzixin.wrongbook.ui.theme.LocalUiStyle
+import com.chenzixin.wrongbook.ui.theme.LocalWbColors
 import com.chenzixin.wrongbook.ui.theme.wbColors
-import io.github.robinpcrd.cupertino.CupertinoIcon
-import io.github.robinpcrd.cupertino.CupertinoText
-import io.github.robinpcrd.cupertino.icons.CupertinoIcons
-import io.github.robinpcrd.cupertino.icons.outlined.ArrowClockwise
-import io.github.robinpcrd.cupertino.icons.outlined.FaceSmiling
-import io.github.robinpcrd.cupertino.icons.outlined.Gearshape
-import io.github.robinpcrd.cupertino.icons.outlined.InfoCircle
-import io.github.robinpcrd.cupertino.icons.outlined.ListBullet
-import io.github.robinpcrd.cupertino.icons.outlined.Lock
-import io.github.robinpcrd.cupertino.icons.outlined.SquareAndArrowUp
-import io.github.robinpcrd.cupertino.icons.outlined.Star
-import io.github.robinpcrd.cupertino.icons.outlined.WrenchAndScrewdriver
+import com.chenzixin.wrongbook.ui.theme.wbUiStyle
+import top.yukonga.miuix.kmp.icon.MiuixIcons
+import top.yukonga.miuix.kmp.icon.extended.ChevronForward
+import top.yukonga.miuix.kmp.icon.extended.Ok
 
 /**
- * 设置 Tab：模型与 API、题库分类、学习数据、外观、数据、关于。
+ * 设置页：同一套信息结构，两套皮肤渲染。
  *
- * 视觉上做成「一张身份卡 + 若干玻璃分组」：
- * 身份卡放最上面，确保用户一眼看到版本与模型状态；其余按使用频率排列。
+ * - Miuix：SmallTitle + Card + BasicComponent；
+ * - iOS：uppercase section + inset grouped 玻璃卡 + Cupertino 行。
+ * 所有行都走 [WbSection] / [WbListRow]，不再直接依赖 Miuix Card。
  */
 @Composable
 fun SettingsTabScreen(
@@ -76,43 +69,46 @@ fun SettingsTabScreen(
     val vm: SettingsViewModel = hiltViewModel()
     val profiles by vm.profiles.collectAsState()
     val themeMode by vm.themeMode.collectAsState()
+    val uiStyle by vm.uiStyle.collectAsState()
     val reprocess by vm.reprocess.collectAsState()
     val reprocessMessage by vm.reprocessMessage.collectAsState()
-    var confirmReprocess by remember { mutableStateOf(false) }
-    var hideReprocessProgress by remember { mutableStateOf(false) }
-    val colors = wbColors()
-    val bottomSpace = wbTabBarSpace()
     var showThemeDialog by remember { mutableStateOf(false) }
+    var showPrivacy by remember { mutableStateOf(false) }
+    var showStyleDialog by remember { mutableStateOf(false) }
+    val c = wbColors()
 
     Column(
         modifier = Modifier
             .fillMaxSize()
             .verticalScroll(rememberScrollState())
-            .padding(bottom = bottomSpace),
+            .padding(bottom = 16.dp),
     ) {
         WbPageHeader(
             title = "设置",
-            kicker = "个性化与数据",
-            subtitle = "错题、图片与对话都只在这台手机上",
+            kicker = "本地优先 · Errata",
+            subtitle = "错题、图片与对话只在这台手机上",
         )
 
-        IdentityCard(profileCount = profiles.size)
+        WbSection(header = "应用") {
+            WbListRow(
+                title = "Errata",
+                subtitle = "AI Mistake Notebook · v${BuildConfig.VERSION_NAME}",
+                leading = { ErrataMark(size = 40.dp) },
+                showDivider = true,
+            )
+            WbListRow(
+                title = "本地优先",
+                subtitle = "题目与图片只存在本机；无网络也可拍照、OCR、整理",
+                showDivider = false,
+            )
+        }
 
-        WbSection(
-            header = "模型与 API",
-            icon = CupertinoIcons.Outlined.WrenchAndScrewdriver,
-            footer = if (profiles.isEmpty()) {
-                "兼容 OpenAI 协议的服务都能接入：DeepSeek、智谱、硅基流动、自建网关等。"
-            } else {
-                "点配置查看详情；默认配置用于 AI 对话、识图与生成。"
-            },
-        ) {
+        WbSection(header = "模型与 API") {
             if (profiles.isEmpty()) {
                 WbListRow(
                     title = "还没有 API 配置",
-                    subtitle = "点右侧「添加」开始",
-                    showDivider = false,
-                    trailing = { WbTextButton(text = "添加", onClick = { onOpenProfile(0L) }) },
+                    subtitle = "兼容 OpenAI 协议的服务都能接入：DeepSeek、智谱、硅基流动等",
+                    showDivider = true,
                 )
             } else {
                 profiles.forEachIndexed { index, profile ->
@@ -121,35 +117,43 @@ fun SettingsTabScreen(
                         subtitle = buildString {
                             append(profile.chatModel)
                             if (profile.visionModel.isNotBlank()) append(" · 识图 ${profile.visionModel}")
-                            if (profile.isDefault) append(" · 默认")
                         },
-                        showDivider = index != profiles.lastIndex,
+                        showDivider = true,
                         onClick = { onOpenProfile(profile.id) },
-                        trailing = {
-                            if (profile.isDefault) {
-                                CupertinoIcon(
-                                    imageVector = CupertinoIcons.Outlined.Star,
-                                    contentDescription = null,
-                                    modifier = Modifier.size(17.dp),
-                                    tint = colors.tint,
-                                )
+                        trailing = if (profile.isDefault) {
+                            {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    WbBadge(text = "默认")
+                                    Spacer(Modifier.width(6.dp))
+                                    WbIcon(
+                                        imageVector = MiuixIcons.ChevronForward,
+                                        contentDescription = null,
+                                        modifier = Modifier.size(14.dp),
+                                        tint = c.secondaryLabel,
+                                    )
+                                }
                             }
+                        } else {
+                            null
                         },
                     )
                 }
             }
-        }
-
-        WbSection(header = "题库分类", icon = CupertinoIcons.Outlined.Star) {
             WbListRow(
-                title = "标签与收藏夹",
-                subtitle = "自定义分类，收藏夹只是打了标记的标签",
+                title = "添加 API 配置",
+                subtitle = "Key 只存密文，不会出现在日志或导出包里",
                 showDivider = false,
-                onClick = onOpenTags,
+                onClick = { onOpenProfile(0L) },
             )
         }
 
-        WbSection(header = "学习数据", icon = CupertinoIcons.Outlined.ArrowClockwise) {
+        WbSection(header = "题库分类") {
+            WbListRow(
+                title = "标签与收藏夹",
+                subtitle = "自定义分类；收藏夹只是打了标记的标签",
+                showDivider = true,
+                onClick = onOpenTags,
+            )
             WbListRow(
                 title = "学习统计",
                 subtitle = "掌握度分布、标签分布",
@@ -158,89 +162,67 @@ fun SettingsTabScreen(
             )
         }
 
-        WbSection(header = "外观", icon = CupertinoIcons.Outlined.FaceSmiling) {
+        WbSection(header = "外观") {
+            WbListRow(
+                title = "界面风格",
+                subtitle = uiStyle.label,
+                showDivider = true,
+                onClick = { showStyleDialog = true },
+            )
             WbListRow(
                 title = "主题",
                 subtitle = themeMode.label,
-                showDivider = false,
+                showDivider = true,
                 onClick = { showThemeDialog = true },
+            )
+            WbListRow(
+                title = "动态取色",
+                subtitle = "由系统壁纸生成主题色；Android 12 以下使用默认蓝色",
+                showDivider = false,
             )
         }
 
-        WbSection(header = "数据", icon = CupertinoIcons.Outlined.SquareAndArrowUp) {
+        WbSection(header = "数据") {
             WbListRow(
                 title = "导出题库",
-                subtitle = "ZIP：题目 JSON + 图片",
+                subtitle = "ZIP：题目 JSON + 图片，不含 API Key",
                 showDivider = true,
                 onClick = onOpenExport,
-                trailing = {
-                    CupertinoIcon(
-                        imageVector = CupertinoIcons.Outlined.SquareAndArrowUp,
-                        contentDescription = null,
-                        modifier = Modifier.size(17.dp),
-                        tint = colors.secondaryLabel,
-                    )
-                },
             )
             WbListRow(
                 title = "导入题库",
-                subtitle = "从 ZIP 恢复或迁移到新机",
+                subtitle = "从 ZIP 恢复或迁移到新机，自动跳过重复题",
                 showDivider = true,
                 onClick = onOpenImport,
             )
             WbListRow(
                 title = "重新处理题目图片",
-                subtitle = "统一摆正并提亮纸面（保留颜色）",
+                subtitle = when (val p = reprocess) {
+                    null -> "统一摆正、白底黑字；不会删除原图"
+                    else -> "处理中 ${p.done}/${p.total}…"
+                },
                 showDivider = false,
-                onClick = { confirmReprocess = true },
+                onClick = if (reprocess == null) {
+                    { vm.reprocessImages() }
+                } else {
+                    null
+                },
             )
         }
 
-        WbAlertDialog(
-        visible = confirmReprocess,
-        title = "重新处理所有题目图片？",
-        message = "会逐张识别方向、摆正并提亮纸面（颜色保留），覆盖原图。题目多时需要几分钟，中途可以退出。",
-        confirmText = "开始处理",
-        onConfirm = {
-            confirmReprocess = false
-            hideReprocessProgress = false
-            vm.reprocessImages()
-        },
-        onDismiss = { confirmReprocess = false },
-    )
-
-    reprocess?.let { p ->
-        if (!hideReprocessProgress) {
-            WbAlertDialog(
-                visible = true,
-                title = "正在处理图片",
-                message = "已完成 ${p.done} / ${p.total} 张" +
-                    if (p.failed > 0) "（失败 ${p.failed}）" else "" +
-                    "\n\n处理在后台继续，可以先去别的页面。",
-                confirmText = "后台运行",
-                onConfirm = { hideReprocessProgress = true },
-                onDismiss = { hideReprocessProgress = true },
+        if (reprocessMessage != null) {
+            WbHintBar(
+                text = reprocessMessage.orEmpty(),
+                onClick = vm::clearReprocessMessage,
             )
         }
-    }
 
-    if (reprocessMessage != null) {
-        WbAlertDialog(
-            visible = true,
-            title = "提示",
-            message = reprocessMessage,
-            confirmText = "知道了",
-            onConfirm = vm::clearReprocessMessage,
-            onDismiss = vm::clearReprocessMessage,
-        )
-    }
-
-    WbSection(header = "关于", icon = CupertinoIcons.Outlined.InfoCircle) {
+        WbSection(header = "关于") {
             WbListRow(
                 title = "隐私政策",
                 subtitle = "题目与对话只存在本机",
                 showDivider = true,
-                onClick = { /* 上架前替换为正式地址 */ },
+                onClick = { showPrivacy = true },
             )
             WbListRow(
                 title = "检查更新",
@@ -255,174 +237,110 @@ fun SettingsTabScreen(
             )
         }
 
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 28.dp, vertical = 14.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            CupertinoIcon(
-                imageVector = CupertinoIcons.Outlined.Lock,
-                contentDescription = null,
-                modifier = Modifier.size(13.dp),
-                tint = colors.secondaryLabel.copy(alpha = 0.7f),
-            )
-            Spacer(Modifier.width(7.dp))
-            CupertinoText(
-                text = "题目图片与对话内容只保存在本机，不会上传服务器。",
-                fontSize = 11.5.sp,
-                lineHeight = 16.sp,
-                color = colors.secondaryLabel,
-            )
-        }
+        WbText(
+            text = "Errata 不会上传题目图片；只有你主动使用 AI 功能时才会发送文本。",
+            modifier = Modifier.padding(horizontal = 28.dp, vertical = 10.dp),
+            fontSize = 11.sp,
+            lineHeight = 16.sp,
+            color = c.secondaryLabel,
+        )
     }
 
     if (showThemeDialog) {
-        ThemeDialog(
-            current = themeMode,
+        ChoiceDialog(
+            title = "选择主题",
+            options = ThemeMode.entries.map { it.label to null },
+            selectedIndex = ThemeMode.entries.indexOf(themeMode),
             onPick = {
-                vm.setThemeMode(it)
+                vm.setThemeMode(ThemeMode.entries[it])
                 showThemeDialog = false
             },
             onDismiss = { showThemeDialog = false },
         )
     }
-}
 
-/** 顶部身份卡：应用图标 + 版本 + 模型配置状态。 */
-@Composable
-private fun IdentityCard(profileCount: Int) {
-    val colors = wbColors()
-    GlassSurface(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 16.dp),
-        cornerRadius = 27.dp,
-        elevation = 12.dp,
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Box(
-                modifier = Modifier
-                    .size(54.dp)
-                    .clip(CircleShape)
-                    .background(
-                        Brush.linearGradient(
-                            listOf(colors.accent, colors.accentEnd),
-                        ),
-                    ),
-                contentAlignment = Alignment.Center,
-            ) {
-                CupertinoIcon(
-                    imageVector = CupertinoIcons.Outlined.ListBullet,
-                    contentDescription = null,
-                    modifier = Modifier.size(24.dp),
-                    tint = Color.White,
-                )
-            }
-            Spacer(Modifier.width(13.dp))
-            Column(modifier = Modifier.weight(1f)) {
-                CupertinoText(
-                    text = "Errata",
-                    fontSize = 17.sp,
-                    fontWeight = FontWeight.SemiBold,
-                    color = colors.label,
-                )
-                Spacer(Modifier.height(3.dp))
-                CupertinoText(
-                    text = "v${BuildConfig.VERSION_NAME} · AI Mistake Notebook",
-                    fontSize = 11.5.sp,
-                    color = colors.secondaryLabel,
-                )
-            }
-            WbBadge(
-                text = if (profileCount == 0) "未配模型" else "$profileCount 套模型",
-                color = if (profileCount == 0) colors.warning else colors.success,
-            )
-        }
+    if (showStyleDialog) {
+        ChoiceDialog(
+            title = "界面风格",
+            options = UiStyle.entries.map { it.label to it.summary },
+            selectedIndex = UiStyle.entries.indexOf(uiStyle),
+            onPick = {
+                vm.setUiStyle(UiStyle.entries[it])
+                showStyleDialog = false
+            },
+            onDismiss = { showStyleDialog = false },
+        )
+    }
+
+    if (showPrivacy) {
+        WbAlertDialog(
+            visible = true,
+            title = "隐私政策",
+            message = "题目、图片和对话只保存在本机。只有你主动使用 AI 功能时，才会把当前文本发送给你配置的服务商；API Key 加密存储，不写入日志或导出包。",
+            confirmText = "知道了",
+            onConfirm = { showPrivacy = false },
+            onDismiss = { showPrivacy = false },
+        )
     }
 }
 
+/** 单选弹窗：两套皮肤共用 WbSurface + WbListRow。 */
 @Composable
-private fun ThemeDialog(
-    current: ThemeMode,
-    onPick: (ThemeMode) -> Unit,
+private fun ChoiceDialog(
+    title: String,
+    options: List<Pair<String, String?>>,
+    selectedIndex: Int,
+    onPick: (Int) -> Unit,
     onDismiss: () -> Unit,
 ) {
-    val colors = wbColors()
+    val c = wbColors()
     Dialog(onDismissRequest = onDismiss) {
-        GlassSurface(
-            modifier = Modifier.width(304.dp),
-            cornerRadius = 30.dp,
-            elevation = 34.dp,
-            underlay = colors.dialogScrim,
+        CompositionLocalProvider(
+            LocalWbColors provides c,
+            LocalUiStyle provides wbUiStyle(),
         ) {
-            Column(modifier = Modifier.padding(22.dp)) {
-                CupertinoText(
-                    text = "外观",
-                    fontSize = 17.sp,
-                    fontWeight = FontWeight.SemiBold,
-                    color = colors.label,
-                )
-                Spacer(Modifier.height(4.dp))
-                CupertinoText(
-                    text = "深色模式下玻璃会变成暗色磨砂",
-                    fontSize = 12.sp,
-                    color = colors.secondaryLabel,
-                )
-                Spacer(Modifier.height(14.dp))
-                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    ThemeMode.entries.forEach { mode ->
-                        val selected = mode == current
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clip(androidx.compose.foundation.shape.RoundedCornerShape(16.dp))
-                                .background(
-                                    if (selected) colors.tintSoft else Color.Transparent,
-                                )
-                                .clickable { onPick(mode) }
-                                .padding(horizontal = 14.dp, vertical = 13.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                        ) {
-                            CupertinoText(
-                                text = mode.label,
-                                modifier = Modifier.weight(1f),
-                                fontSize = 15.5.sp,
-                                fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal,
-                                color = if (selected) colors.tint else colors.label,
-                            )
-                            if (selected) {
-                                Box(
-                                    modifier = Modifier
-                                        .size(20.dp)
-                                        .clip(CircleShape)
-                                        .background(colors.tint),
-                                    contentAlignment = Alignment.Center,
-                                ) {
-                                    CupertinoText(text = "✓", fontSize = 11.sp, color = Color.White)
+            WbSurface(
+                modifier = Modifier.width(320.dp),
+                cornerRadius = 16.dp,
+                elevation = 24.dp,
+                underlay = c.cardBackground,
+            ) {
+                Column {
+                    WbText(
+                        text = title,
+                        modifier = Modifier.padding(start = 20.dp, end = 20.dp, top = 18.dp, bottom = 12.dp),
+                        fontSize = 17.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = c.label,
+                    )
+                    WbDivider()
+                    options.forEachIndexed { index, option ->
+                        WbListRow(
+                            title = option.first,
+                            subtitle = option.second,
+                            showDivider = index != options.lastIndex,
+                            onClick = { onPick(index) },
+                            trailing = {
+                                if (index == selectedIndex) {
+                                    WbIcon(
+                                        imageVector = MiuixIcons.Ok,
+                                        contentDescription = null,
+                                        modifier = Modifier.size(20.dp),
+                                        tint = c.accent,
+                                    )
                                 }
-                            } else {
-                                Box(
-                                    modifier = Modifier
-                                        .size(20.dp)
-                                        .clip(CircleShape)
-                                        .background(colors.separator),
-                                )
-                            }
-                        }
+                            },
+                        )
                     }
+                    WbDivider()
+                    WbTextButton(
+                        text = "取消",
+                        onClick = onDismiss,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(8.dp),
+                    )
                 }
-                Spacer(Modifier.height(18.dp))
-                WbSecondaryButton(
-                    text = "关闭",
-                    onClick = onDismiss,
-                    modifier = Modifier.fillMaxWidth(),
-                )
             }
         }
     }

@@ -1,4 +1,4 @@
-package com.chenzixin.wrongbook.feature.chat
+﻿package com.chenzixin.wrongbook.feature.chat
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -25,13 +25,13 @@ import androidx.compose.ui.window.Dialog
 import com.chenzixin.wrongbook.data.local.entity.TagEntity
 import com.chenzixin.wrongbook.domain.chat.ChatQuestionExtractor
 import com.chenzixin.wrongbook.domain.chat.ExtractedQuestion
-import com.chenzixin.wrongbook.ui.component.GlassSurface
+import com.chenzixin.wrongbook.ui.component.WbSurface
 import com.chenzixin.wrongbook.ui.component.WbChip
 import com.chenzixin.wrongbook.ui.component.WbPrimaryButton
 import com.chenzixin.wrongbook.ui.component.WbSecondaryButton
 import com.chenzixin.wrongbook.ui.component.WbTextField
 import com.chenzixin.wrongbook.ui.theme.wbColors
-import io.github.robinpcrd.cupertino.CupertinoText
+import com.chenzixin.wrongbook.ui.component.WbText
 
 /**
  * 把一条 AI 回答存成错题：先自动拆出题干/答案/解析，三段都能改，再选标签。
@@ -52,7 +52,7 @@ fun SaveQuestionFromChatDialog(
     var selected by remember(rawText) { mutableStateOf<Set<Long>>(emptySet()) }
 
     Dialog(onDismissRequest = onDismiss) {
-        GlassSurface(
+        WbSurface(
             modifier = Modifier.fillMaxWidth(),
             cornerRadius = 28.dp,
             elevation = 30.dp,
@@ -64,13 +64,13 @@ fun SaveQuestionFromChatDialog(
                     .verticalScroll(rememberScrollState())
                     .padding(20.dp),
             ) {
-                CupertinoText(
+                WbText(
                     text = "存为错题",
                     fontSize = 17.sp,
                     fontWeight = FontWeight.SemiBold,
                     color = colors.label,
                 )
-                CupertinoText(
+                WbText(
                     text = "已自动拆分，识别不准的可以直接改",
                     modifier = Modifier.padding(top = 2.dp),
                     fontSize = 12.sp,
@@ -147,7 +147,7 @@ fun SaveQuestionFromChatDialog(
 @Composable
 private fun FieldLabel(text: String) {
     val colors = wbColors()
-    CupertinoText(
+    WbText(
         text = text,
         modifier = Modifier.padding(bottom = 6.dp),
         fontSize = 12.sp,

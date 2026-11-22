@@ -1,4 +1,4 @@
-package com.chenzixin.wrongbook.feature.export
+﻿package com.chenzixin.wrongbook.feature.export
 
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -29,12 +29,12 @@ import com.chenzixin.wrongbook.ui.component.WbPrimaryButton
 import com.chenzixin.wrongbook.ui.component.WbSection
 import com.chenzixin.wrongbook.ui.component.WbTopBar
 import com.chenzixin.wrongbook.ui.theme.wbColors
-import io.github.robinpcrd.cupertino.CupertinoIcon
-import io.github.robinpcrd.cupertino.CupertinoText
-import io.github.robinpcrd.cupertino.icons.CupertinoIcons
-import io.github.robinpcrd.cupertino.icons.outlined.Lock
-import io.github.robinpcrd.cupertino.icons.outlined.PlusCircle
-import io.github.robinpcrd.cupertino.icons.outlined.SquareAndArrowUp
+import com.chenzixin.wrongbook.ui.component.WbIcon
+import com.chenzixin.wrongbook.ui.component.WbText
+import top.yukonga.miuix.kmp.icon.MiuixIcons
+import top.yukonga.miuix.kmp.icon.extended.Lock
+import top.yukonga.miuix.kmp.icon.extended.AddCircle
+import top.yukonga.miuix.kmp.icon.extended.Share
 
 /** 导出题库：ZIP（JSON + 图片），通过系统文件选择器落盘，不申请存储权限。 */
 @Composable
@@ -64,11 +64,11 @@ fun ExportScreen(
         ) {
             WbSection(
                 header = "导出内容",
-                icon = CupertinoIcons.Outlined.SquareAndArrowUp,
+                icon = MiuixIcons.Share,
                 footer = "备份里不包含 API Key，可以放心分享给别的设备。",
             ) {
                 Column(modifier = Modifier.padding(16.dp)) {
-                    CupertinoText(
+                    WbText(
                         text = "题目与图片、标签、AI 对话记录会打包成一个 ZIP 文件。",
                         fontSize = 14.sp,
                         lineHeight = 21.sp,
@@ -80,12 +80,12 @@ fun ExportScreen(
                         onClick = { createLauncher.launch("errata-backup.zip") },
                         modifier = Modifier.fillMaxWidth(),
                         enabled = !state.busy,
-                        icon = CupertinoIcons.Outlined.SquareAndArrowUp,
+                        icon = MiuixIcons.Share,
                     )
                 }
             }
 
-            WbSection(header = "包含哪些数据", icon = CupertinoIcons.Outlined.Lock) {
+            WbSection(header = "包含哪些数据", icon = MiuixIcons.Lock) {
                 WbListRow(title = "题目与图片", subtitle = "原图 + 200px 缩略图", showDivider = true)
                 WbListRow(title = "标签与关联", subtitle = "多标签、收藏夹", showDivider = true)
                 WbListRow(title = "AI 对话记录", subtitle = "不含 API Key", showDivider = false)
@@ -131,11 +131,11 @@ fun ImportScreen(
         ) {
             WbSection(
                 header = "从备份恢复",
-                icon = CupertinoIcons.Outlined.PlusCircle,
+                icon = MiuixIcons.AddCircle,
                 footer = "重复的题目会被跳过，不会产生两份。",
             ) {
                 Column(modifier = Modifier.padding(16.dp)) {
-                    CupertinoText(
+                    WbText(
                         text = "选择之前导出的 ZIP 文件，图片会一起恢复。",
                         fontSize = 14.sp,
                         lineHeight = 21.sp,
@@ -151,11 +151,11 @@ fun ImportScreen(
                         },
                         modifier = Modifier.fillMaxWidth(),
                         enabled = !state.busy,
-                        icon = CupertinoIcons.Outlined.PlusCircle,
+                        icon = MiuixIcons.AddCircle,
                     )
                     if (state.busy) {
                         Spacer(Modifier.height(12.dp))
-                        CupertinoText(
+                        WbText(
                             text = "正在解包并写入数据库，请保持页面打开…",
                             fontSize = 12.sp,
                             color = colors.secondaryLabel,
@@ -200,7 +200,7 @@ private fun NoteRow(text: String) {
             .padding(horizontal = 28.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        CupertinoText(
+        WbText(
             text = text,
             fontSize = 11.5.sp,
             lineHeight = 16.sp,

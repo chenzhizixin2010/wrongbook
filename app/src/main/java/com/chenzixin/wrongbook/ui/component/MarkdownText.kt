@@ -1,4 +1,4 @@
-package com.chenzixin.wrongbook.ui.component
+﻿package com.chenzixin.wrongbook.ui.component
 
 import android.graphics.Color
 import android.text.util.Linkify
@@ -23,7 +23,7 @@ import io.noties.markwon.ext.latex.JLatexMathPlugin
 fun MarkdownText(
     markdown: String,
     modifier: Modifier = Modifier,
-    textColor: Int = Color.BLACK,
+    textColor: Int,
     textSizeSp: Float = 16f,
 ) {
     val context = LocalContext.current

@@ -1,4 +1,4 @@
-package com.chenzixin.wrongbook.feature.stats
+﻿package com.chenzixin.wrongbook.feature.stats
 
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
@@ -31,15 +31,15 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
-import com.chenzixin.wrongbook.ui.component.GlassSurface
+import com.chenzixin.wrongbook.ui.component.WbSurface
 import com.chenzixin.wrongbook.ui.component.WbSection
 import com.chenzixin.wrongbook.ui.component.WbTextButton
 import com.chenzixin.wrongbook.ui.component.WbTopBar
 import com.chenzixin.wrongbook.ui.theme.wbColors
-import io.github.robinpcrd.cupertino.CupertinoText
-import io.github.robinpcrd.cupertino.icons.CupertinoIcons
-import io.github.robinpcrd.cupertino.icons.outlined.ArrowClockwise
-import io.github.robinpcrd.cupertino.icons.outlined.Star
+import com.chenzixin.wrongbook.ui.component.WbText
+import top.yukonga.miuix.kmp.icon.MiuixIcons
+import top.yukonga.miuix.kmp.icon.extended.Refresh
+import top.yukonga.miuix.kmp.icon.extended.Favorites
 
 /** 学习统计：掌握度分布 + 标签分布。 */
 @Composable
@@ -71,7 +71,7 @@ fun StatsScreen(
 
             WbSection(
                 header = "掌握度分布",
-                icon = CupertinoIcons.Outlined.ArrowClockwise,
+                icon = MiuixIcons.Refresh,
                 footer = "0 = 还没掌握，5 = 已彻底掌握。数值来自每次 AI 整理与手动调整。",
             ) {
                 Column(modifier = Modifier.padding(16.dp)) {
@@ -84,12 +84,7 @@ fun StatsScreen(
                             label = "$level 级",
                             value = count,
                             max = maxCount,
-                            barBrush = Brush.linearGradient(
-                                listOf(
-                                    colors.accent.copy(alpha = if (level >= 4) 1f else 0.65f),
-                                    colors.accentEnd.copy(alpha = if (level >= 4) 1f else 0.45f),
-                                ),
-                            ),
+                            bar = if (level >= 4) colors.tint else colors.tint.copy(alpha = 0.55f),
                         )
                     }
                 }
@@ -97,12 +92,12 @@ fun StatsScreen(
 
             WbSection(
                 header = "标签分布",
-                icon = CupertinoIcons.Outlined.Star,
+                icon = MiuixIcons.Favorites,
                 footer = "只显示题量前 10 的标签。",
             ) {
                 if (state.tagCounts.isEmpty()) {
                     Column(modifier = Modifier.padding(16.dp)) {
-                        CupertinoText(
+                        WbText(
                             text = "还没有标签数据，去「设置 → 标签与收藏夹」建几个",
                             fontSize = 13.sp,
                             lineHeight = 18.sp,
@@ -117,18 +112,7 @@ fun StatsScreen(
                                 label = tag.name,
                                 value = tag.count,
                                 max = maxTag,
-                                barBrush = if (index == 0) {
-                                    Brush.linearGradient(
-                                        listOf(colors.accent, colors.accentEnd),
-                                    )
-                                } else {
-                                    Brush.linearGradient(
-                                        listOf(
-                                            colors.tint.copy(alpha = 0.45f),
-                                            colors.accentEnd.copy(alpha = 0.3f),
-                                        ),
-                                    )
-                                },
+                                bar = if (index == 0) colors.tint else colors.tint.copy(alpha = 0.45f),
                             )
                         }
                     }
@@ -154,7 +138,7 @@ private fun OverviewCard(
     val unmastered = countOf(0..2)
     val progress = if (total == 0) 0f else mastered.toFloat() / total
 
-    GlassSurface(
+    WbSurface(
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = 16.dp),
@@ -189,11 +173,7 @@ private fun OverviewCard(
                     )
                     if (progress > 0f) {
                         drawArc(
-                            brush = Brush.linearGradient(
-                                listOf(colors.accent, colors.accentEnd),
-                                start = Offset(0f, 0f),
-                                end = Offset(size.width, size.height),
-                            ),
+                            color = colors.tint,
                             startAngle = -90f,
                             sweepAngle = 360f * progress,
                             useCenter = false,
@@ -204,13 +184,13 @@ private fun OverviewCard(
                     }
                 }
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    CupertinoText(
+                    WbText(
                         text = if (loading) "…" else "$mastered",
                         fontSize = 27.sp,
                         fontWeight = FontWeight.Bold,
                         color = colors.label,
                     )
-                    CupertinoText(
+                    WbText(
                         text = "已掌握",
                         fontSize = 10.sp,
                         color = colors.secondaryLabel,
@@ -221,14 +201,14 @@ private fun OverviewCard(
             Spacer(Modifier.width(18.dp))
 
             Column(modifier = Modifier.weight(1f)) {
-                CupertinoText(
+                WbText(
                     text = if (loading) "正在统计…" else "共 $total 道错题",
                     fontSize = 16.sp,
                     fontWeight = FontWeight.SemiBold,
                     color = colors.label,
                 )
                 Spacer(Modifier.height(4.dp))
-                CupertinoText(
+                WbText(
                     text = "掌握度越高，说明这类题越稳",
                     fontSize = 11.5.sp,
                     color = colors.secondaryLabel,
@@ -259,14 +239,14 @@ private fun StatPill(
             .padding(vertical = 7.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        CupertinoText(
+        WbText(
             text = "$value",
             fontSize = 15.sp,
             fontWeight = FontWeight.SemiBold,
             color = color,
         )
         Spacer(Modifier.height(1.dp))
-        CupertinoText(
+        WbText(
             text = label,
             fontSize = 9.sp,
             color = colors.secondaryLabel,
@@ -281,7 +261,7 @@ private fun StatBar(
     label: String,
     value: Int,
     max: Int,
-    barBrush: Brush,
+    bar: Color,
 ) {
     val colors = wbColors()
     Row(
@@ -291,7 +271,7 @@ private fun StatBar(
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Box(modifier = Modifier.width(70.dp)) {
-            CupertinoText(
+            WbText(
                 text = label,
                 fontSize = 12.sp,
                 color = colors.secondaryLabel,
@@ -312,12 +292,12 @@ private fun StatBar(
                         .fillMaxWidth(fraction)
                         .height(9.dp)
                         .clip(RoundedCornerShape(percent = 50))
-                        .background(barBrush),
+                        .background(bar),
                 )
             }
         }
         Box(modifier = Modifier.width(36.dp), contentAlignment = Alignment.CenterEnd) {
-            CupertinoText(text = "$value", fontSize = 12.sp, color = colors.label)
+            WbText(text = "$value", fontSize = 12.sp, color = colors.label)
         }
     }
 }

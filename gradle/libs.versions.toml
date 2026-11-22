@@ -23,6 +23,10 @@ hiltNavigationCompose = "1.4.0"
 room = "2.8.5"
 
 # —— iOS 风格 UI（Compose Multiplatform 生态）——
+
+# —— 小米 HyperOS 风格 UI（Compose Multiplatform）——
+# 0.9.1 是最后一个用 Kotlin 2.3.21 构建的稳定版，与本项目 Kotlin 版本完全一致。
+miuix = "0.9.1"
 cupertino = "3.3.1"
 
 # —— 图片 / 网络 / 序列化 ——
@@ -61,7 +65,11 @@ compose-ui-tooling-preview = { module = "androidx.compose.ui:ui-tooling-preview"
 compose-foundation = { module = "androidx.compose.foundation:foundation" }
 compose-material3 = { module = "androidx.compose.material3:material3" }
 
-# iOS 风格组件库（Cupertino）
+
+# 小米 HyperOS 风格组件库（Miuix）
+miuix-ui = { module = "top.yukonga.miuix.kmp:miuix-ui", version.ref = "miuix" }
+miuix-preference = { module = "top.yukonga.miuix.kmp:miuix-preference", version.ref = "miuix" }
+miuix-icons = { module = "top.yukonga.miuix.kmp:miuix-icons", version.ref = "miuix" }
 cupertino = { module = "io.github.robinpcrd:cupertino", version.ref = "cupertino" }
 
 # Hilt

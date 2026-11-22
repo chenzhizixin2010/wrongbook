@@ -1,30 +1,35 @@
-package com.chenzixin.wrongbook.ui.theme
+﻿package com.chenzixin.wrongbook.ui.theme
 
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.sp
+import com.chenzixin.wrongbook.data.prefs.UiStyle
+import io.github.robinpcrd.cupertino.theme.ColorScheme
 import io.github.robinpcrd.cupertino.theme.CupertinoTheme
+import io.github.robinpcrd.cupertino.theme.Shapes
+import io.github.robinpcrd.cupertino.theme.Typography
 import io.github.robinpcrd.cupertino.theme.darkColorScheme
 import io.github.robinpcrd.cupertino.theme.lightColorScheme
+import top.yukonga.miuix.kmp.theme.ColorSchemeMode
+import top.yukonga.miuix.kmp.theme.Colors
+import top.yukonga.miuix.kmp.theme.MiuixTheme
+import top.yukonga.miuix.kmp.theme.ThemeController
+import top.yukonga.miuix.kmp.theme.defaultTextStyles
 
 /**
- * 设计令牌 —— 「液态玻璃」视觉体系。
+ * 设计令牌。
  *
- * 分两层：
- * 1) 组件库内部配色 —— 交给 CupertinoTheme（按钮、导航栏、对话框等自带配色）；
- * 2) 我们自己画的容器 —— 极光背景、玻璃面板、标签、按钮渐变，统一走 [WbColors]。
- *
- * 玻璃的观感由三件事决定，缺一不可：
- * - 底：会呼吸的彩色极光画布（[com.chenzixin.wrongbook.ui.component.WbAmbientBackground]）；
- * - 面：半透明填充 + 边缘高光 + 底部内阴影（[com.chenzixin.wrongbook.ui.component.GlassSurface]）；
- * - 光：从左上打来的镜面反光与彩色光晕（按钮、悬浮标签栏）。
- *
- * 业务代码只引用 [wbColors] 里的语义色，不出现任何裸色值。
+ * Miuix 皮肤：映射 `MiuixTheme.colorScheme`（含 Monet）。
+ * iOS 皮肤：映射 Cupertino 的 ColorScheme，并补一组玻璃/极光令牌；
+ * 这些令牌只在 iOS 皮肤内生效，Miuix 侧仍为纯色。
  */
 data class WbColors(
-    // —— 兼容层：既有页面仍在用的语义色 ——
     val tint: Color,
     val groupedBackground: Color,
     val cardBackground: Color,
@@ -33,138 +38,232 @@ data class WbColors(
     val secondaryLabel: Color,
     val danger: Color,
 
-    // —— 主题标识 ——
     val isDark: Boolean,
 
-    // —— 强调色（渐变按钮的起止）——
     val accent: Color,
     val accentEnd: Color,
     val success: Color,
     val warning: Color,
     val onAccent: Color,
 
-    // —— 画布：极光 ——
     val canvasTop: Color,
     val canvasBottom: Color,
     val aurora: List<Color>,
 
-    // —— 玻璃材质 ——
-    /** 玻璃填充：上亮下暗，模拟厚度。 */
     val glassTop: Color,
     val glassBottom: Color,
-
-    /** 玻璃边缘：左上受光、右下背光。 */
     val glassStrokeTop: Color,
     val glassStrokeBottom: Color,
-
-    /** 镜面高光 / 可点击区域的浅色底。 */
     val glassSheen: Color,
     val glassFill: Color,
-
-    /** 投影颜色（带一点蓝，避免死灰）。 */
     val shadow: Color,
-
-    /** 强调色的低透明度版本，用于选中胶囊、图标底板。 */
     val tintSoft: Color,
-
-    /** 悬浮标签栏的底衬：没有真实背景模糊时，靠它保证栏上文字可读。 */
     val barScrim: Color,
-
-    /** 对话框底衬：比标签栏更实，避免页面文字透进弹窗。 */
     val dialogScrim: Color,
 )
 
-private val LightColors = WbColors(
-    tint = Color(0xFF0A84FF),
-    groupedBackground = Color(0x0F1B2A5E),
-    cardBackground = Color(0xB3FFFFFF),
-    separator = Color(0x143C3C43),
-    label = Color(0xFF0B0B12),
-    secondaryLabel = Color(0xFF6B6B7B),
-    danger = Color(0xFFFF3B30),
+val LocalWbColors = staticCompositionLocalOf<WbColors> {
+    error("WbColors 未提供：请用 WrongBookTheme 包裹页面")
+}
 
-    isDark = false,
+val LocalUiStyle = staticCompositionLocalOf { UiStyle.MIUIX }
 
-    accent = Color(0xFF0A84FF),
-    accentEnd = Color(0xFF6C5CE7),
-    success = Color(0xFF34C759),
-    warning = Color(0xFFFF9F0A),
-    onAccent = Color.White,
-
-    canvasTop = Color(0xFFF5F7FD),
-    canvasBottom = Color(0xFFE9EDF8),
-    aurora = listOf(
-        Color(0x666AA6FF),
-        Color(0x59C08CFF),
-        Color(0x4D4FE0D0),
-        Color(0x40FFB3D1),
-    ),
-
-    glassTop = Color(0xA8FFFFFF),
-    glassBottom = Color(0x6BFFFFFF),
-    glassStrokeTop = Color(0xF2FFFFFF),
-    glassStrokeBottom = Color(0x33FFFFFF),
-    glassSheen = Color(0xCCFFFFFF),
-    glassFill = Color(0x99FFFFFF),
-    shadow = Color(0x1A1B2A5E),
-    tintSoft = Color(0x1F0A84FF),
-    barScrim = Color(0xE2FFFFFF),
-    dialogScrim = Color(0xFFFFFFFF),
-)
-
-private val DarkColors = WbColors(
-    tint = Color(0xFF4C9AFF),
-    groupedBackground = Color(0x14FFFFFF),
-    cardBackground = Color(0x1FFFFFFF),
-    separator = Color(0x1FFFFFFF),
-    label = Color(0xFFF5F5FA),
-    secondaryLabel = Color(0xFF9C9CB0),
-    danger = Color(0xFFFF453A),
-
-    isDark = true,
-
-    accent = Color(0xFF3D8BFF),
-    accentEnd = Color(0xFF9B7BFF),
-    success = Color(0xFF30D158),
-    warning = Color(0xFFFFB340),
-    onAccent = Color.White,
-
-    canvasTop = Color(0xFF08090F),
-    canvasBottom = Color(0xFF04050A),
-    aurora = listOf(
-        Color(0xCC0B2A6F),
-        Color(0xB32B1466),
-        Color(0x99123F3C),
-        Color(0x661A0D3D),
-    ),
-
-    glassTop = Color(0x29FFFFFF),
-    glassBottom = Color(0x0DFFFFFF),
-    glassStrokeTop = Color(0x73FFFFFF),
-    glassStrokeBottom = Color(0x14FFFFFF),
-    glassSheen = Color(0x4DFFFFFF),
-    glassFill = Color(0x1AFFFFFF),
-    shadow = Color(0x99000000),
-    tintSoft = Color(0x2E4C9AFF),
-    barScrim = Color(0xF00B0C12),
-    dialogScrim = Color(0xFF0A0B11),
-)
-
-val LocalWbColors = staticCompositionLocalOf { LightColors }
-
-/** 在 Composable 里取当前配色，跟随 [WrongBookTheme] 的深浅色。 */
 @Composable
 fun wbColors(): WbColors = LocalWbColors.current
 
 @Composable
+fun wbUiStyle(): UiStyle = LocalUiStyle.current
+
+@Composable
 fun WrongBookTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
+    uiStyle: UiStyle = UiStyle.MIUIX,
     content: @Composable () -> Unit,
 ) {
-    CompositionLocalProvider(LocalWbColors provides if (darkTheme) DarkColors else LightColors) {
-        CupertinoTheme(
-            colorScheme = if (darkTheme) darkColorScheme() else lightColorScheme(),
-            content = content,
+    val ios = uiStyle == UiStyle.IOS
+    val v090 = uiStyle == UiStyle.V090
+    val controller = remember(darkTheme, uiStyle) {
+        ThemeController(
+            colorSchemeMode = if (ios || v090) {
+                if (darkTheme) ColorSchemeMode.Dark else ColorSchemeMode.Light
+            } else {
+                ColorSchemeMode.MonetSystem
+            },
+            isDark = darkTheme,
         )
     }
+    val textStyles = remember {
+        defaultTextStyles(
+            title1 = TextStyle(fontSize = 28.sp, fontWeight = FontWeight.Bold),
+            title2 = TextStyle(fontSize = 24.sp, fontWeight = FontWeight.SemiBold),
+            title3 = TextStyle(fontSize = 20.sp, fontWeight = FontWeight.Medium),
+            title4 = TextStyle(fontSize = 18.sp, fontWeight = FontWeight.Medium),
+        )
+    }
+    val scheme = if (darkTheme) darkColorScheme() else lightColorScheme()
+
+    // 两套 provider 始终存在，只切换取值；内容树位置不变，切风格不会重置导航。
+    MiuixTheme(controller = controller, textStyles = textStyles) {
+        CupertinoTheme(
+            colorScheme = scheme,
+            shapes = Shapes(),
+            typography = Typography(),
+        ) {
+            val colors = when {
+                v090 -> v090Colors(darkTheme)
+                ios -> iosColors(scheme, darkTheme)
+                else -> miuixColors(MiuixTheme.colorScheme, darkTheme)
+            }
+            CompositionLocalProvider(
+                LocalWbColors provides colors,
+                LocalUiStyle provides uiStyle,
+            ) {
+                content()
+            }
+        }
+    }
+}
+
+private fun miuixColors(c: Colors, dark: Boolean): WbColors = WbColors(
+    tint = c.primary,
+    groupedBackground = c.surfaceContainer,
+    cardBackground = c.surface,
+    separator = c.dividerLine,
+    label = c.onBackground,
+    secondaryLabel = c.onSurfaceVariantSummary,
+    danger = c.error,
+
+    isDark = dark,
+
+    accent = c.primary,
+    accentEnd = c.primary,
+    success = c.primary,
+    warning = c.secondary,
+    onAccent = c.onPrimary,
+
+    canvasTop = c.background,
+    canvasBottom = c.background,
+    aurora = emptyList(),
+
+    glassTop = c.surface,
+    glassBottom = c.surface,
+    glassStrokeTop = c.outline,
+    glassStrokeBottom = c.outline,
+    glassSheen = c.surface,
+    glassFill = c.surfaceContainerHigh,
+    shadow = c.outline,
+    tintSoft = c.primaryContainer,
+    barScrim = c.surface,
+    dialogScrim = Color.Black.copy(alpha = 0.32f),
+)
+
+private fun v090Colors(dark: Boolean): WbColors {
+    val accent = if (dark) Color(0xFF6EA8FF) else Color(0xFF3867F5)
+    val accentEnd = if (dark) Color(0xFFA78BFA) else Color(0xFF8B5CF6)
+    val label = if (dark) Color(0xFFF8FAFC) else Color(0xFF111827)
+    val secondary = if (dark) Color(0xFF94A3B8) else Color(0xFF667085)
+    return WbColors(
+        tint = accent,
+        groupedBackground = if (dark) Color(0xFF0B1020) else Color(0xFFEEF2FF),
+        cardBackground = if (dark) Color(0xFF161C2E) else Color.White,
+        separator = if (dark) Color(0xFF2A3350) else Color(0xFFD6D9E8),
+        label = label,
+        secondaryLabel = secondary,
+        danger = if (dark) Color(0xFFFF6B6B) else Color(0xFFFF3B30),
+
+        isDark = dark,
+
+        accent = accent,
+        accentEnd = accentEnd,
+        success = if (dark) Color(0xFF34D399) else Color(0xFF10B981),
+        warning = if (dark) Color(0xFFFBBF24) else Color(0xFFF59E0B),
+        onAccent = Color.White,
+
+        canvasTop = if (dark) Color(0xFF0B1226) else Color(0xFFEAF2FF),
+        canvasBottom = if (dark) Color(0xFF1A0B2E) else Color(0xFFFDEBFF),
+        aurora = if (dark) {
+            listOf(
+                Color(0xFF2563EB),
+                Color(0xFF7C3AED),
+                Color(0xFF059669),
+                Color(0xFFDB2777),
+            )
+        } else {
+            listOf(
+                Color(0xFF93C5FD),
+                Color(0xFFC4B5FD),
+                Color(0xFF6EE7B7),
+                Color(0xFFF9A8D4),
+            )
+        },
+
+        glassTop = if (dark) Color.White.copy(alpha = 0.10f) else Color.White.copy(alpha = 0.78f),
+        glassBottom = if (dark) Color.White.copy(alpha = 0.04f) else Color.White.copy(alpha = 0.52f),
+        glassStrokeTop = if (dark) Color.White.copy(alpha = 0.18f) else Color.White.copy(alpha = 0.92f),
+        glassStrokeBottom = if (dark) Color.White.copy(alpha = 0.06f) else Color.White.copy(alpha = 0.42f),
+        glassSheen = if (dark) Color.White.copy(alpha = 0.08f) else Color.White.copy(alpha = 0.42f),
+        glassFill = if (dark) Color.White.copy(alpha = 0.08f) else Color.White.copy(alpha = 0.38f),
+        shadow = Color.Black.copy(alpha = if (dark) 0.52f else 0.16f),
+        tintSoft = accent.copy(alpha = if (dark) 0.24f else 0.12f),
+        barScrim = if (dark) Color(0xFF0B1020).copy(alpha = 0.72f) else Color.White.copy(alpha = 0.62f),
+        dialogScrim = Color.Black.copy(alpha = 0.30f),
+    )
+}
+
+private fun iosColors(scheme: ColorScheme, dark: Boolean): WbColors {
+    val red = if (dark) Color(0xFFFF453A) else Color(0xFFFF3B30)
+    val green = if (dark) Color(0xFF30D158) else Color(0xFF34C759)
+    val orange = if (dark) Color(0xFFFFD60A) else Color(0xFFFF9F0A)
+    val indigo = if (dark) Color(0xFF5E5CE6) else Color(0xFF5856D6)
+    val glassTop = if (dark) Color.White.copy(alpha = 0.10f) else Color.White.copy(alpha = 0.74f)
+    val glassBottom = if (dark) Color.White.copy(alpha = 0.04f) else Color.White.copy(alpha = 0.52f)
+    val strokeTop = if (dark) Color.White.copy(alpha = 0.16f) else Color.White.copy(alpha = 0.85f)
+    val strokeBottom = if (dark) Color.White.copy(alpha = 0.06f) else Color.Black.copy(alpha = 0.06f)
+
+    return WbColors(
+        tint = scheme.accent,
+        groupedBackground = scheme.systemGroupedBackground,
+        cardBackground = scheme.secondarySystemGroupedBackground,
+        separator = scheme.separator,
+        label = scheme.label,
+        secondaryLabel = scheme.secondaryLabel,
+        danger = red,
+
+        isDark = dark,
+
+        accent = scheme.accent,
+        accentEnd = indigo,
+        success = green,
+        warning = orange,
+        onAccent = Color.White,
+
+        canvasTop = scheme.systemGroupedBackground,
+        canvasBottom = scheme.systemBackground,
+        aurora = if (dark) {
+            listOf(
+                Color(0xFF0B1220),
+                Color(0xFF141024),
+                Color(0xFF1A1010),
+                Color(0xFF0B1A14),
+            )
+        } else {
+            listOf(
+                Color(0xFFEAF1FF),
+                Color(0xFFF3ECFF),
+                Color(0xFFFFF0E6),
+                Color(0xFFE8FAF0),
+            )
+        },
+
+        glassTop = glassTop,
+        glassBottom = glassBottom,
+        glassStrokeTop = strokeTop,
+        glassStrokeBottom = strokeBottom,
+        glassSheen = if (dark) Color.White.copy(alpha = 0.08f) else Color.White.copy(alpha = 0.30f),
+        glassFill = if (dark) Color.White.copy(alpha = 0.08f) else Color.White.copy(alpha = 0.34f),
+        shadow = Color.Black.copy(alpha = if (dark) 0.45f else 0.14f),
+        tintSoft = scheme.accent.copy(alpha = if (dark) 0.22f else 0.12f),
+        barScrim = scheme.systemBackground.copy(alpha = 0.86f),
+        dialogScrim = Color.Black.copy(alpha = 0.32f),
+    )
 }

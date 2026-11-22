@@ -1,11 +1,14 @@
 ﻿package com.chenzixin.wrongbook.ui.component
 
-import androidx.compose.foundation.clickable
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.runtime.Composable
@@ -16,15 +19,14 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
+import com.chenzixin.wrongbook.data.prefs.UiStyle
 import com.chenzixin.wrongbook.ui.theme.wbColors
-import io.github.robinpcrd.cupertino.CupertinoText
+import com.chenzixin.wrongbook.ui.theme.wbUiStyle
+import top.yukonga.miuix.kmp.basic.Card
+import top.yukonga.miuix.kmp.theme.MiuixTheme
 
-/**
- * 二次确认弹窗。玻璃面板 + 大圆角，背景由系统 Dialog 自动压暗。
- *
- * 按钮统一走 [WbPrimaryButton] / [WbSecondaryButton] / [WbDangerButton]，
- * 避免出现「灰字压蓝底」这种看不清的组合。
- */
+/** 二次确认弹窗：Miuix 实心 Card；iOS 玻璃 Alert + 横向按钮。 */
 @Composable
 fun WbAlertDialog(
     visible: Boolean,
@@ -37,39 +39,104 @@ fun WbAlertDialog(
     onDismiss: () -> Unit,
 ) {
     if (!visible) return
-    val colors = wbColors()
-    Dialog(onDismissRequest = onDismiss) {
-        GlassSurface(
-            modifier = Modifier.width(304.dp),
-            cornerRadius = 30.dp,
-            elevation = 34.dp,
-            underlay = colors.dialogScrim,
-        ) {
-            Column(
-                modifier = Modifier.padding(horizontal = 20.dp, vertical = 24.dp),
-                horizontalAlignment = Alignment.CenterHorizontally,
+    val style = wbUiStyle()
+    val ios = style == UiStyle.IOS || style == UiStyle.V090
+    val c = wbColors()
+
+    if (ios) {
+        Dialog(onDismissRequest = onDismiss) {
+            WbSurface(
+                modifier = Modifier.width(288.dp),
+                cornerRadius = 16.dp,
+                elevation = 24.dp,
+                underlay = c.cardBackground,
             ) {
-                CupertinoText(
+                Column(
+                    modifier = Modifier.padding(start = 20.dp, end = 20.dp, top = 22.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                ) {
+                    WbText(
+                        text = title,
+                        fontSize = 17.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = c.label,
+                        textAlign = TextAlign.Center,
+                    )
+                    if (message != null) {
+                        WbText(
+                            text = message,
+                            modifier = Modifier.padding(top = 6.dp),
+                            fontSize = 13.sp,
+                            lineHeight = 18.sp,
+                            color = c.secondaryLabel,
+                            textAlign = TextAlign.Center,
+                        )
+                    }
+                    Box(
+                        modifier = Modifier
+                            .padding(top = 18.dp)
+                            .fillMaxWidth()
+                            .height(1.dp)
+                            .background(c.separator.copy(alpha = 0.55f)),
+                    )
+                    Row(modifier = Modifier.fillMaxWidth()) {
+                        WbTextButton(
+                            text = dismissText,
+                            onClick = onDismiss,
+                            modifier = Modifier
+                                .weight(1f)
+                                .height(48.dp),
+                        )
+                        Box(
+                            modifier = Modifier
+                                .width(1.dp)
+                                .height(48.dp)
+                                .background(c.separator.copy(alpha = 0.55f)),
+                        )
+                        WbTextButton(
+                            text = confirmText,
+                            onClick = onConfirm,
+                            modifier = Modifier
+                                .weight(1f)
+                                .height(48.dp),
+                            color = if (destructive) c.danger else c.accent,
+                        )
+                    }
+                }
+            }
+        }
+        return
+    }
+
+    val mc = MiuixTheme.colorScheme
+    Dialog(onDismissRequest = onDismiss) {
+        Card(
+            modifier = Modifier.width(304.dp),
+            cornerRadius = 20.dp,
+            insideMargin = PaddingValues(horizontal = 20.dp, vertical = 22.dp),
+        ) {
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                WbText(
                     text = title,
                     fontSize = 17.sp,
-                    fontWeight = FontWeight.SemiBold,
-                    color = colors.label,
+                    fontWeight = FontWeight.Medium,
+                    color = mc.onSurface,
                     textAlign = TextAlign.Center,
                 )
                 if (message != null) {
-                    CupertinoText(
+                    WbText(
                         text = message,
-                        modifier = Modifier.padding(top = 9.dp),
-                        fontSize = 13.5.sp,
-                        lineHeight = 19.sp,
-                        color = colors.secondaryLabel,
+                        modifier = Modifier.padding(top = 8.dp),
+                        fontSize = 14.sp,
+                        lineHeight = 20.sp,
+                        color = mc.onSurfaceVariantSummary,
                         textAlign = TextAlign.Center,
                     )
                 }
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(top = 22.dp),
+                        .padding(top = 20.dp),
                     horizontalArrangement = Arrangement.spacedBy(10.dp),
                 ) {
                     WbSecondaryButton(
@@ -88,7 +155,6 @@ fun WbAlertDialog(
                             text = confirmText,
                             onClick = onConfirm,
                             modifier = Modifier.weight(1f),
-                            fontSize = 15,
                         )
                     }
                 }
@@ -97,38 +163,30 @@ fun WbAlertDialog(
     }
 }
 
-/** 轻量提示条（一次性 message，点击消失）。 */
+/** 轻量提示条。 */
 @Composable
 fun WbHintBar(
     text: String,
     modifier: Modifier = Modifier,
     onClick: (() -> Unit)? = null,
 ) {
-    val colors = wbColors()
-    Box(
+    val style = wbUiStyle()
+    val ios = style == UiStyle.IOS || style == UiStyle.V090
+    val c = wbColors()
+    WbSurface(
         modifier = modifier
             .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 5.dp),
+            .padding(horizontal = 16.dp, vertical = 4.dp),
+        cornerRadius = if (ios) 10.dp else 12.dp,
+        elevation = if (ios) 8.dp else 0.dp,
+        onClick = onClick,
+        contentPadding = PaddingValues(horizontal = 14.dp, vertical = 10.dp),
     ) {
-        GlassSurface(
-            modifier = Modifier.fillMaxWidth(),
-            cornerRadius = 18.dp,
-            elevation = 4.dp,
-            onClick = onClick,
-        ) {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 14.dp, vertical = 11.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                CupertinoText(
-                    text = text,
-                    fontSize = 13.sp,
-                    lineHeight = 18.sp,
-                    color = colors.secondaryLabel,
-                )
-            }
-        }
+        WbText(
+            text = text,
+            fontSize = 13.sp,
+            lineHeight = 18.sp,
+            color = c.secondaryLabel,
+        )
     }
 }

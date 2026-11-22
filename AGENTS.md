@@ -1,4 +1,4 @@
-# AGENTS.md —— 错题本 App 的智能体工作约定
+﻿# AGENTS.md —— 错题本 App 的智能体工作约定
 
 > 这份文件是给 **AI 智能体**（Claude Code / Codex / Cursor / 其他编码 Agent）读的。
 > 每次开新会话，先完整读本文件，再读 `docs/DECISIONS.md`，然后只做当前任务卡里的事。
@@ -37,7 +37,7 @@
 
 | # | 规则 | 原因 |
 | --- | --- | --- |
-| 1 | 不改包名 `com.chenzixin.wrongbook`、不改 `minSdk 24`、不改 UI 基座（Cupertino） | 甲方已确认 |
+| 1 | 不改包名 `com.chenzixin.wrongbook`、不改 `minSdk 24`；UI 基座为 **三皮肤（Miuix 默认 / iOS Cupertino / 0.9.0 液态玻璃）**，共用页面逻辑 | 甲方已确认 |
 | 2 | 新增依赖必须先写进 `gradle/libs.versions.toml`，版本要能在 Maven 上真实解析到 | 防止猜版本导致 Sync 失败 |
 | 3 | 不用 `fallbackToDestructiveMigration()`；改表必须写 Migration 并升 version | 会丢用户错题 |
 | 4 | API Key 只存密文（Keystore + EncryptedSharedPreferences），禁止出现在日志/导出/异常信息里 | 安全与合规 |
@@ -62,7 +62,10 @@
 | 注解处理 | KSP | 2.3.14 | 新版本号体系（不再形如 `<kotlin>-<ksp>`） |
 | SDK | compileSdk / targetSdk | 37 / 37 | 平台目录 `platforms/android-37.0` |
 | UI | Compose BOM | 2026.09.00 | 子模块不写版本 |
-| UI 风格 | `io.github.robinpcrd:cupertino` | 3.3.1 | iOS 风格组件（Compose Multiplatform 生态） |
+| UI 风格 | `top.yukonga.miuix.kmp:miuix-ui` | 0.9.1 | 默认 HyperOS 皮肤（Monet 动态取色） |
+| UI 风格 | `top.yukonga.miuix.kmp:miuix-preference` | 0.9.1 | 设置页 / 表单的现成 Preference 组件 |
+| UI 图标 | `top.yukonga.miuix.kmp:miuix-icons` | 0.9.1 | HyperOS 线性图标（`MiuixIcons.*`） |
+| UI 皮肤 | `io.github.robinpcrd:cupertino` | 3.3.1 | iOS 皮肤（Cupertino 组件/字阶），与 Miuix 并存 |
 | 数据库 | Room | 2.8.5 | |
 | DI | Hilt | 2.60.1 | 2.59.x 及更早不支持 AGP 9 |
 | 相机 | CameraX | 1.7.0 | P3 |
@@ -74,6 +77,9 @@
 | Markdown | Markwon + ext-latex + JLatexMath | 4.6.2 / 0.2.0 | 离线渲染公式 |
 
 `minSdk = 24`，JVM target 17。
+
+> Miuix 版本锁 **0.9.1**：它是最后一个用 Kotlin **2.3.21** 构建的稳定版，与本项目 Kotlin 完全一致。
+> 0.9.2+ 用 Kotlin 2.4.0、0.9.4 用 Kotlin 2.4.20，**在升级 Kotlin 之前禁止升 Miuix**，否则会报元数据版本不兼容。
 
 两个必须保留的开关（`gradle.properties`），删掉任何一行都会编译失败：
 
@@ -100,7 +106,7 @@ app/src/main/java/com/chenzixin/wrongbook/
 │   ├── prefs/             主题与更新提示的 DataStore
 │   └── generate/          练习卷生成
 ├── domain/               UseCase：SegmentQuestions、SaveQuestions、ReviewScheduler、RefineQuestion
-├── feature/{home,scan,chat,review,settings,questiondetail,export}/
+├── feature/{home,scan,chat,generate,detail,tag,settings,export,stats,update}/
 ├── ui/{theme,component,navigation}/
 └── di/
 ```
@@ -211,12 +217,14 @@ data class QuestionRegion(
 1. 看 Maven 上的 `.module` / `-sources.jar`：
    `https://repo1.maven.org/maven2/<group path>/<artifact>/<version>/`
    —— 下载 `-sources.jar`，解压后直接读 `.kt` 源文件。
-2. 例：Cupertino 3.3.1 的真实 API（已核对，**与网上教程不同**）：
-   - 包名是 `io.github.robinpcrd.cupertino`，不是 `io.github.alexzhirkevich.*`
-   - 文本组件叫 `CupertinoText`，图标叫 `CupertinoIcon(imageVector, ...)`
-   - **没有** `CupertinoList` / `CupertinoListItem` / `CupertinoSection` → 已在 `ui/component/InsetList.kt` 自封装
-   - 图标只有 44 个 outlined（无 Camera / Book），项目里用语义最近的替代
-   - 图标是扩展属性，必须 import 具体文件：`import io.github.robinpcrd.cupertino.icons.outlined.House`
+2. 例：Miuix 0.9.1 的真实 API（已核对，**与网上教程不同**）：
+   - 坐标：`top.yukonga.miuix.kmp:miuix-ui` / `miuix-preference` / `miuix-icons`，版本锁 `0.9.1`
+   - 主题：`MiuixTheme(controller = ThemeController(colorSchemeMode = ColorSchemeMode.MonetSystem), ...)`
+   - 文本：`Text(style = MiuixTheme.textStyles.body1)`；字号只允许用 `MiuixTheme.textStyles` 里的 token
+   - 导航：`NavigationBar { NavigationBarItem(selected, onClick, icon = MiuixIcons.Notes, label) }`
+   - 设置：`Card { ArrowPreference(...); SwitchPreference(...); BasicComponent(...) }`（**没有** `PreferenceGroup`）
+   - 图标：`MiuixIcons.Notes` / `MiuixIcons.Scan`，必须 import `top.yukonga.miuix.kmp.icon.extended.Notes`
+   - 0.9.1 没有 `miuix-squircle` 模块；Squircle 从 0.9.3 才有，禁止为它升版本
 3. 仍查不到 → 停下来提问，并说明你查过哪些位置。
 
 ---
@@ -229,6 +237,13 @@ data class QuestionRegion(
 - ❌ 写死 API Key、模型名、baseUrl
 - ❌ 声称"已验证"效果类能力（准确率、流畅度）—— 那是人验项
 - ❌ 改动 `docs/DECISIONS.md` 里已确认的决策（要改先问）
+- ❌ Miuix 皮肤禁止使用任何线性/径向渐变（尤其蓝紫渐变），必须纯色
+- ✅ iOS / 0.9.0 皮肤允许柔和玻璃渐变/高光与 0.9.0 的蓝紫渐变（用户已确认），但不得扩散到 Miuix
+- ❌ 禁止为「三套皮肤」复制三份页面；必须共用 ViewModel 与语义组件
+- ❌ 禁止把每个 ListItem 包在独立的大圆角卡片里。必须用标准内嵌列表（Card/Inset List）或 Miuix 标准组件
+- ❌ 禁止悬浮胶囊底部导航；Miuix / iOS 必须贴底，仅 0.9.0 皮肤允许复古悬浮胶囊
+- ❌ 禁止随意设置字号；Miuix 必须用 `textStyles` 且大标题 ≤28sp；iOS 用 Cupertino 字阶
+- ❌ 禁止散落硬编码颜色；Miuix 只用 `MiuixTheme.colorScheme`，iOS 用 `iosColors()`、0.9.0 用 `v090Colors()` 集中调色板
 
 ---
 
@@ -250,7 +265,10 @@ gradle :app:assembleDebug :app:testDebugUnitTest
 ```
 
 - 本机没有 git，无法用 diff 汇报，改用「变更文件清单」。
-- 本机没有真机/模拟器：`assembleDebugAndroidTest` 只能验证**编译**，仪器测试跑不了。
+- 本机已装 MuMu 12 模拟器（1080×1920 / 480dpi），可用
+  `D:\Program Files\Netease\MuMu\nx_main\MuMuManager.exe control -v 0 launch` 启动，
+  再用 `...\nx_main\adb.exe connect 127.0.0.1:16384` 连接；截图命令 `adb exec-out screencap -p > out.png`。
+- 模拟器只用于 UI 走查；相机、OCR 精度、真实壁纸取色仍需真机人验。
 - **`gradlew.bat` 在中文路径下不可用**（java 通过 cmd 读不到 wrapper jar）。需要 wrapper 时：
   `cmd /c mklink /J D:\wb "D:\错题整理app"` 然后 `cd D:\wb && .\gradlew.bat ...`。
 - 依赖默认走 `D:\dev-tools\maven-mirrors.gradle`；没有该文件时用 google()/mavenCentral()，速度可能很慢。

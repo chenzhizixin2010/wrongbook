@@ -23,6 +23,7 @@ import androidx.compose.ui.Modifier
 import androidx.core.view.WindowCompat
 import com.chenzixin.wrongbook.data.prefs.ThemeMode
 import com.chenzixin.wrongbook.data.prefs.ThemePrefs
+import com.chenzixin.wrongbook.data.prefs.UiStyle
 import com.chenzixin.wrongbook.ui.component.ErrataSplash
 import com.chenzixin.wrongbook.ui.navigation.AppNavHost
 import com.chenzixin.wrongbook.ui.theme.WrongBookTheme
@@ -38,9 +39,24 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        enableEdgeToEdge()
+        enableEdgeToEdge(
+            statusBarStyle = androidx.activity.SystemBarStyle.auto(
+                android.graphics.Color.TRANSPARENT,
+                android.graphics.Color.TRANSPARENT,
+            ),
+            navigationBarStyle = androidx.activity.SystemBarStyle.auto(
+                android.graphics.Color.TRANSPARENT,
+                android.graphics.Color.TRANSPARENT,
+            ),
+        )
+        // 手势导航条的系统「对比压暗层」会让底部出现一条与页面不一致的色带
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.Q) {
+            window.isNavigationBarContrastEnforced = false
+            window.isStatusBarContrastEnforced = false
+        }
         setContent {
             val mode by themePrefs.mode.collectAsState(initial = ThemeMode.SYSTEM)
+            val uiStyle by themePrefs.uiStyle.collectAsState(initial = UiStyle.MIUIX)
             val dark = when (mode) {
                 ThemeMode.LIGHT -> false
                 ThemeMode.DARK -> true
@@ -54,7 +70,7 @@ class MainActivity : ComponentActivity() {
                     isAppearanceLightNavigationBars = !dark
                 }
             }
-            WrongBookTheme(darkTheme = dark) {
+            WrongBookTheme(darkTheme = dark, uiStyle = uiStyle) {
                 Box(modifier = Modifier.fillMaxSize()) {
                     AppNavHost()
                     SplashHost()

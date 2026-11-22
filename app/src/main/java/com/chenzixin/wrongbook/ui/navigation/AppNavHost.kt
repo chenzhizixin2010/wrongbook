@@ -1,69 +1,76 @@
-package com.chenzixin.wrongbook.ui.navigation
+﻿package com.chenzixin.wrongbook.ui.navigation
 
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.core.tween
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.slideInHorizontally
-import androidx.compose.animation.slideOutHorizontally
-import androidx.compose.animation.slideInVertically
-import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
-import androidx.compose.foundation.layout.asPaddingValues
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.windowInsetsPadding
+import androidx.compose.foundation.layout.Box
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
+import com.chenzixin.wrongbook.BuildConfig
 import com.chenzixin.wrongbook.feature.chat.ChatSessionScreen
 import com.chenzixin.wrongbook.feature.chat.ChatTabScreen
 import com.chenzixin.wrongbook.feature.detail.QuestionDetailScreen
 import com.chenzixin.wrongbook.feature.export.ExportScreen
 import com.chenzixin.wrongbook.feature.export.ImportScreen
-import com.chenzixin.wrongbook.feature.home.HomeTabScreen
 import com.chenzixin.wrongbook.feature.generate.GenerateScreen
+import com.chenzixin.wrongbook.feature.home.HomeTabScreen
 import com.chenzixin.wrongbook.feature.scan.CameraCaptureScreen
 import com.chenzixin.wrongbook.feature.scan.ScanTabScreen
 import com.chenzixin.wrongbook.feature.settings.ProfileEditScreen
 import com.chenzixin.wrongbook.feature.settings.SettingsTabScreen
 import com.chenzixin.wrongbook.feature.settings.UpdateScreen
-import androidx.hilt.navigation.compose.hiltViewModel
-import com.chenzixin.wrongbook.BuildConfig
 import com.chenzixin.wrongbook.feature.update.UpdateCheckViewModel
+import com.chenzixin.wrongbook.data.prefs.UiStyle
 import com.chenzixin.wrongbook.ui.component.UpdateRecommendedDialog
-import com.chenzixin.wrongbook.ui.component.WbAmbientBackground
-import com.chenzixin.wrongbook.ui.component.WbPageBase
-import com.chenzixin.wrongbook.ui.component.WbGlassTabBar
-import com.chenzixin.wrongbook.ui.component.WbIcons
-import com.chenzixin.wrongbook.ui.component.WbTabItem
+import com.chenzixin.wrongbook.ui.component.WbDivider
+import com.chenzixin.wrongbook.ui.component.WbIcon
+import com.chenzixin.wrongbook.ui.component.WbScreenBackground
+import com.chenzixin.wrongbook.ui.component.WbSurface
+import com.chenzixin.wrongbook.ui.component.WbText
 import com.chenzixin.wrongbook.ui.theme.wbColors
-import io.github.robinpcrd.cupertino.icons.CupertinoIcons
-import io.github.robinpcrd.cupertino.icons.outlined.Gearshape
-import io.github.robinpcrd.cupertino.icons.outlined.ListBullet
-import io.github.robinpcrd.cupertino.icons.outlined.Paperplane
-import io.github.robinpcrd.cupertino.icons.outlined.RectanglePortraitAndArrowForward
-import io.github.robinpcrd.cupertino.icons.outlined.SquareAndPencil
+import com.chenzixin.wrongbook.ui.theme.wbUiStyle
 import kotlinx.coroutines.delay
+import top.yukonga.miuix.kmp.basic.NavigationBar
+import top.yukonga.miuix.kmp.basic.NavigationBarItem
+import top.yukonga.miuix.kmp.basic.Scaffold
+import top.yukonga.miuix.kmp.icon.MiuixIcons
+import top.yukonga.miuix.kmp.icon.extended.Edit
+import top.yukonga.miuix.kmp.icon.extended.Notes
+import top.yukonga.miuix.kmp.icon.extended.Scan
+import top.yukonga.miuix.kmp.icon.extended.Send
+import top.yukonga.miuix.kmp.icon.extended.Settings
+import top.yukonga.miuix.kmp.theme.MiuixTheme
+import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.compose.runtime.collectAsState
 
 /**
  * 路由表。二级页面用 `Routes.xxx()` 生成路径，避免手拼字符串出错。
@@ -95,12 +102,7 @@ object Routes {
     const val IMPORT = "settings/import"
 }
 
-/**
- * 5 个主 Tab。
- *
- * 图标说明：Cupertino 3.3.1 内置图标集只有 44 个 outlined 图标，没有相机/书本图标，
- * 这里用语义最近的替代。
- */
+/** 5 个主 Tab，图标全部来自 Miuix 图标库。 */
 sealed interface WbTab {
     val route: String
     val label: String
@@ -109,31 +111,31 @@ sealed interface WbTab {
     data object Home : WbTab {
         override val route = Routes.HOME
         override val label = "题库"
-        override val icon: ImageVector get() = CupertinoIcons.Outlined.ListBullet
+        override val icon: ImageVector get() = MiuixIcons.Notes
     }
 
     data object Scan : WbTab {
         override val route = Routes.SCAN
         override val label = "扫描"
-        override val icon: ImageVector get() = WbIcons.Camera
+        override val icon: ImageVector get() = MiuixIcons.Scan
     }
 
     data object Chat : WbTab {
         override val route = Routes.CHAT
         override val label = "AI 对话"
-        override val icon: ImageVector get() = CupertinoIcons.Outlined.Paperplane
+        override val icon: ImageVector get() = MiuixIcons.Send
     }
 
     data object Generate : WbTab {
         override val route = Routes.GENERATE
         override val label = "生成"
-        override val icon: ImageVector get() = CupertinoIcons.Outlined.SquareAndPencil
+        override val icon: ImageVector get() = MiuixIcons.Edit
     }
 
     data object Settings : WbTab {
         override val route = Routes.SETTINGS
         override val label = "设置"
-        override val icon: ImageVector get() = CupertinoIcons.Outlined.Gearshape
+        override val icon: ImageVector get() = MiuixIcons.Settings
     }
 }
 
@@ -145,239 +147,352 @@ val WbTabs: List<WbTab> = listOf(
     WbTab.Settings,
 )
 
-private val TabItems: List<WbTabItem> = WbTabs.map { WbTabItem(label = it.label, icon = it.icon) }
-
 /**
- * App 外壳：极光画布 → 页面内容 → 悬浮玻璃标签栏。
+ * App 外壳：Miuix Scaffold + 贴底 NavigationBar。
  *
- * 不再用 CupertinoScaffold：通栏底部栏会把内容「切断」，
- * 而液态玻璃需要内容从半透明栏后面穿过去。安全区改由 [WbRoute] 分页处理。
+ * 底部导航不再悬浮；内容区通过 Scaffold 的 PaddingValues 让出导航栏高度，
+ * 不做「内容从玻璃后面穿过」的花活。
  */
 @Composable
 fun AppNavHost() {
     val navController = rememberNavController()
+    val backStackEntry by navController.currentBackStackEntryAsState()
+    val currentRoute = backStackEntry?.destination?.route
+    val showBottomBar = WbTabs.any { it.route == currentRoute }
+
     val updateVm: UpdateCheckViewModel = hiltViewModel()
     val updateState by updateVm.state.collectAsState()
-
-    // 启动静默检查一次：大版本才弹窗，小版本不打扰
+    val style = wbUiStyle()
+    val ios = style == UiStyle.IOS
+    val v090 = style == UiStyle.V090
+    val c = wbColors()
     LaunchedEffect(Unit) {
         // 等开屏淡出后再查更新，避免「建议更新」弹窗压在品牌页上。
         delay(1_650)
         updateVm.checkOnce()
     }
 
-    val backStackEntry by navController.currentBackStackEntryAsState()
-    val currentRoute = backStackEntry?.destination?.route
-    val selectedIndex = WbTabs.indexOfFirst { it.route == currentRoute }.coerceAtLeast(0)
-    val showBottomBar = WbTabs.any { it.route == currentRoute }
-    val navBottom = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
-    val colors = wbColors()
-
-    Box(modifier = Modifier.fillMaxSize().background(colors.canvasBottom)) {
-        WbAmbientBackground()
-
-        NavHost(
-            navController = navController,
-            startDestination = Routes.HOME,
-            modifier = Modifier.fillMaxSize(),
-            // iOS 风格滑页：新页从右滑入，旧页向左退 1/4；返回时反过来
-            enterTransition = {
-                slideInHorizontally(tween(320)) { it } + fadeIn(tween(200))
-            },
-            exitTransition = {
-                slideOutHorizontally(tween(320)) { -it / 4 } + fadeOut(tween(200))
-            },
-            popEnterTransition = {
-                slideInHorizontally(tween(320)) { -it / 4 } + fadeIn(tween(200))
-            },
-            popExitTransition = {
-                slideOutHorizontally(tween(320)) { it } + fadeOut(tween(200))
-            },
-        ) {
-            composable(Routes.HOME) {
-                WbRoute(insetBottom = false) {
-                    HomeTabScreen(
-                        onOpenQuestion = { id -> navController.navigate(Routes.question(id)) },
-                        onNewQuestion = { navController.navigate(Routes.MANUAL) },
-                        onOpenScan = { navController.navigate(Routes.SCAN) },
-                    )
-                }
-            }
-            composable(Routes.SCAN) {
-                WbRoute(insetBottom = false) {
-                    ScanTabScreen(onStartCapture = { navController.navigate(Routes.CAPTURE) })
-                }
-            }
-            composable(Routes.CHAT) {
-                WbRoute(insetBottom = false) {
-                    ChatTabScreen(onOpenSession = { id -> navController.navigate(Routes.chatSession(id)) })
-                }
-            }
-            composable(
-                route = Routes.CHAT_SESSION,
-                arguments = listOf(navArgument("sessionId") { type = NavType.LongType; defaultValue = 0L }),
-            ) {
-                WbRoute {
-                    ChatSessionScreen(onBack = { navController.popBackStack() })
-                }
-            }
-            composable(Routes.GENERATE) {
-                WbRoute(insetBottom = false) {
-                    GenerateScreen()
-                }
-            }
-            composable(Routes.SETTINGS) {
-                WbRoute(insetBottom = false) {
-                    SettingsTabScreen(
-                        onOpenProfile = { id -> navController.navigate(Routes.profileEdit(id)) },
-                        onOpenTags = { navController.navigate(Routes.TAGS) },
-                        onOpenUpdate = { navController.navigate(Routes.UPDATE) },
-                        onOpenStats = { navController.navigate(Routes.STATS) },
-                        onOpenExport = { navController.navigate(Routes.EXPORT) },
-                        onOpenImport = { navController.navigate(Routes.IMPORT) },
-                    )
-                }
-            }
-            composable(
-                route = Routes.PROFILE_EDIT,
-                arguments = listOf(navArgument("profileId") { type = NavType.LongType; defaultValue = 0L }),
-            ) {
-                WbRoute {
-                    ProfileEditScreen(onBack = { navController.popBackStack() })
-                }
-            }
-            composable(Routes.CAPTURE) {
-                // 相机要全屏出血到状态栏/导航栏下面，自己处理安全区。
-                WbRoute(insetTop = false, insetBottom = false) {
-                    CameraCaptureScreen(
-                        onDone = {
-                            navController.popBackStack()
-                            navController.navigate(Routes.HOME) {
-                                popUpTo(Routes.HOME) { inclusive = true }
-                                launchSingleTop = true
+    WbScreenBackground {
+    Scaffold(
+        containerColor = if (ios || v090) androidx.compose.ui.graphics.Color.Transparent else MiuixTheme.colorScheme.background,
+        contentWindowInsets = WindowInsets(0, 0, 0, 0),
+        bottomBar = {
+            if (showBottomBar) {
+                if (v090) {
+                    V090TabBar(
+                        tabs = WbTabs,
+                        currentRoute = currentRoute,
+                        onSelect = { tab ->
+                            if (currentRoute != tab.route) {
+                                navController.navigate(tab.route) {
+                                    popUpTo(navController.graph.startDestinationId) { saveState = true }
+                                    launchSingleTop = true
+                                    restoreState = true
+                                }
                             }
                         },
-                        onBack = { navController.popBackStack() },
                     )
-                }
-            }
-            composable(Routes.MANUAL) {
-                WbRoute {
-                    com.chenzixin.wrongbook.feature.detail.ManualQuestionScreen(
-                        onBack = { navController.popBackStack() },
+                } else if (ios) {
+                    IosTabBar(
+                        tabs = WbTabs,
+                        currentRoute = currentRoute,
+                        onSelect = { tab ->
+                            if (currentRoute != tab.route) {
+                                navController.navigate(tab.route) {
+                                    popUpTo(navController.graph.startDestinationId) { saveState = true }
+                                    launchSingleTop = true
+                                    restoreState = true
+                                }
+                            }
+                        },
                     )
-                }
-            }
-            composable(
-                route = Routes.QUESTION,
-                arguments = listOf(navArgument("questionId") { type = NavType.LongType; defaultValue = 0L }),
-            ) {
-                WbRoute {
-                    QuestionDetailScreen(
-                        onBack = { navController.popBackStack() },
-                        onOpenChat = { id -> navController.navigate(Routes.chatSession(id)) },
-                    )
-                }
-            }
-            composable(Routes.TAGS) {
-                WbRoute {
-                    com.chenzixin.wrongbook.feature.tag.TagsScreen(onBack = { navController.popBackStack() })
-                }
-            }
-            composable(Routes.STATS) {
-                WbRoute {
-                    com.chenzixin.wrongbook.feature.stats.StatsScreen(onBack = { navController.popBackStack() })
-                }
-            }
-            composable(Routes.UPDATE) {
-                WbRoute {
-                    UpdateScreen(onBack = { navController.popBackStack() })
-                }
-            }
-            composable(Routes.EXPORT) {
-                WbRoute {
-                    ExportScreen(onBack = { navController.popBackStack() })
-                }
-            }
-            composable(Routes.IMPORT) {
-                WbRoute {
-                    ImportScreen(onBack = { navController.popBackStack() })
-                }
-            }
-        }
-
-        if (showBottomBar) {
-            // 没有真实背景模糊，用一层向上淡出的画布色把「穿过标签栏」的内容压暗：
-            // 既保留玻璃的透，又不让正文穿透到栏上抢读。
-            Box(
-                modifier = Modifier
-                    .align(Alignment.BottomCenter)
-                    .fillMaxWidth()
-                    .height(150.dp)
-                    .background(
-                        Brush.verticalGradient(
-                            colorStops = arrayOf(
-                                0f to Color.Transparent,
-                                0.5f to Color.Transparent,
-                                0.82f to colors.canvasBottom.copy(alpha = 0.55f),
-                                1f to colors.canvasBottom.copy(alpha = 0.92f),
-                            ),
-                        ),
-                    ),
-            )
-        }
-
-        val info = updateState.info
-        if (updateState.showDialog && info != null) {
-            UpdateRecommendedDialog(
-                info = info,
-                currentVersion = BuildConfig.VERSION_NAME,
-                onUpdate = {
-                    updateVm.dismiss()
-                    navController.navigate(Routes.UPDATE)
-                },
-                onLater = { updateVm.dismiss() },
-            )
-        }
-
-        AnimatedVisibility(
-            visible = showBottomBar,
-            modifier = Modifier.align(Alignment.BottomCenter),
-            enter = slideInVertically(
-                initialOffsetY = { it },
-                animationSpec = tween(320),
-            ) + fadeIn(animationSpec = tween(220)),
-            exit = slideOutVertically(
-                targetOffsetY = { it },
-                animationSpec = tween(200),
-            ) + fadeOut(animationSpec = tween(140)),
-        ) {
-            WbGlassTabBar(
-                items = TabItems,
-                selectedIndex = selectedIndex,
-                onSelect = { index ->
-                    val tab = WbTabs[index]
-                    if (currentRoute != tab.route) {
-                        navController.navigate(tab.route) {
-                            popUpTo(navController.graph.startDestinationId) { saveState = true }
-                            launchSingleTop = true
-                            restoreState = true
+                } else {
+                    NavigationBar {
+                        WbTabs.forEach { tab ->
+                            NavigationBarItem(
+                                selected = currentRoute == tab.route,
+                                onClick = {
+                                    if (currentRoute != tab.route) {
+                                        navController.navigate(tab.route) {
+                                            popUpTo(navController.graph.startDestinationId) { saveState = true }
+                                            launchSingleTop = true
+                                            restoreState = true
+                                        }
+                                    }
+                                },
+                                icon = tab.icon,
+                                label = tab.label,
+                            )
                         }
                     }
-                },
+                }
+            }
+        },
+    ) { padding ->
+        Box(modifier = Modifier.fillMaxSize().padding(padding)) {
+            NavHost(
+                navController = navController,
+                startDestination = Routes.HOME,
+                modifier = Modifier.fillMaxSize(),
+            ) {
+                composable(Routes.HOME) {
+                    WbRoute(insetBottom = false) {
+                        HomeTabScreen(
+                            onOpenQuestion = { id -> navController.navigate(Routes.question(id)) },
+                            onNewQuestion = { navController.navigate(Routes.MANUAL) },
+                            onOpenScan = { navController.navigate(Routes.SCAN) },
+                        )
+                    }
+                }
+                composable(Routes.SCAN) {
+                    WbRoute(insetBottom = false) {
+                        ScanTabScreen(onStartCapture = { navController.navigate(Routes.CAPTURE) })
+                    }
+                }
+                composable(Routes.CHAT) {
+                    WbRoute(insetBottom = false) {
+                        ChatTabScreen(onOpenSession = { id -> navController.navigate(Routes.chatSession(id)) })
+                    }
+                }
+                composable(
+                    route = Routes.CHAT_SESSION,
+                    arguments = listOf(navArgument("sessionId") { type = NavType.LongType; defaultValue = 0L }),
+                ) {
+                    WbRoute {
+                        ChatSessionScreen(onBack = { navController.popBackStack() })
+                    }
+                }
+                composable(Routes.GENERATE) {
+                    WbRoute(insetBottom = false) {
+                        GenerateScreen()
+                    }
+                }
+                composable(Routes.SETTINGS) {
+                    WbRoute(insetBottom = false) {
+                        SettingsTabScreen(
+                            onOpenProfile = { id -> navController.navigate(Routes.profileEdit(id)) },
+                            onOpenTags = { navController.navigate(Routes.TAGS) },
+                            onOpenUpdate = { navController.navigate(Routes.UPDATE) },
+                            onOpenStats = { navController.navigate(Routes.STATS) },
+                            onOpenExport = { navController.navigate(Routes.EXPORT) },
+                            onOpenImport = { navController.navigate(Routes.IMPORT) },
+                        )
+                    }
+                }
+                composable(
+                    route = Routes.PROFILE_EDIT,
+                    arguments = listOf(navArgument("profileId") { type = NavType.LongType; defaultValue = 0L }),
+                ) {
+                    WbRoute {
+                        ProfileEditScreen(onBack = { navController.popBackStack() })
+                    }
+                }
+                composable(Routes.CAPTURE) {
+                    WbRoute(insetTop = false, insetBottom = false) {
+                        CameraCaptureScreen(
+                            onDone = {
+                                navController.popBackStack()
+                                navController.navigate(Routes.HOME) {
+                                    popUpTo(Routes.HOME) { inclusive = true }
+                                    launchSingleTop = true
+                                }
+                            },
+                            onBack = { navController.popBackStack() },
+                        )
+                    }
+                }
+                composable(Routes.MANUAL) {
+                    WbRoute {
+                        com.chenzixin.wrongbook.feature.detail.ManualQuestionScreen(
+                            onBack = { navController.popBackStack() },
+                        )
+                    }
+                }
+                composable(
+                    route = Routes.QUESTION,
+                    arguments = listOf(navArgument("questionId") { type = NavType.LongType; defaultValue = 0L }),
+                ) {
+                    WbRoute {
+                        QuestionDetailScreen(
+                            onBack = { navController.popBackStack() },
+                            onOpenChat = { id -> navController.navigate(Routes.chatSession(id)) },
+                        )
+                    }
+                }
+                composable(Routes.TAGS) {
+                    WbRoute {
+                        com.chenzixin.wrongbook.feature.tag.TagsScreen(onBack = { navController.popBackStack() })
+                    }
+                }
+                composable(Routes.STATS) {
+                    WbRoute {
+                        com.chenzixin.wrongbook.feature.stats.StatsScreen(onBack = { navController.popBackStack() })
+                    }
+                }
+                composable(Routes.UPDATE) {
+                    WbRoute {
+                        UpdateScreen(onBack = { navController.popBackStack() })
+                    }
+                }
+                composable(Routes.EXPORT) {
+                    WbRoute {
+                        ExportScreen(onBack = { navController.popBackStack() })
+                    }
+                }
+                composable(Routes.IMPORT) {
+                    WbRoute {
+                        ImportScreen(onBack = { navController.popBackStack() })
+                    }
+                }
+            }
+
+            val info = updateState.info
+            if (updateState.showDialog && info != null) {
+                UpdateRecommendedDialog(
+                    info = info,
+                    currentVersion = BuildConfig.VERSION_NAME,
+                    onUpdate = {
+                        updateVm.dismiss()
+                        navController.navigate(Routes.UPDATE)
+                    },
+                    onLater = { updateVm.dismiss() },
+                )
+            }
+        }
+    }
+    }
+}
+
+/**
+ * 0.9.0 液态玻璃底栏：悬浮胶囊 + 渐变选中态。
+ * 只在这个复古皮肤里启用，Miuix/iOS 仍贴底。
+ */
+@Composable
+private fun V090TabBar(
+    tabs: List<WbTab>,
+    currentRoute: String?,
+    onSelect: (WbTab) -> Unit,
+) {
+    val c = wbColors()
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .windowInsetsPadding(WindowInsets.navigationBars)
+            .padding(horizontal = 16.dp, vertical = 8.dp),
+    ) {
+        WbSurface(
+            modifier = Modifier.fillMaxWidth(),
+            cornerRadius = 30.dp,
+            elevation = 18.dp,
+        ) {
+            Row(
                 modifier = Modifier
-                    .padding(start = 16.dp, end = 16.dp, bottom = navBottom + 10.dp),
-            )
+                    .fillMaxWidth()
+                    .padding(horizontal = 8.dp, vertical = 6.dp),
+                horizontalArrangement = Arrangement.SpaceEvenly,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                tabs.forEach { tab ->
+                    val selected = currentRoute == tab.route
+                    Column(
+                        modifier = Modifier
+                            .weight(1f)
+                            .clickable { onSelect(tab) }
+                            .padding(vertical = 3.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(34.dp)
+                                .clip(CircleShape)
+                                .background(
+                                    if (selected) {
+                                        Brush.linearGradient(listOf(c.accent, c.accentEnd))
+                                    } else {
+                                        SolidColor(androidx.compose.ui.graphics.Color.Transparent)
+                                    },
+                                ),
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            WbIcon(
+                                imageVector = tab.icon,
+                                contentDescription = tab.label,
+                                modifier = Modifier.size(20.dp),
+                                tint = if (selected) c.onAccent else c.secondaryLabel,
+                            )
+                        }
+                        Spacer(Modifier.height(2.dp))
+                        WbText(
+                            text = tab.label,
+                            fontSize = 9.sp,
+                            color = if (selected) c.accent else c.secondaryLabel,
+                            maxLines = 1,
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+/**
+ * iOS 底部 TabBar：贴底、半透明底、顶部发丝线。
+ * 不是悬浮胶囊；只是 Cupertino 风格的系统 TabBar。
+ */
+@Composable
+private fun IosTabBar(
+    tabs: List<WbTab>,
+    currentRoute: String?,
+    onSelect: (WbTab) -> Unit,
+) {
+    val c = wbColors()
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(c.barScrim),
+    ) {
+        WbDivider()
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .windowInsetsPadding(WindowInsets.navigationBars)
+                .padding(top = 6.dp, bottom = 2.dp),
+            horizontalArrangement = Arrangement.SpaceEvenly,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            tabs.forEach { tab ->
+                val selected = currentRoute == tab.route
+                Column(
+                    modifier = Modifier
+                        .weight(1f)
+                        .clickable { onSelect(tab) }
+                        .padding(vertical = 4.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                ) {
+                    WbIcon(
+                        imageVector = tab.icon,
+                        contentDescription = tab.label,
+                        modifier = Modifier.size(24.dp),
+                        tint = if (selected) c.accent else c.secondaryLabel,
+                    )
+                    Spacer(Modifier.height(2.dp))
+                    WbText(
+                        text = tab.label,
+                        fontSize = 10.sp,
+                        color = if (selected) c.accent else c.secondaryLabel,
+                        maxLines = 1,
+                    )
+                }
+            }
         }
     }
 }
 
 /**
  * 安全区包装。
- *
- * - 主 Tab 页：只避让状态栏，底部留给标签栏（内容从玻璃后面穿过）；
+ * - 主 Tab 页：只避状态栏，底部由 Scaffold 的 NavigationBar 让位；
  * - 二级页：上下都避让；
- * - 相机页：都不避让，全屏出血。
+ * - 相机页：全屏出血，自己处理。
  */
 @Composable
 private fun WbRoute(
@@ -385,22 +500,16 @@ private fun WbRoute(
     insetBottom: Boolean = true,
     content: @Composable () -> Unit,
 ) {
-    Box(modifier = Modifier.fillMaxSize()) {
-        // 底图铺满全屏（含状态栏/手势条区域），否则顶部底部会露出一条纯色「白条」
-        WbPageBase()
-
-        // 只让内容避让系统栏
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .then(
-                    if (insetTop) Modifier.windowInsetsPadding(WindowInsets.statusBars) else Modifier,
-                )
-                .then(
-                    if (insetBottom) Modifier.windowInsetsPadding(WindowInsets.navigationBars) else Modifier,
-                ),
-        ) {
-            content()
-        }
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .then(
+                if (insetTop) Modifier.windowInsetsPadding(WindowInsets.statusBars) else Modifier,
+            )
+            .then(
+                if (insetBottom) Modifier.windowInsetsPadding(WindowInsets.navigationBars) else Modifier,
+            ),
+    ) {
+        content()
     }
 }

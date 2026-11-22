@@ -1,7 +1,6 @@
-package com.chenzixin.wrongbook.ui.component
+﻿package com.chenzixin.wrongbook.ui.component
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.padding
@@ -10,21 +9,18 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.shadow
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.chenzixin.wrongbook.data.prefs.UiStyle
 import com.chenzixin.wrongbook.ui.theme.wbColors
-import io.github.robinpcrd.cupertino.CupertinoText
+import com.chenzixin.wrongbook.ui.theme.wbUiStyle
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.SolidColor
+import top.yukonga.miuix.kmp.theme.MiuixTheme
 
-/**
- * 可选中的胶囊标签（筛选栏、打标签、收藏夹共用）。
- *
- * 选中态不是简单换底色，而是「实心强调色渐变 + 彩色投影」，
- * 未选中态是一块很薄的玻璃片，压在极光背景上能透出底色。
- */
+/** 可选中的筛选胶囊：纯色 primary / surfaceContainerHigh，无渐变无阴影。 */
 @Composable
 fun WbChip(
     label: String,
@@ -33,81 +29,65 @@ fun WbChip(
     modifier: Modifier = Modifier,
     onLight: Boolean = false,
 ) {
-    val colors = wbColors()
-    val shape = RoundedCornerShape(percent = 50)
-    val background = when {
-        selected -> Brush.linearGradient(listOf(colors.accent, colors.accentEnd))
-        onLight -> Brush.verticalGradient(
-            listOf(Color.White.copy(alpha = 0.26f), Color.White.copy(alpha = 0.14f)),
-        )
-
-        else -> Brush.verticalGradient(listOf(colors.glassTop, colors.glassBottom))
-    }
-    val contentColor = if (selected || onLight) Color.White else colors.label
-
+    val style = wbUiStyle()
+    val ios = style == UiStyle.IOS
+    val v090 = style == UiStyle.V090
+    val c = MiuixTheme.colorScheme
+    val wb = wbColors()
     Row(
         modifier = modifier
-            .then(
-                if (selected) {
-                    Modifier.shadow(
-                        elevation = 9.dp,
-                        shape = shape,
-                        clip = false,
-                        ambientColor = colors.accent.copy(alpha = 0.45f),
-                        spotColor = colors.accent.copy(alpha = 0.35f),
-                    )
-                } else {
-                    Modifier
-                },
-            )
-            .clip(shape)
-            .background(background)
-            .then(
-                if (!selected && !onLight) {
-                    Modifier.border(
-                        width = 1.dp,
-                        color = colors.glassStrokeTop.copy(alpha = 0.55f),
-                        shape = shape,
-                    )
-                } else {
-                    Modifier
+            .clip(RoundedCornerShape(50))
+            .background(
+                when {
+                    v090 && selected -> Brush.linearGradient(listOf(wb.accent, wb.accentEnd))
+                    v090 -> SolidColor(wb.tintSoft)
+                    ios -> SolidColor(if (selected) wb.accent else wb.tintSoft)
+                    else -> SolidColor(if (selected) c.primary else c.surfaceContainerHigh)
                 },
             )
             .clickable(onClick = onClick)
-            .padding(horizontal = 13.dp, vertical = 7.dp),
+            .padding(horizontal = 14.dp, vertical = 7.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        CupertinoText(
+        WbText(
             text = label,
-            fontSize = 12.5.sp,
-            fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Medium,
-            color = contentColor,
+            fontSize = 13.sp,
+            fontWeight = if (selected) FontWeight.Medium else FontWeight.Normal,
+            color = if (ios || v090) {
+                if (selected) wb.onAccent else wb.accent
+            } else {
+                if (selected) c.onPrimary else c.onSurface
+            },
             maxLines = 1,
         )
     }
 }
 
-/** 只读小徽标（标签、状态），不做点击。 */
+/** 只读小徽标（标签、状态）。 */
 @Composable
 fun WbBadge(
     text: String,
     modifier: Modifier = Modifier,
     color: Color? = null,
 ) {
-    val colors = wbColors()
-    val base = color ?: colors.tint
+    val style = wbUiStyle()
+    val ios = style == UiStyle.IOS
+    val v090 = style == UiStyle.V090
+    val c = MiuixTheme.colorScheme
+    val wb = wbColors()
+    val base = color ?: if (ios) wb.accent else c.primary
     Row(
         modifier = modifier
-            .clip(RoundedCornerShape(percent = 50))
-            .background(base.copy(alpha = 0.14f))
-            .padding(horizontal = 8.dp, vertical = 3.dp),
+            .clip(RoundedCornerShape(50))
+            .background(if (color == null) (if (ios) wb.tintSoft else c.primaryContainer) else base.copy(alpha = 0.14f))
+            .padding(horizontal = 8.dp, vertical = 2.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        CupertinoText(
+        WbText(
             text = text,
-            fontSize = 10.sp,
+            fontSize = 11.sp,
             fontWeight = FontWeight.Medium,
-            color = base,
+            color = if (color == null) (if (ios) wb.accent else c.onPrimaryContainer) else base,
             maxLines = 1,
         )
     }

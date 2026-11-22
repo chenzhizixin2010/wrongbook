@@ -1,4 +1,4 @@
-# 决策记录（Decision Log）
+﻿# 决策记录（Decision Log）
 
 > 规则：已确认的决策不许智能体擅自推翻；要改必须先问人。
 > 核验时间：2026-11-19。
@@ -217,6 +217,7 @@
 | D38 | **内置 10 个服务商预设，端点逐个探活** | `ark.cn-beijing.volces.com/api/v3`、`api.longcat.chat/openai/v1`、`dashscope.aliyuncs.com/compatible-mode/v1`、`open.bigmodel.cn/api/paas/v4`、`api.siliconflow.cn/v1`、`api.deepseek.com/v1` 全部实测返回 401/400（说明路由存在），不是猜的 |
 | D39 | **只预填地址与模型名，绝不内置共享 Key** | 共享 Key 不合规、会被刷爆；界面里写明「Key 需要自己申请」 |
 | D40 | **免费政策写进 quota 字段但标注「以官网为准」** | 各家额度变动频繁（GLM-4.5-Flash 已下线换 4.7-Flash、LongCat 额度调整过），代码不做硬性判断 |
+| D41 | **UI 采用三皮肤，默认 Miuix** | 新增 `UiStyle`（MIUIX / IOS / V090）存 DataStore；三套皮肤共用页面与 ViewModel，通过 `LocalUiStyle` 分支。iOS 允许柔和玻璃渐变，V090 允许极光/悬浮胶囊/蓝紫渐变，Miuix 保持纯色。切换风格不重置导航 |
 
 > 易错点：LongCat 的 API 域名是 `api.longcat.chat`（`longcat.chat` 是网页端，`/v1/models` 会返回 HTML）；
 > 智谱的 `glm-4.5-flash` 已下线，预设改用 `glm-4.7-flash`。

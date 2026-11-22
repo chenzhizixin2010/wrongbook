@@ -38,8 +38,8 @@ import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.chenzixin.wrongbook.core.ImageUtils.warpQuad
-import io.github.robinpcrd.cupertino.CupertinoButton
-import io.github.robinpcrd.cupertino.CupertinoText
+import com.chenzixin.wrongbook.ui.component.WbText
+import top.yukonga.miuix.kmp.theme.MiuixTheme
 import kotlin.math.min
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -94,7 +94,8 @@ fun PerspectiveCropScreen(
         return Triple(scale, offsetX, offsetY)
     }
 
-    Box(modifier = Modifier.fillMaxSize().background(Color.Black)) {
+    val c = MiuixTheme.colorScheme
+    Box(modifier = Modifier.fillMaxSize().background(c.background)) {
         Canvas(
             modifier = Modifier
                 .fillMaxSize()
@@ -145,17 +146,17 @@ fun PerspectiveCropScreen(
                 quad.drop(1).forEach { p -> val s = screen(p); lineTo(s.x, s.y) }
                 close()
             }
-            drawPath(path = path, color = Color(0x330A84FF))
-            drawPath(path = path, color = Color(0xFF0A84FF), style = Stroke(width = 4f))
+            drawPath(path = path, color = c.primary.copy(alpha = 0.20f))
+            drawPath(path = path, color = c.primary, style = Stroke(width = 4f))
 
             // 手柄尺寸必须按 dp 换算：Canvas 里直接写 18f 是 18px，高密度屏上小到点不中
             val outer = 18.dp.toPx()
             val inner = 12.dp.toPx()
             quad.forEach { p ->
                 val s = screen(p)
-                drawCircle(color = Color(0x66FFFFFF), radius = outer * 1.7f, center = s)
-                drawCircle(color = Color.White, radius = outer, center = s)
-                drawCircle(color = Color(0xFF0A84FF), radius = inner, center = s)
+                drawCircle(color = c.onSurface.copy(alpha = 0.40f), radius = outer * 1.7f, center = s)
+                drawCircle(color = c.onSurface, radius = outer, center = s)
+                drawCircle(color = c.primary, radius = inner, center = s)
             }
         }
 
@@ -164,14 +165,14 @@ fun PerspectiveCropScreen(
                 .align(Alignment.BottomCenter)
                 .fillMaxWidth()
                 .clip(androidx.compose.foundation.shape.RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp))
-                .background(Color(0xE6000000))
+                .background(c.surface)
                 .windowInsetsPadding(WindowInsets.navigationBars)
                 .padding(horizontal = 16.dp, vertical = 14.dp),
         ) {
-            CupertinoText(
+            WbText(
                 text = "拖动四个圆点贴住试卷四角；拍歪了也不用重拍",
                 fontSize = 12.sp,
-                color = Color(0x99FFFFFF),
+                color = c.onSurfaceVariantSummary,
             )
             Spacer(Modifier.height(12.dp))
             Row(

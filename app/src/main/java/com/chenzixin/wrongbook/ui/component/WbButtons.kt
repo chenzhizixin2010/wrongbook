@@ -1,12 +1,13 @@
-package com.chenzixin.wrongbook.ui.component
+﻿package com.chenzixin.wrongbook.ui.component
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -15,134 +16,113 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.drawBehind
-import androidx.compose.ui.draw.shadow
-import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.chenzixin.wrongbook.data.prefs.UiStyle
 import com.chenzixin.wrongbook.ui.theme.wbColors
-import io.github.robinpcrd.cupertino.CupertinoButton
-import io.github.robinpcrd.cupertino.CupertinoIcon
-import io.github.robinpcrd.cupertino.CupertinoText
+import com.chenzixin.wrongbook.ui.theme.wbUiStyle
+import top.yukonga.miuix.kmp.basic.Button
+import top.yukonga.miuix.kmp.basic.ButtonDefaults
+import top.yukonga.miuix.kmp.basic.TextButton
+import top.yukonga.miuix.kmp.theme.LocalContentColor
+import top.yukonga.miuix.kmp.theme.MiuixTheme
 
 /**
- * 统一的按钮语义。
- *
- * 视觉规格：
- * - 主要：强调色 → 紫的渐变胶囊 + 彩色投影 + 顶部高光；
- * - 次要：玻璃胶囊 + 强调色字；
- * - 危险：玻璃胶囊 + 红字（不用实心红，避免误触视觉过重）；
- * - 文字：无底色，仅用于导航栏/卡片内的轻操作。
+ * 语义化按钮。
+ * Miuix：16dp 圆角实心 Button。
+ * iOS：胶囊 filled / tinted / plain 三种形态。
  */
 
-/** 主要操作：渐变玻璃胶囊 + 白字。 */
 @Composable
 fun WbPrimaryButton(
     text: String,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
-    fontSize: Int = 16,
+    fontSize: Int = 17,
     icon: ImageVector? = null,
 ) {
-    val colors = wbColors()
-    val shape = RoundedCornerShape(percent = 50)
-    val contentColor = if (enabled) Color.White else Color.White.copy(alpha = 0.72f)
+    val style = wbUiStyle()
+    if (style == UiStyle.IOS || style == UiStyle.V090) {
+        val c = wbColors()
+        IosButton(
+            text = text,
+            onClick = onClick,
+            modifier = modifier,
+            enabled = enabled,
+            background = c.accent,
+            contentColor = c.onAccent,
+            icon = icon,
+            filled = true,
+            backgroundBrush = if (style == UiStyle.V090) {
+                Brush.linearGradient(listOf(c.accent, c.accentEnd))
+            } else {
+                null
+            },
+        )
+        return
+    }
 
-    Row(
-        modifier = modifier
-            .then(
-                if (enabled) {
-                    Modifier.shadow(
-                        elevation = 16.dp,
-                        shape = shape,
-                        clip = false,
-                        ambientColor = colors.accent.copy(alpha = 0.5f),
-                        spotColor = colors.accent.copy(alpha = 0.38f),
-                    )
-                } else {
-                    Modifier
-                },
-            )
-            .clip(shape)
-            .background(
-                if (enabled) {
-                    Brush.linearGradient(listOf(colors.accent, colors.accentEnd))
-                } else {
-                    Brush.linearGradient(
-                        listOf(
-                            colors.secondaryLabel.copy(alpha = 0.45f),
-                            colors.secondaryLabel.copy(alpha = 0.3f),
-                        ),
-                    )
-                },
-            )
-            .drawBehind {
-                // 玻璃胶囊顶部的镜面反光。
-                drawRoundRect(
-                    brush = Brush.verticalGradient(
-                        listOf(Color.White.copy(alpha = 0.28f), Color.Transparent),
-                        startY = 0f,
-                        endY = size.height * 0.75f,
-                    ),
-                    cornerRadius = CornerRadius(size.height / 2f),
-                )
-            }
-            .clickable(enabled = enabled, onClick = onClick)
-            .heightIn(min = 48.dp)
-            .padding(horizontal = 22.dp, vertical = 13.dp),
-        horizontalArrangement = Arrangement.Center,
-        verticalAlignment = Alignment.CenterVertically,
+    Button(
+        onClick = onClick,
+        modifier = modifier,
+        enabled = enabled,
+        colors = ButtonDefaults.buttonColorsPrimary(),
+        insideMargin = PaddingValues(horizontal = 20.dp, vertical = 12.dp),
     ) {
         if (icon != null) {
-            CupertinoIcon(
+            WbIcon(
                 imageVector = icon,
                 contentDescription = null,
-                modifier = Modifier.size((fontSize + 3).dp),
-                tint = contentColor,
+                modifier = Modifier.size(18.dp),
+                tint = LocalContentColor.current,
             )
-            Spacer(Modifier.width(8.dp))
+            Spacer(Modifier.width(6.dp))
         }
-        CupertinoText(
+        WbText(
             text = text,
-            color = contentColor,
             fontSize = fontSize.sp,
-            fontWeight = FontWeight.SemiBold,
+            fontWeight = FontWeight.Medium,
             maxLines = 1,
         )
     }
 }
 
-/** 次要操作：淡强调色胶囊 + 强调色字（在白玻璃弹窗里也能看清边界）。 */
 @Composable
 fun WbSecondaryButton(
     text: String,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
-    fontSize: Int = 15,
+    fontSize: Int = 17,
 ) {
-    val colors = wbColors()
-    val shape = RoundedCornerShape(percent = 50)
-    Row(
-        modifier = modifier
-            .heightIn(min = 46.dp)
-            .clip(shape)
-            .background(
-                if (enabled) colors.tint.copy(alpha = 0.10f) else colors.secondaryLabel.copy(alpha = 0.08f),
-            )
-            .clickable(enabled = enabled, onClick = onClick)
-            .padding(horizontal = 16.dp),
-        horizontalArrangement = Arrangement.Center,
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        CupertinoText(
+    if (wbUiStyle() == UiStyle.IOS || wbUiStyle() == UiStyle.V090) {
+        val c = wbColors()
+        IosButton(
             text = text,
-            color = if (enabled) colors.tint else colors.secondaryLabel,
+            onClick = onClick,
+            modifier = modifier,
+            enabled = enabled,
+            background = c.tintSoft,
+            contentColor = c.accent,
+            filled = false,
+        )
+        return
+    }
+    Button(
+        onClick = onClick,
+        modifier = modifier,
+        enabled = enabled,
+        colors = ButtonDefaults.buttonColors(),
+        insideMargin = PaddingValues(horizontal = 18.dp, vertical = 12.dp),
+    ) {
+        WbText(
+            text = text,
             fontSize = fontSize.sp,
             fontWeight = FontWeight.Medium,
             maxLines = 1,
@@ -150,30 +130,40 @@ fun WbSecondaryButton(
     }
 }
 
-/** 危险操作：淡红玻璃胶囊 + 红字。 */
 @Composable
 fun WbDangerButton(
     text: String,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
-    fontSize: Int = 15,
+    fontSize: Int = 17,
 ) {
-    val colors = wbColors()
-    val shape = RoundedCornerShape(percent = 50)
-    Row(
-        modifier = modifier
-            .heightIn(min = 46.dp)
-            .clip(shape)
-            .background(colors.danger.copy(alpha = 0.12f))
-            .clickable(enabled = enabled, onClick = onClick)
-            .padding(horizontal = 16.dp),
-        horizontalArrangement = Arrangement.Center,
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        CupertinoText(
+    if (wbUiStyle() == UiStyle.IOS || wbUiStyle() == UiStyle.V090) {
+        val c = wbColors()
+        IosButton(
             text = text,
-            color = colors.danger,
+            onClick = onClick,
+            modifier = modifier,
+            enabled = enabled,
+            background = c.danger,
+            contentColor = Color.White,
+            filled = true,
+        )
+        return
+    }
+    val c = MiuixTheme.colorScheme
+    Button(
+        onClick = onClick,
+        modifier = modifier,
+        enabled = enabled,
+        colors = ButtonDefaults.buttonColors(
+            color = c.errorContainer,
+            contentColor = c.onErrorContainer,
+        ),
+        insideMargin = PaddingValues(horizontal = 18.dp, vertical = 12.dp),
+    ) {
+        WbText(
+            text = text,
             fontSize = fontSize.sp,
             fontWeight = FontWeight.Medium,
             maxLines = 1,
@@ -181,7 +171,6 @@ fun WbDangerButton(
     }
 }
 
-/** 文字按钮：透明底 + 强调色字（「重拍」「全选」这种轻操作）。 */
 @Composable
 fun WbTextButton(
     text: String,
@@ -191,27 +180,40 @@ fun WbTextButton(
     color: Color? = null,
     fontSize: Int = 15,
 ) {
-    val colors = wbColors()
-    val fg = color ?: colors.tint
-    Row(
-        modifier = modifier
-            .heightIn(min = 40.dp)
-            .clip(RoundedCornerShape(percent = 50))
-            .clickable(enabled = enabled, onClick = onClick)
-            .padding(horizontal = 12.dp, vertical = 8.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        CupertinoText(
-            text = text,
-            color = if (enabled) fg else fg.copy(alpha = 0.5f),
-            fontSize = fontSize.sp,
-            fontWeight = FontWeight.Medium,
-            maxLines = 1,
-        )
+    if (wbUiStyle() == UiStyle.IOS || wbUiStyle() == UiStyle.V090) {
+        val c = wbColors()
+        Row(
+            modifier = modifier
+                .clip(RoundedCornerShape(50))
+                .clickable(enabled = enabled, onClick = onClick)
+                .padding(horizontal = 8.dp, vertical = 6.dp),
+            horizontalArrangement = Arrangement.Center,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            WbText(
+                text = text,
+                fontSize = 17.sp,
+                color = if (enabled) (color ?: c.accent) else c.secondaryLabel,
+                maxLines = 1,
+            )
+        }
+        return
     }
+    val c = MiuixTheme.colorScheme
+    TextButton(
+        text = text,
+        onClick = onClick,
+        modifier = modifier,
+        enabled = enabled,
+        colors = ButtonDefaults.textButtonColors(
+            color = Color.Transparent,
+            disabledColor = Color.Transparent,
+            textColor = color ?: c.primary,
+            disabledTextColor = c.disabledOnSurface,
+        ),
+    )
 }
 
-/** 仅供需要自定义内容（如带图标）的按钮使用。 */
 @Composable
 fun WbContentButton(
     onClick: () -> Unit,
@@ -219,5 +221,77 @@ fun WbContentButton(
     enabled: Boolean = true,
     content: @Composable RowScope.() -> Unit,
 ) {
-    CupertinoButton(onClick = onClick, modifier = modifier, enabled = enabled, content = content)
+    if (wbUiStyle() == UiStyle.IOS || wbUiStyle() == UiStyle.V090) {
+        val c = wbColors()
+        Row(
+            modifier = modifier
+                .clip(RoundedCornerShape(50))
+                .background(c.tintSoft)
+                .clickable(enabled = enabled, onClick = onClick)
+                .padding(horizontal = 18.dp, vertical = 12.dp),
+            horizontalArrangement = Arrangement.Center,
+            verticalAlignment = Alignment.CenterVertically,
+            content = content,
+        )
+        return
+    }
+    Button(
+        onClick = onClick,
+        modifier = modifier,
+        enabled = enabled,
+        colors = ButtonDefaults.buttonColors(),
+        content = content,
+    )
+}
+
+@Composable
+private fun IosButton(
+    text: String,
+    onClick: () -> Unit,
+    modifier: Modifier,
+    enabled: Boolean,
+    background: Color,
+    contentColor: Color,
+    icon: ImageVector? = null,
+    filled: Boolean,
+    backgroundBrush: Brush? = null,
+) {
+    val c = wbColors()
+    val bg = when {
+        !enabled -> c.secondaryLabel.copy(alpha = 0.18f)
+        filled -> background
+        else -> background
+    }
+    val fg = when {
+        !enabled -> c.secondaryLabel
+        filled -> contentColor
+        else -> contentColor
+    }
+    Row(
+        modifier = modifier
+            .defaultMinSize(minHeight = 50.dp)
+            .clip(RoundedCornerShape(50))
+            .background(backgroundBrush ?: SolidColor(bg))
+            .clickable(enabled = enabled, onClick = onClick)
+            .padding(horizontal = 22.dp, vertical = 13.dp),
+        horizontalArrangement = Arrangement.Center,
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        if (icon != null) {
+            WbIcon(
+                imageVector = icon,
+                contentDescription = null,
+                modifier = Modifier.size(19.dp),
+                tint = fg,
+            )
+            Spacer(Modifier.width(7.dp))
+        }
+        WbText(
+            text = text,
+            fontSize = 17.sp,
+            fontWeight = FontWeight.SemiBold,
+            color = fg,
+            maxLines = 1,
+        )
+    }
 }

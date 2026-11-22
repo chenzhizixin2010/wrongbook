@@ -1,4 +1,4 @@
-package com.chenzixin.wrongbook.ui.component
+﻿package com.chenzixin.wrongbook.ui.component
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Column
@@ -15,6 +15,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -22,7 +23,7 @@ import androidx.compose.ui.window.Dialog
 import com.chenzixin.wrongbook.data.update.UpdateInfo
 import com.chenzixin.wrongbook.domain.update.ReleaseNotesFormatter
 import com.chenzixin.wrongbook.ui.theme.wbColors
-import io.github.robinpcrd.cupertino.CupertinoText
+import com.chenzixin.wrongbook.ui.component.WbText
 
 /**
  * 大版本更新提示（只在主版本/次版本变化时弹）。
@@ -42,16 +43,17 @@ fun UpdateRecommendedDialog(
             modifier = Modifier
                 .fillMaxWidth()
                 .clip(RoundedCornerShape(16.dp))
-                .background(colors.cardBackground)
+                // 弹窗必须不透明：半透明会让底下的页面文字透上来，很难读
+                .background(colors.cardBackground.compositeOver(colors.canvasTop))
                 .padding(20.dp),
         ) {
-            CupertinoText(
+            WbText(
                 text = "发现新版本 ${info.version}",
                 fontSize = 17.sp,
                 fontWeight = FontWeight.SemiBold,
                 color = colors.label,
             )
-            CupertinoText(
+            WbText(
                 text = "当前 $currentVersion → 建议更新到大版本",
                 modifier = Modifier.padding(top = 4.dp),
                 fontSize = 12.sp,
@@ -66,7 +68,7 @@ fun UpdateRecommendedDialog(
                         .heightIn(max = 240.dp)
                         .verticalScroll(rememberScrollState()),
                 ) {
-                    CupertinoText(
+                    WbText(
                         text = ReleaseNotesFormatter.toPlainText(info.notes, maxChars = 1500),
                         fontSize = 13.sp,
                         color = colors.secondaryLabel,

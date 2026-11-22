@@ -6,6 +6,7 @@ package com.chenzixin.wrongbook.domain.generate
  * 打印用系统 WebView + PrintManager：HTML/CSS 排版比用 PdfDocument 手动画文字省事得多，
  * 而且中文断行、分页、页码都由打印框架处理。
  */
+@kotlinx.serialization.Serializable
 data class PracticeItem(
     val index: Int,
     val stem: String,
@@ -13,6 +14,7 @@ data class PracticeItem(
     val analysis: String = "",
 )
 
+@kotlinx.serialization.Serializable
 data class PracticeSheet(
     val title: String,
     val subtitle: String,
@@ -26,7 +28,7 @@ object PracticeSheetHtml {
         val questions = sheet.items.joinToString("\n") { item ->
             """
             <section class="q">
-              <div class="stem"><span class="no">${item.index}.</span> ${escape(item.stem)}</div>
+              <div class="stem"><span class="no">${item.index}.</span> ${MathHtml.format(item.stem)}</div>
               <div class="space"></div>
             </section>
             """.trimIndent()
@@ -38,7 +40,7 @@ object PracticeSheetHtml {
                 <div class="ans">
                   <div class="ans-no">${item.index}.</div>
                   <div class="ans-body">
-                    <div class="ans-text">${escape(item.answer.ifBlank { "（未提供答案）" })}</div>
+                    <div class="ans-text">${MathHtml.format(item.answer.ifBlank { "（未提供答案）" })}</div>
                     ${if (item.analysis.isNotBlank()) "<div class=\"ans-analysis\">解析：${escape(item.analysis)}</div>" else ""}
                   </div>
                 </div>
@@ -67,6 +69,8 @@ object PracticeSheetHtml {
   .sub { font-size: 10pt; color: #555; }
   .q { margin: 0 0 14pt 0; page-break-inside: avoid; }
   .stem { white-space: pre-wrap; overflow-wrap: anywhere; word-break: break-word; }
+  .math { font-family: "Cambria Math", "Times New Roman", serif; font-style: italic; }
+  sup, sub { font-size: 70%; }
   .no { font-weight: 600; }
   .space { height: 52pt; border-bottom: 0.5pt dashed #bbb; margin-top: 6pt; }
   .answers h2 { font-size: 14pt; border-bottom: 1pt solid #111; padding-bottom: 4pt; }

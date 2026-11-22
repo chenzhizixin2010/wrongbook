@@ -1,6 +1,8 @@
-package com.chenzixin.wrongbook.feature.home
+﻿package com.chenzixin.wrongbook.feature.home
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -14,13 +16,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
-import com.chenzixin.wrongbook.ui.component.WbAlertDialog
-import com.chenzixin.wrongbook.ui.component.WbDangerButton
-import com.chenzixin.wrongbook.ui.component.WbSecondaryButton
-import com.chenzixin.wrongbook.ui.component.WbTextButton
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
@@ -29,10 +24,12 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
@@ -44,33 +41,39 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import coil3.compose.AsyncImage
 import com.chenzixin.wrongbook.data.local.entity.QuestionEntity
 import com.chenzixin.wrongbook.data.local.model.QuestionWithTags
-import com.chenzixin.wrongbook.ui.component.GlassSurface
+import com.chenzixin.wrongbook.ui.component.WbAlertDialog
 import com.chenzixin.wrongbook.ui.component.WbBadge
 import com.chenzixin.wrongbook.ui.component.WbChip
-import com.chenzixin.wrongbook.ui.component.WbGlassIconButton
-import com.chenzixin.wrongbook.ui.component.WbIcons
+import com.chenzixin.wrongbook.ui.component.WbDangerButton
+import com.chenzixin.wrongbook.ui.component.WbIconButton
+import com.chenzixin.wrongbook.ui.component.WbIcon
 import com.chenzixin.wrongbook.ui.component.WbPageHeader
 import com.chenzixin.wrongbook.ui.component.WbPrimaryButton
+import com.chenzixin.wrongbook.ui.component.WbSecondaryButton
+import com.chenzixin.wrongbook.ui.component.WbDivider
 import com.chenzixin.wrongbook.ui.component.WbSectionLabel
+import com.chenzixin.wrongbook.ui.component.WbSurface
+import com.chenzixin.wrongbook.ui.component.WbText
 import com.chenzixin.wrongbook.ui.component.WbTextField
-import com.chenzixin.wrongbook.ui.component.wbTabBarSpace
+import com.chenzixin.wrongbook.data.prefs.UiStyle
 import com.chenzixin.wrongbook.ui.theme.wbColors
-import io.github.robinpcrd.cupertino.CupertinoIcon
-import io.github.robinpcrd.cupertino.CupertinoText
-import io.github.robinpcrd.cupertino.icons.CupertinoIcons
-import io.github.robinpcrd.cupertino.icons.outlined.Checkmark
-import io.github.robinpcrd.cupertino.icons.outlined.ListBullet
-import io.github.robinpcrd.cupertino.icons.outlined.MagnifyingGlass
-import io.github.robinpcrd.cupertino.icons.outlined.Plus
-import io.github.robinpcrd.cupertino.icons.outlined.RectanglePortraitAndArrowForward
-import io.github.robinpcrd.cupertino.icons.outlined.Xmark
+import com.chenzixin.wrongbook.ui.theme.wbUiStyle
+import com.chenzixin.wrongbook.ui.component.WbTextButton
+import top.yukonga.miuix.kmp.icon.MiuixIcons
+import top.yukonga.miuix.kmp.icon.extended.Add
+import top.yukonga.miuix.kmp.icon.extended.Close
+import top.yukonga.miuix.kmp.icon.extended.Notes
+import top.yukonga.miuix.kmp.icon.extended.Ok
+import top.yukonga.miuix.kmp.icon.extended.Scan
+import top.yukonga.miuix.kmp.icon.extended.Search
+import top.yukonga.miuix.kmp.icon.extended.SelectAll
+import top.yukonga.miuix.kmp.theme.MiuixTheme
 import java.io.File
 
 /**
- * 题库 Tab：题目列表 + 多标签筛选（AND / OR）。
+ * 题库 Tab：标准 HyperOS 内嵌列表。
  *
- * 筛选在内存里做：题目量级是「个人错题本」（几百条），比再加一套带 JOIN 的查询简单，
- * 语义与 [com.chenzixin.wrongbook.domain.tag.TagFilter] 的单测保持一致。
+ * 题目不再一条一个玻璃卡；每 8 条放进一张 Card 分组，行与行之间用分隔线。
  */
 @Composable
 fun HomeTabScreen(
@@ -80,150 +83,184 @@ fun HomeTabScreen(
     vm: HomeViewModel = hiltViewModel(),
 ) {
     val state by vm.uiState.collectAsState()
-    val colors = wbColors()
-    val bottomSpace = wbTabBarSpace()
-
+    val c = wbColors()
     var confirmDelete by remember { mutableStateOf(false) }
 
     Box(modifier = Modifier.fillMaxSize()) {
-    LazyColumn(
-        modifier = Modifier.fillMaxSize(),
-        contentPadding = PaddingValues(bottom = if (state.selectionMode) bottomSpace + 72.dp else bottomSpace),
-    ) {
-        item(key = "header") {
-            WbPageHeader(
-                title = "题库",
-                kicker = "本地优先 · Errata",
-                subtitle = buildString {
-                    append("${state.questions.size} 道错题")
-                    if (state.tags.isNotEmpty()) append(" · ${state.tags.size} 个标签")
-                },
-                trailing = {
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        WbTextButton(
-                            text = if (state.selectionMode) "取消" else "选择",
-                            onClick = {
-                                if (state.selectionMode) vm.exitSelectionMode() else vm.enterSelectionMode()
-                            },
-                        )
-                        WbGlassIconButton(
-                            icon = CupertinoIcons.Outlined.Plus,
-                            contentDescription = "新建题目",
-                            onClick = onNewQuestion,
-                            size = 46.dp,
-                            iconSize = 19.dp,
-                            tint = colors.tint,
-                        )
-                    }
-                },
-            )
-        }
+        LazyColumn(
+            modifier = Modifier.fillMaxSize(),
+            contentPadding = PaddingValues(
+                bottom = if (state.selectionMode) 88.dp else 16.dp,
+            ),
+        ) {
+            item(key = "header") {
+                WbPageHeader(
+                    title = "题库",
+                    kicker = "本地优先 · Errata",
+                    subtitle = buildString {
+                        append("${state.questions.size} 道错题")
+                        if (state.tags.isNotEmpty()) append(" · ${state.tags.size} 个标签")
+                    },
+                    trailing = {
+                        Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                            WbIconButton(
+                                icon = MiuixIcons.SelectAll,
+                                contentDescription = if (state.selectionMode) "退出选择" else "选择题目",
+                                onClick = {
+                                    if (state.selectionMode) vm.exitSelectionMode() else vm.enterSelectionMode()
+                                },
+                                size = 40.dp,
+                                iconSize = 22.dp,
+                                tint = c.accent,
+                                containerColor = if (state.selectionMode) c.tintSoft else null,
+                            )
+                            WbIconButton(
+                                icon = MiuixIcons.Add,
+                                contentDescription = "新建题目",
+                                onClick = onNewQuestion,
+                                size = 40.dp,
+                                iconSize = 22.dp,
+                                tint = c.accent,
+                            )
+                        }
+                    },
+                )
+            }
 
-        item(key = "search") {
-            WbTextField(
-                value = state.keyword,
-                onValueChange = vm::setKeyword,
-                placeholder = "搜索题干、答案或 OCR 文本",
-                modifier = Modifier.padding(horizontal = 16.dp),
-                leadingIcon = CupertinoIcons.Outlined.MagnifyingGlass,
-                trailing = if (state.keyword.isEmpty()) {
-                    null
-                } else {
-                    {
-                        WbGlassIconButton(
-                            icon = CupertinoIcons.Outlined.Xmark,
-                            contentDescription = "清空搜索",
-                            onClick = { vm.setKeyword("") },
-                            size = 26.dp,
-                            iconSize = 12.dp,
-                        )
-                    }
-                },
-            )
-        }
+            item(key = "search") {
+                WbTextField(
+                    value = state.keyword,
+                    onValueChange = vm::setKeyword,
+                    placeholder = "搜索题干、答案或 OCR 文本",
+                    modifier = Modifier.padding(horizontal = 16.dp),
+                    leadingIcon = MiuixIcons.Search,
+                    trailing = if (state.keyword.isEmpty()) {
+                        null
+                    } else {
+                        {
+                            WbIconButton(
+                                icon = MiuixIcons.Close,
+                                contentDescription = "清空搜索",
+                                onClick = { vm.setKeyword("") },
+                                size = 24.dp,
+                                iconSize = 16.dp,
+                            )
+                        }
+                    },
+                )
+            }
 
-        if (state.tags.isNotEmpty()) {
-            item(key = "filters") {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .horizontalScroll(rememberScrollState())
-                        .padding(start = 16.dp, end = 16.dp, top = 12.dp),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    WbChip(
-                        label = if (state.filter.matchAll) "全部满足" else "任一满足",
-                        selected = !state.filter.isEmpty,
-                        onClick = { vm.setMatchAll(!state.filter.matchAll) },
-                    )
-                    state.tags.forEach { tag ->
+            if (state.tags.isNotEmpty()) {
+                item(key = "filters") {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .horizontalScroll(rememberScrollState())
+                            .padding(start = 16.dp, end = 16.dp, top = 10.dp),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
                         WbChip(
-                            label = tag.name,
-                            selected = tag.id in state.filter.tagIds,
-                            onClick = { vm.toggleTag(tag.id) },
+                            label = if (state.filter.matchAll) "全部满足" else "任一满足",
+                            selected = !state.filter.isEmpty,
+                            onClick = { vm.setMatchAll(!state.filter.matchAll) },
                         )
+                        state.tags.forEach { tag ->
+                            WbChip(
+                                label = tag.name,
+                                selected = tag.id in state.filter.tagIds,
+                                onClick = { vm.toggleTag(tag.id) },
+                            )
+                        }
+                        if (!state.filter.isEmpty) {
+                            WbChip(label = "清除", selected = false, onClick = vm::clearFilter)
+                        }
                     }
-                    if (!state.filter.isEmpty) {
-                        WbChip(label = "清除", selected = false, onClick = vm::clearFilter)
+                }
+            }
+
+            item(key = "section") {
+                Box(modifier = Modifier.padding(horizontal = 20.dp, vertical = 10.dp)) {
+                    WbSectionLabel(
+                        text = if (state.filter.isEmpty) "全部题目" else "筛选结果",
+                        trailing = "${state.questions.size} 道",
+                    )
+                }
+            }
+
+            if (state.questions.isEmpty()) {
+                item(key = "empty") {
+                    HomeEmptyState(
+                        filtered = !state.filter.isEmpty,
+                        onOpenScan = onOpenScan,
+                    )
+                }
+            } else {
+                items(
+                    items = state.questions.chunked(8),
+                    key = { chunk -> chunk.first().question.id },
+                ) { chunk ->
+                    WbSurface(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp),
+                        cornerRadius = if (wbUiStyle() == UiStyle.V090) 24.dp else 16.dp,
+                        contentPadding = PaddingValues(0.dp),
+                    ) {
+                        Column {
+                        chunk.forEachIndexed { index, item ->
+                            QuestionRow(
+                                item = item,
+                                selectable = state.selectionMode,
+                                selected = item.question.id in state.selectedIds,
+                                onClick = {
+                                    if (state.selectionMode) {
+                                        vm.toggleSelect(item.question.id)
+                                    } else {
+                                        onOpenQuestion(item.question.id)
+                                    }
+                                },
+                            )
+                            if (index != chunk.lastIndex) {
+                                WbDivider(startIndent = 72.dp)
+                            }
+                        }
+                        }
                     }
+                    Spacer(Modifier.height(8.dp))
                 }
             }
         }
 
-        item(key = "section") {
-            Box(modifier = Modifier.padding(horizontal = 16.dp, vertical = 14.dp)) {
-                WbSectionLabel(
-                    text = if (state.filter.isEmpty) "全部题目" else "筛选结果",
-                    trailing = "${state.questions.size} 道",
-                )
+        if (state.selectionMode) {
+            Column(
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .fillMaxWidth()
+                    .background(c.cardBackground),
+            ) {
+                WbDivider()
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 10.dp),
+                    horizontalArrangement = Arrangement.spacedBy(10.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    WbSecondaryButton(
+                        text = if (state.selectedIds.size == state.questions.size && state.questions.isNotEmpty()) "取消全选" else "全选",
+                        onClick = {
+                            if (state.selectedIds.size == state.questions.size) vm.clearSelection() else vm.selectAll()
+                        },
+                        modifier = Modifier.weight(1f),
+                    )
+                    WbDangerButton(
+                        text = "删除（${state.selectedIds.size}）",
+                        onClick = { if (state.selectedIds.isNotEmpty()) confirmDelete = true },
+                        modifier = Modifier.weight(1f),
+                    )
+                }
             }
-        }
-
-        if (state.questions.isEmpty()) {
-            item(key = "empty") {
-                HomeEmptyState(
-                    filtered = !state.filter.isEmpty,
-                    onOpenScan = onOpenScan,
-                )
-            }
-        } else {
-            items(state.questions, key = { it.question.id }) { item ->
-                val id = item.question.id
-                QuestionCard(
-                    item = item,
-                    selectable = state.selectionMode,
-                    selected = id in state.selectedIds,
-                    onClick = {
-                        if (state.selectionMode) vm.toggleSelect(id) else onOpenQuestion(id)
-                    },
-                )
-                Spacer(Modifier.height(10.dp))
-            }
-        }
-    }
-
-    if (state.selectionMode) {
-        Row(
-            modifier = Modifier
-                .align(Alignment.BottomCenter)
-                .padding(bottom = bottomSpace - 8.dp, start = 16.dp, end = 16.dp)
-                .fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(10.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            WbSecondaryButton(
-                text = if (state.selectedIds.size == state.questions.size && state.questions.isNotEmpty()) "取消全选" else "全选",
-                onClick = {
-                    if (state.selectedIds.size == state.questions.size) vm.clearSelection() else vm.selectAll()
-                },
-                modifier = Modifier.weight(1f),
-            )
-            WbDangerButton(
-                text = "删除（${state.selectedIds.size}）",
-                onClick = { if (state.selectedIds.isNotEmpty()) confirmDelete = true },
-                modifier = Modifier.weight(1f),
-            )
         }
     }
 
@@ -250,186 +287,153 @@ fun HomeTabScreen(
             onDismiss = vm::clearMessage,
         )
     }
-    }
 }
 
+/** 空状态：页面居中，极简线框图标 + 一句话 + 一个按钮；无卡片、无渐变。 */
 @Composable
 private fun HomeEmptyState(filtered: Boolean, onOpenScan: () -> Unit) {
-    val colors = wbColors()
-    GlassSurface(
+    val c = wbColors()
+    Column(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 16.dp),
-        cornerRadius = 28.dp,
-        elevation = 10.dp,
+            .padding(horizontal = 32.dp, vertical = 72.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 24.dp, vertical = 30.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-        ) {
-            Box(
-                modifier = Modifier
-                    .size(78.dp)
-                    .clip(CircleShape)
-                    .background(
-                        Brush.linearGradient(
-                            listOf(colors.accent.copy(alpha = 0.95f), colors.accentEnd.copy(alpha = 0.9f)),
-                        ),
-                    ),
-                contentAlignment = Alignment.Center,
-            ) {
-                CupertinoIcon(
-                    imageVector = CupertinoIcons.Outlined.ListBullet,
-                    contentDescription = null,
-                    modifier = Modifier.size(32.dp),
-                    tint = Color.White,
-                )
-            }
-            Spacer(Modifier.height(18.dp))
-            CupertinoText(
-                text = if (filtered) "没有匹配的题目" else "还没有错题",
-                fontSize = 17.sp,
-                fontWeight = FontWeight.SemiBold,
-                color = colors.label,
+        WbIcon(
+            imageVector = MiuixIcons.Notes,
+            contentDescription = null,
+            modifier = Modifier.size(56.dp),
+            tint = c.secondaryLabel,
+        )
+        Spacer(Modifier.height(16.dp))
+        WbText(
+            text = if (filtered) "没有匹配的题目" else "还没有错题",
+            fontSize = 18.sp,
+            fontWeight = FontWeight.Medium,
+            color = c.label,
+        )
+        Spacer(Modifier.height(6.dp))
+        WbText(
+            text = if (filtered) "换个标签组合，或者清空筛选" else "拍一整页，自动切成一道道题",
+            fontSize = 14.sp,
+            lineHeight = 20.sp,
+            color = c.secondaryLabel,
+        )
+        if (!filtered) {
+            Spacer(Modifier.height(20.dp))
+            WbPrimaryButton(
+                text = "去扫描",
+                onClick = onOpenScan,
+                icon = MiuixIcons.Scan,
             )
-            Spacer(Modifier.height(6.dp))
-            CupertinoText(
-                text = if (filtered) "换个标签组合，或者清空筛选再看" else "拍一整页，自动切成一道道题",
-                fontSize = 13.sp,
-                lineHeight = 19.sp,
-                color = colors.secondaryLabel,
-            )
-            if (!filtered) {
-                Spacer(Modifier.height(20.dp))
-                WbPrimaryButton(
-                    text = "去扫描",
-                    onClick = onOpenScan,
-                    icon = WbIcons.Camera,
-                )
-            }
         }
     }
 }
 
 @Composable
-private fun QuestionCard(
+private fun QuestionRow(
     item: QuestionWithTags,
     onClick: () -> Unit,
     selectable: Boolean = false,
     selected: Boolean = false,
 ) {
-    val colors = wbColors()
+    val c = wbColors()
     val context = LocalContext.current
     val question = item.question
 
-    GlassSurface(
+    Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 16.dp),
-        cornerRadius = 22.dp,
-        elevation = 6.dp,
-        onClick = onClick,
+            .clickable(onClick = onClick)
+            .padding(horizontal = 16.dp, vertical = 12.dp),
+        verticalAlignment = Alignment.CenterVertically,
     ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(12.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            if (selectable) {
-                Box(
-                    modifier = Modifier
-                        .padding(end = 10.dp)
-                        .size(24.dp)
-                        .clip(CircleShape)
-                        .background(
-                            if (selected) colors.tint else colors.groupedBackground,
-                        ),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    if (selected) {
-                        CupertinoIcon(
-                            imageVector = CupertinoIcons.Outlined.Checkmark,
-                            contentDescription = null,
-                            modifier = Modifier.size(14.dp),
-                            tint = Color.White,
-                        )
-                    }
-                }
-            }
-
-            if (question.thumbPath.isNotBlank()) {
-                AsyncImage(
-                    model = File(context.filesDir, question.thumbPath),
-                    contentDescription = null,
-                    modifier = Modifier
-                        .size(58.dp)
-                        .clip(RoundedCornerShape(17.dp))
-                        .background(colors.groupedBackground),
-                    contentScale = ContentScale.Crop,
-                )
-            } else {
-                Box(
-                    modifier = Modifier
-                        .size(58.dp)
-                        .clip(RoundedCornerShape(17.dp))
-                        .background(
-                            Brush.linearGradient(
-                                listOf(colors.accent.copy(alpha = 0.22f), colors.accentEnd.copy(alpha = 0.12f)),
-                            ),
-                        ),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    CupertinoIcon(
-                        imageVector = CupertinoIcons.Outlined.ListBullet,
+        if (selectable) {
+            Box(
+                modifier = Modifier
+                    .padding(end = 10.dp)
+                    .size(22.dp)
+                    .clip(CircleShape)
+                    .background(if (selected) c.accent else Color.Transparent)
+                    .border(1.5.dp, if (selected) c.accent else c.separator, CircleShape),
+                contentAlignment = Alignment.Center,
+            ) {
+                if (selected) {
+                    WbIcon(
+                        imageVector = MiuixIcons.Ok,
                         contentDescription = null,
-                        modifier = Modifier.size(22.dp),
-                        tint = colors.tint,
+                        modifier = Modifier.size(14.dp),
+                        tint = c.onAccent,
                     )
                 }
             }
+        }
 
-            Spacer(Modifier.width(12.dp))
-
-            Column(modifier = Modifier.weight(1f)) {
-                CupertinoText(
-                    text = previewText(question),
-                    fontSize = 14.5.sp,
-                    lineHeight = 20.sp,
-                    color = colors.label,
-                    maxLines = 2,
-                    overflow = TextOverflow.Ellipsis,
+        if (question.thumbPath.isNotBlank()) {
+            AsyncImage(
+                model = File(context.filesDir, question.thumbPath),
+                contentDescription = null,
+                modifier = Modifier
+                    .size(48.dp)
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(c.groupedBackground),
+                contentScale = ContentScale.Crop,
+            )
+        } else {
+            Box(
+                modifier = Modifier
+                    .size(48.dp)
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(c.groupedBackground),
+                contentAlignment = Alignment.Center,
+            ) {
+                WbIcon(
+                    imageVector = MiuixIcons.Notes,
+                    contentDescription = null,
+                    modifier = Modifier.size(22.dp),
+                    tint = c.secondaryLabel,
                 )
-                Spacer(Modifier.height(8.dp))
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(6.dp),
-                ) {
-                    if (item.tags.isEmpty()) {
-                        WbBadge(text = "未分类", color = colors.secondaryLabel)
-                    } else {
-                        item.tags.take(2).forEach { tag ->
-                            WbBadge(text = tag.name, color = parseTagColor(tag.color))
-                        }
-                        if (item.tags.size > 2) {
-                            WbBadge(text = "+${item.tags.size - 2}", color = colors.secondaryLabel)
-                        }
+            }
+        }
+
+        Spacer(Modifier.width(12.dp))
+
+        Column(modifier = Modifier.weight(1f)) {
+            WbText(
+                text = previewText(question),
+                fontSize = 15.sp,
+                lineHeight = 20.sp,
+                color = c.label,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis,
+            )
+            Spacer(Modifier.height(6.dp))
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(6.dp),
+            ) {
+                if (item.tags.isEmpty()) {
+                    WbBadge(text = "未分类", color = c.secondaryLabel)
+                } else {
+                    item.tags.take(2).forEach { tag ->
+                        WbBadge(text = tag.name, color = parseTagColor(tag.color))
                     }
-                    Spacer(Modifier.weight(1f))
-                    MasteryDots(level = question.masteryLevel)
+                    if (item.tags.size > 2) {
+                        WbBadge(text = "+${item.tags.size - 2}", color = c.secondaryLabel)
+                    }
                 }
+                Spacer(Modifier.weight(1f))
+                MasteryDots(level = question.masteryLevel)
             }
         }
     }
 }
 
-/** 掌握度小圆点：5 格，已点亮的用强调色渐变。 */
+/** 掌握度小圆点：纯色 primary / outline。 */
 @Composable
 private fun MasteryDots(level: Int) {
-    val colors = wbColors()
+    val c = wbColors()
     Row(horizontalArrangement = Arrangement.spacedBy(3.dp)) {
         repeat(5) { index ->
             val lit = index < level.coerceIn(0, 5)
@@ -438,15 +442,7 @@ private fun MasteryDots(level: Int) {
                     .width(6.dp)
                     .height(6.dp)
                     .clip(CircleShape)
-                    .background(
-                        if (lit) {
-                            Brush.linearGradient(listOf(colors.accent, colors.accentEnd))
-                        } else {
-                            Brush.linearGradient(
-                                listOf(colors.secondaryLabel.copy(alpha = 0.25f), colors.secondaryLabel.copy(alpha = 0.25f)),
-                            )
-                        },
-                    ),
+                    .background(if (lit) c.accent else c.separator.copy(alpha = 0.45f)),
             )
         }
     }
@@ -458,6 +454,6 @@ private fun previewText(question: QuestionEntity): String {
     return if (oneLine.isEmpty()) "（无文字）" else oneLine.take(80)
 }
 
-private fun parseTagColor(hex: String): Color = runCatching {
+private fun parseTagColor(hex: String): Color? = runCatching {
     Color(android.graphics.Color.parseColor(hex))
-}.getOrDefault(Color(0xFF0A84FF))
+}.getOrNull()

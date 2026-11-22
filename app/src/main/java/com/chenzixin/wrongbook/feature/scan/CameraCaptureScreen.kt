@@ -69,16 +69,17 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import com.chenzixin.wrongbook.core.ImageUtils
 import com.chenzixin.wrongbook.core.awaitResult
 import com.chenzixin.wrongbook.ui.component.WbAlertDialog
-import com.chenzixin.wrongbook.ui.component.WbIcons
+import top.yukonga.miuix.kmp.theme.MiuixTheme
+import top.yukonga.miuix.kmp.theme.darkColorScheme
+import top.yukonga.miuix.kmp.icon.extended.Scan
 import com.chenzixin.wrongbook.ui.component.WbPrimaryButton
 import com.chenzixin.wrongbook.ui.component.WbTopBar
 import com.chenzixin.wrongbook.ui.theme.wbColors
-import io.github.robinpcrd.cupertino.CupertinoButton
-import io.github.robinpcrd.cupertino.CupertinoIcon
-import io.github.robinpcrd.cupertino.CupertinoText
-import io.github.robinpcrd.cupertino.icons.CupertinoIcons
-import io.github.robinpcrd.cupertino.icons.outlined.ChevronBackward
-import io.github.robinpcrd.cupertino.icons.outlined.RectanglePortraitAndArrowForward
+import com.chenzixin.wrongbook.ui.component.WbIcon
+import com.chenzixin.wrongbook.ui.component.WbText
+import top.yukonga.miuix.kmp.icon.MiuixIcons
+import top.yukonga.miuix.kmp.icon.extended.ChevronBackward
+import top.yukonga.miuix.kmp.icon.extended.Scan
 import kotlin.math.min
 
 /**
@@ -92,8 +93,21 @@ fun CameraCaptureScreen(
     onBack: () -> Unit,
     vm: ScanViewModel = hiltViewModel(),
 ) {
+    // 相机永远是深色场景：局部套一套深色 Miuix 色板，保证 onSurface/Button 都是浅色。
+    MiuixTheme(colors = darkColorScheme()) {
+        CameraCaptureContent(onDone = onDone, onBack = onBack, vm = vm)
+    }
+}
+
+@Composable
+private fun CameraCaptureContent(
+    onDone: (Int) -> Unit,
+    onBack: () -> Unit,
+    vm: ScanViewModel,
+) {
     val state by vm.state.collectAsState()
     val context = LocalContext.current
+    val c = MiuixTheme.colorScheme
     CameraSystemBars()
     var cropBitmap by remember { mutableStateOf<android.graphics.Bitmap?>(null) }
     var permissionGranted by remember {
@@ -112,7 +126,7 @@ fun CameraCaptureScreen(
         }
     }
 
-    Box(modifier = Modifier.fillMaxSize().background(Color.Black)) {
+    Box(modifier = Modifier.fillMaxSize().background(c.background)) {
         val pendingCrop = cropBitmap
         when {
             pendingCrop != null -> PerspectiveCropScreen(
@@ -158,12 +172,7 @@ fun CameraCaptureScreen(
                 modifier = Modifier
                     .align(Alignment.TopCenter)
                     .fillMaxWidth()
-                    .background(
-                        Brush.verticalGradient(
-                            listOf(Color.Black.copy(alpha = 0.72f), Color.Transparent),
-                            endY = 220f,
-                        ),
-                    )
+                    .background(c.background.copy(alpha = 0.55f))
                     .windowInsetsPadding(WindowInsets.statusBars)
                     .padding(horizontal = 12.dp, vertical = 8.dp),
                 verticalAlignment = Alignment.CenterVertically,
@@ -172,32 +181,32 @@ fun CameraCaptureScreen(
                     modifier = Modifier
                         .size(40.dp)
                         .clip(CircleShape)
-                        .background(Color.Black.copy(alpha = 0.35f))
-                        .border(1.dp, Color.White.copy(alpha = 0.18f), CircleShape)
+                        .background(c.background.copy(alpha = 0.35f))
+                        .border(1.dp, c.onSurface.copy(alpha = 0.18f), CircleShape)
                         .clickable(onClick = vm::discard),
                     contentAlignment = Alignment.Center,
                 ) {
-                    CupertinoIcon(
-                        imageVector = CupertinoIcons.Outlined.ChevronBackward,
+                    WbIcon(
+                        imageVector = MiuixIcons.ChevronBackward,
                         contentDescription = "返回",
                         modifier = Modifier.size(17.dp),
-                        tint = Color.White,
+                        tint = c.onSurface,
                     )
                 }
-                CupertinoText(
+                WbText(
                     text = "选择要入库的题目",
                     modifier = Modifier
                         .weight(1f)
                         .padding(horizontal = 12.dp),
                     fontSize = 16.sp,
                     fontWeight = FontWeight.SemiBold,
-                    color = Color.White,
+                    color = c.onSurface,
                     maxLines = 1,
                 )
-                CupertinoText(
+                WbText(
                     text = "已选 ${state.selected.size}",
                     fontSize = 11.sp,
-                    color = Color.White.copy(alpha = 0.65f),
+                    color = c.onSurface.copy(alpha = 0.65f),
                 )
             }
         }
@@ -217,13 +226,13 @@ fun CameraCaptureScreen(
             Box(
                 modifier = Modifier
                     .fillMaxSize()
-                    .background(Color(0x99000000)),
+                    .background(c.windowDimming),
                 contentAlignment = Alignment.Center,
             ) {
-                CupertinoText(
+                WbText(
                     text = "正在保存 ${state.progress ?: ""}",
                     fontSize = 16.sp,
-                    color = Color.White,
+                    color = c.onSurface,
                 )
             }
         }
@@ -232,6 +241,7 @@ fun CameraCaptureScreen(
 
 @Composable
 private fun PermissionRequest(onRequest: () -> Unit) {
+    val c = MiuixTheme.colorScheme
     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
         Column(
             modifier = Modifier.padding(horizontal = 32.dp),
@@ -241,33 +251,29 @@ private fun PermissionRequest(onRequest: () -> Unit) {
                 modifier = Modifier
                     .size(76.dp)
                     .clip(CircleShape)
-                    .background(
-                        Brush.linearGradient(
-                            listOf(Color(0xFF0A84FF), Color(0xFF6C5CE7)),
-                        ),
-                    ),
+                    .background(c.primaryContainer),
                 contentAlignment = Alignment.Center,
             ) {
-                CupertinoIcon(
-                    imageVector = WbIcons.Camera,
+                WbIcon(
+                    imageVector = MiuixIcons.Scan,
                     contentDescription = null,
                     modifier = Modifier.size(30.dp),
-                    tint = Color.White,
+                    tint = c.onSurface,
                 )
             }
             Spacer(Modifier.height(20.dp))
-            CupertinoText(
+            WbText(
                 text = "需要相机权限",
                 fontSize = 18.sp,
                 fontWeight = FontWeight.SemiBold,
-                color = Color.White,
+                color = c.onSurface,
             )
             Spacer(Modifier.height(7.dp))
-            CupertinoText(
+            WbText(
                 text = "只用于拍摄错题；识别在本机完成，不会上传图片。",
                 fontSize = 12.5.sp,
                 lineHeight = 18.sp,
-                color = Color.White.copy(alpha = 0.68f),
+                color = c.onSurface.copy(alpha = 0.68f),
                 textAlign = TextAlign.Center,
             )
             Spacer(Modifier.height(22.dp))
@@ -301,6 +307,7 @@ private fun CameraStage(
     onError: (String) -> Unit,
     onBack: () -> Unit,
 ) {
+    val c = MiuixTheme.colorScheme
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
     val previewView = remember { PreviewView(context) }
@@ -330,19 +337,7 @@ private fun CameraStage(
     Box(modifier = Modifier.fillMaxSize()) {
         AndroidView(factory = { previewView }, modifier = Modifier.fillMaxSize())
 
-        // 顶部压暗，保证状态栏与提示可读
         Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(150.dp)
-            .align(Alignment.TopCenter)
-            .background(
-                Brush.verticalGradient(
-                    listOf(Color.Black.copy(alpha = 0.55f), Color.Transparent),
-                ),
-            ),
-    )
-    Box(
         modifier = Modifier
             .align(Alignment.TopCenter)
             .fillMaxWidth()
@@ -358,29 +353,29 @@ private fun CameraStage(
                 modifier = Modifier
                     .size(40.dp)
                     .clip(CircleShape)
-                    .background(Color.Black.copy(alpha = 0.38f))
-                    .border(1.dp, Color.White.copy(alpha = 0.16f), CircleShape)
+                    .background(c.background.copy(alpha = 0.38f))
+                    .border(1.dp, c.onSurface.copy(alpha = 0.16f), CircleShape)
                     .clickable(onClick = onBack),
                 contentAlignment = Alignment.Center,
             ) {
-                CupertinoIcon(
-                    imageVector = CupertinoIcons.Outlined.ChevronBackward,
+                WbIcon(
+                    imageVector = MiuixIcons.ChevronBackward,
                     contentDescription = "返回",
                     modifier = Modifier.size(17.dp),
-                    tint = Color.White,
+                    tint = c.onSurface,
                 )
             }
             Spacer(Modifier.weight(1f))
             Box(
                 modifier = Modifier
                     .clip(RoundedCornerShape(percent = 50))
-                    .background(Color.Black.copy(alpha = 0.38f))
+                    .background(c.background.copy(alpha = 0.38f))
                     .padding(horizontal = 14.dp, vertical = 7.dp),
             ) {
-                CupertinoText(
+                WbText(
                     text = "整页入框 · 四角可见",
                     fontSize = 11.5.sp,
-                    color = Color.White.copy(alpha = 0.85f),
+                    color = c.onSurface.copy(alpha = 0.85f),
                 )
             }
             Spacer(Modifier.weight(1f))
@@ -404,10 +399,10 @@ private fun CameraStage(
                 Box(
                     modifier = Modifier
                         .clip(RoundedCornerShape(percent = 50))
-                        .background(Color.Black.copy(alpha = 0.5f))
+                        .background(c.background.copy(alpha = 0.5f))
                         .padding(horizontal = 14.dp, vertical = 7.dp),
                 ) {
-                    CupertinoText(text = "识别中…", fontSize = 12.sp, color = Color.White)
+                    WbText(text = "识别中…", fontSize = 12.sp, color = c.onSurface)
                 }
                 Spacer(Modifier.height(16.dp))
             }
@@ -415,10 +410,10 @@ private fun CameraStage(
                 modifier = Modifier
                     .size(84.dp)
                     .clip(CircleShape)
-                    .border(4.dp, Color.White.copy(alpha = 0.92f), CircleShape)
+                    .border(4.dp, c.onSurface.copy(alpha = 0.92f), CircleShape)
                     .padding(8.dp)
                     .clip(CircleShape)
-                    .background(Color.White)
+                    .background(c.onSurface)
                     .pointerInput(Unit) {
                         detectTapGestures {
                             if (stage != ScanViewModel.Stage.Idle) return@detectTapGestures
@@ -443,13 +438,13 @@ private fun CameraStage(
             Box(
                 modifier = Modifier
                     .clip(RoundedCornerShape(percent = 50))
-                    .background(Color.Black.copy(alpha = 0.38f))
+                    .background(c.background.copy(alpha = 0.38f))
                     .padding(horizontal = 14.dp, vertical = 6.dp),
             ) {
-                CupertinoText(
+                WbText(
                     text = "点按拍摄",
                     fontSize = 11.5.sp,
-                    color = Color.White.copy(alpha = 0.85f),
+                    color = c.onSurface.copy(alpha = 0.85f),
                 )
             }
         }
@@ -460,6 +455,7 @@ private fun CameraStage(
 /** 取景框四角括号。 */
 @Composable
 private fun CameraFrameOverlay() {
+    val c = MiuixTheme.colorScheme
     Canvas(
         modifier = Modifier
             .fillMaxSize()
@@ -468,7 +464,7 @@ private fun CameraFrameOverlay() {
     ) {
         val len = 26.dp.toPx()
         val stroke = 2.5.dp.toPx()
-        val color = Color.White.copy(alpha = 0.8f)
+        val color = c.onSurface.copy(alpha = 0.8f)
         val left = 0f
         val top = 0f
         val right = size.width
@@ -499,6 +495,7 @@ private fun SelectionStage(
     val bitmap = state.bitmap ?: return
     val image = remember(bitmap) { bitmap.asImageBitmap() }
     val colors = wbColors()
+    val c = MiuixTheme.colorScheme
     var showTagDialog by remember { mutableStateOf(false) }
 
     Box(modifier = Modifier.fillMaxSize()) {
@@ -516,7 +513,7 @@ private fun SelectionStage(
                 .align(Alignment.BottomCenter)
                 .fillMaxWidth()
                 .clip(RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp))
-                .background(Color(0xE6000000))
+                .background(c.surface)
                 .windowInsetsPadding(WindowInsets.navigationBars)
                 .padding(horizontal = 16.dp, vertical = 14.dp),
         ) {
@@ -543,10 +540,10 @@ private fun SelectionStage(
                     onLight = true,
                 )
                 Spacer(Modifier.weight(1f))
-                CupertinoText(
+                WbText(
                     text = "已选 ${state.selected.size} 题",
                     fontSize = 11.5.sp,
-                    color = Color.White.copy(alpha = 0.7f),
+                    color = c.onSurface.copy(alpha = 0.7f),
                 )
             }
             if (state.tags.isNotEmpty()) {
@@ -603,6 +600,7 @@ private fun BoxWithImageOverlay(
     onToggle: (Int) -> Unit,
 ) {
     val accent = wbColors().tint
+    val c = MiuixTheme.colorScheme
     Box(modifier = Modifier.fillMaxSize()) {
         var canvasSize by remember { mutableStateOf(Size.Zero) }
 
@@ -645,7 +643,7 @@ private fun BoxWithImageOverlay(
                 val w = region.rect.width * dw
                 val h = region.rect.height * dh
                 drawRect(
-                    color = if (isSelected) accent else Color.White,
+                    color = if (isSelected) accent else c.onSurface,
                     topLeft = Offset(left, top),
                     size = Size(w, h),
                     style = Stroke(width = if (isSelected) 6f else 3f),
@@ -677,13 +675,13 @@ private fun BoxWithImageOverlay(
                     modifier = Modifier
                         .offset { IntOffset(left.toInt().coerceAtLeast(0), (top - 22.dp.toPx()).toInt().coerceAtLeast(0)) }
                         .clip(RoundedCornerShape(6.dp))
-                        .background(if (index in selected) accent else Color(0x99000000))
+                        .background(if (index in selected) accent else c.windowDimming)
                         .padding(horizontal = 6.dp, vertical = 2.dp),
                 ) {
-                    CupertinoText(
+                    WbText(
                         text = region.index.takeIf { it > 0 }?.toString() ?: "题",
                         fontSize = 12.sp,
-                        color = Color.White,
+                        color = c.onSurface,
                     )
                 }
             }

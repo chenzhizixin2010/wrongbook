@@ -1,4 +1,4 @@
-package com.chenzixin.wrongbook.ui.component
+﻿package com.chenzixin.wrongbook.ui.component
 
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
@@ -19,7 +19,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.windowInsetsPadding
-import androidx.compose.foundation.text.BasicText
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -28,59 +28,60 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.TextStyle
-import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.chenzixin.wrongbook.R
+import com.chenzixin.wrongbook.data.prefs.UiStyle
 import com.chenzixin.wrongbook.ui.theme.wbColors
-import io.github.robinpcrd.cupertino.CupertinoText
+import com.chenzixin.wrongbook.ui.theme.wbUiStyle
+import top.yukonga.miuix.kmp.theme.MiuixTheme
 
 /**
- * Errata 品牌标记：玻璃底 + 蓝紫渐变的 E。
- *
- * E 由三条圆头横杠组成，和开屏字标（衬线 Errata）一起构成最小识别单元；
- * 圆角/受光边缘复用 [GlassSurface]，所以在深色模式下不会「白块」。
+ * Errata 品牌标记：primaryContainer 圆角块 + primary 三横杠 E。
+ * 纯色，无渐变、无玻璃。
  */
 @Composable
 fun ErrataMark(
-    size: Dp = 128.dp,
+    size: Dp = 112.dp,
     modifier: Modifier = Modifier,
+    onBrand: Boolean = false,
 ) {
-    val colors = wbColors()
-    GlassSurface(
-        modifier = modifier.size(size),
-        cornerRadius = size * 0.30f,
-        elevation = 24.dp,
-        glow = colors.accent.copy(alpha = 0.32f),
+    val c = MiuixTheme.colorScheme
+    val wb = wbColors()
+    val ios = wbUiStyle() == UiStyle.IOS
+    val container = when {
+        onBrand -> c.onPrimary.copy(alpha = 0.14f)
+        ios -> wb.tintSoft
+        else -> c.primaryContainer
+    }
+    val barColor = when {
+        onBrand -> c.onPrimary
+        ios -> wb.accent
+        else -> c.primary
+    }
+    Box(
+        modifier = modifier
+            .size(size)
+            .clip(RoundedCornerShape(28.dp))
+            .background(container),
+        contentAlignment = Alignment.Center,
     ) {
-        Canvas(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(size * 0.24f),
-        ) {
+        Canvas(modifier = Modifier.fillMaxSize().padding(size * 0.26f)) {
             val w = this.size.width
             val h = this.size.height
-            val stroke = h * 0.135f
-            val brush = Brush.linearGradient(
-                colors = listOf(colors.accent, colors.accentEnd),
-                start = Offset(0f, 0f),
-                end = Offset(w, h),
-            )
+            val stroke = h * 0.14f
 
             fun bar(y: Float, endX: Float) {
                 drawLine(
-                    brush = brush,
+                    color = barColor,
                     start = Offset(w * 0.04f, h * y),
                     end = Offset(w * endX, h * y),
                     strokeWidth = stroke,
@@ -89,23 +90,23 @@ fun ErrataMark(
             }
 
             bar(0.14f, 0.96f)
-            bar(0.50f, 0.66f)
+            bar(0.50f, 0.64f)
             bar(0.86f, 0.96f)
         }
     }
 }
 
 /**
- * 开屏。
+ * 开屏：纯色背景 + 品牌标记 + 文字。
  *
- * 不在这里做耗时初始化：它只是盖在已经渲染好的主界面之上，
- * 由 [com.chenzixin.wrongbook.MainActivity] 在 1s 后淡出，所以不会拖慢冷启动。
+ * 只是盖在已渲染主界面之上，由 MainActivity 在 1.2s 后淡出；不做初始化。
  */
 @Composable
 fun ErrataSplash(modifier: Modifier = Modifier) {
-    val colors = wbColors()
+    val c = MiuixTheme.colorScheme
     var started by remember { mutableStateOf(false) }
     LaunchedEffect(Unit) { started = true }
+
 
     val markScale by animateFloatAsState(
         targetValue = if (started) 1f else 0.92f,
@@ -118,7 +119,7 @@ fun ErrataSplash(modifier: Modifier = Modifier) {
         label = "wordAlpha",
     )
     val wordOffset by animateDpAsState(
-        targetValue = if (started) 0.dp else 18.dp,
+        targetValue = if (started) 0.dp else 16.dp,
         animationSpec = tween(durationMillis = 600, delayMillis = 160),
         label = "wordOffset",
     )
@@ -141,62 +142,38 @@ fun ErrataSplash(modifier: Modifier = Modifier) {
     Box(
         modifier = modifier
             .fillMaxSize()
-            // 开屏期间吞掉点击，避免用户误触到下面已经就绪的主界面。
+            .background(c.background)
             .pointerInput(Unit) { detectTapGestures { } },
     ) {
-        WbAmbientBackground()
-
-        Box(
-            modifier = Modifier
-                .align(Alignment.Center)
-                .size(320.dp)
-                .drawBehind {
-                    drawCircle(
-                        brush = Brush.radialGradient(
-                            colors = listOf(
-                                colors.accent.copy(alpha = if (colors.isDark) 0.30f else 0.18f),
-                                Color.Transparent,
-                            ),
-                            center = center,
-                            radius = size.minDimension / 2f,
-                        ),
-                    )
-                },
-        )
-
         Column(
             modifier = Modifier
                 .align(Alignment.Center)
-                .padding(horizontal = 36.dp),
+                .padding(horizontal = 32.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
             ErrataMark(
-                size = 128.dp,
+                size = 112.dp,
                 modifier = Modifier.graphicsLayer {
                     scaleX = markScale
                     scaleY = markScale
                 },
             )
 
-            Spacer(Modifier.height(34.dp))
+            Spacer(Modifier.height(28.dp))
 
-            BasicText(
+            WbText(
                 text = "Errata",
-                style = TextStyle(
-                    fontFamily = FontFamily.Serif,
-                    fontSize = 48.sp,
-                    lineHeight = 56.sp,
-                    fontWeight = FontWeight.Normal,
-                    letterSpacing = (-0.8).sp,
-                    color = colors.label,
-                ),
                 modifier = Modifier.graphicsLayer {
                     alpha = wordAlpha
                     translationY = wordOffset.toPx()
                 },
+                fontSize = 28.sp,
+                fontWeight = FontWeight.Bold,
+                letterSpacing = (-0.5).sp,
+                color = c.onBackground,
             )
 
-            Spacer(Modifier.height(18.dp))
+            Spacer(Modifier.height(14.dp))
 
             Row(
                 verticalAlignment = Alignment.CenterVertically,
@@ -204,57 +181,48 @@ fun ErrataSplash(modifier: Modifier = Modifier) {
             ) {
                 Box(
                     modifier = Modifier
-                        .width(22.dp)
+                        .width(18.dp)
                         .height(1.dp)
-                        .background(
-                            Brush.horizontalGradient(
-                                listOf(Color.Transparent, colors.tint.copy(alpha = 0.7f)),
-                            ),
-                        ),
+                        .background(c.outline),
                 )
                 Spacer(Modifier.width(10.dp))
-                CupertinoText(
+                WbText(
                     text = stringResource(R.string.app_subtitle).uppercase(),
-                    fontSize = 9.5.sp,
+                    fontSize = 11.sp,
                     fontWeight = FontWeight.Medium,
-                    letterSpacing = 2.2.sp,
-                    color = colors.secondaryLabel,
+                    letterSpacing = 2.sp,
+                    color = c.onSurfaceVariantSummary,
                     maxLines = 1,
                 )
                 Spacer(Modifier.width(10.dp))
                 Box(
                     modifier = Modifier
-                        .width(22.dp)
+                        .width(18.dp)
                         .height(1.dp)
-                        .background(
-                            Brush.horizontalGradient(
-                                listOf(colors.tint.copy(alpha = 0.7f), Color.Transparent),
-                            ),
-                        ),
+                        .background(c.outline),
                 )
             }
 
-            Spacer(Modifier.height(22.dp))
+            Spacer(Modifier.height(18.dp))
 
-            CupertinoText(
+            WbText(
                 text = stringResource(R.string.app_tagline),
                 modifier = Modifier.graphicsLayer { alpha = taglineAlpha },
-                fontSize = 13.sp,
-                letterSpacing = 0.4.sp,
-                color = colors.secondaryLabel,
+                fontSize = 14.sp,
+                color = c.onSurfaceVariantSummary,
             )
         }
 
-        CupertinoText(
+        WbText(
             text = stringResource(R.string.app_footer),
             modifier = Modifier
                 .align(Alignment.BottomCenter)
                 .windowInsetsPadding(WindowInsets.navigationBars)
-                .padding(bottom = 22.dp)
+                .padding(bottom = 20.dp)
                 .graphicsLayer { alpha = footerAlpha },
-            fontSize = 10.5.sp,
-            letterSpacing = 0.6.sp,
-            color = colors.secondaryLabel.copy(alpha = 0.8f),
+            fontSize = 11.sp,
+            letterSpacing = 0.4.sp,
+            color = c.onSurfaceVariantSummary,
         )
     }
 }

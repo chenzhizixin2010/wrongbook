@@ -1,8 +1,10 @@
-package com.chenzixin.wrongbook.feature.settings
+﻿package com.chenzixin.wrongbook.feature.settings
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.clickable
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -26,7 +28,7 @@ import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.chenzixin.wrongbook.BuildConfig
 import com.chenzixin.wrongbook.domain.update.ReleaseNotesFormatter
-import com.chenzixin.wrongbook.ui.component.GlassSurface
+import com.chenzixin.wrongbook.ui.component.WbSurface
 import com.chenzixin.wrongbook.ui.component.WbAlertDialog
 import com.chenzixin.wrongbook.ui.component.WbBadge
 import com.chenzixin.wrongbook.ui.component.WbDangerButton
@@ -36,12 +38,12 @@ import com.chenzixin.wrongbook.ui.component.WbSection
 import com.chenzixin.wrongbook.ui.component.WbTextButton
 import com.chenzixin.wrongbook.ui.component.WbTopBar
 import com.chenzixin.wrongbook.ui.theme.wbColors
-import io.github.robinpcrd.cupertino.CupertinoText
-import io.github.robinpcrd.cupertino.icons.CupertinoIcons
-import io.github.robinpcrd.cupertino.icons.outlined.ArrowClockwise
-import io.github.robinpcrd.cupertino.icons.outlined.InfoCircle
-import io.github.robinpcrd.cupertino.icons.outlined.Lock
-import io.github.robinpcrd.cupertino.icons.outlined.SquareAndArrowUp
+import com.chenzixin.wrongbook.ui.component.WbText
+import top.yukonga.miuix.kmp.icon.MiuixIcons
+import top.yukonga.miuix.kmp.icon.extended.Refresh
+import top.yukonga.miuix.kmp.icon.extended.Info
+import top.yukonga.miuix.kmp.icon.extended.Lock
+import top.yukonga.miuix.kmp.icon.extended.Share
 
 /**
  * 检查更新：从 GitHub Releases 拉最新 APK，直连失败自动走镜像。
@@ -84,9 +86,9 @@ fun UpdateScreen(
             if (info != null) {
                 WbSection(
                     header = "更新内容",
-                    icon = CupertinoIcons.Outlined.InfoCircle,
+                    icon = MiuixIcons.Info,
                 ) {
-                    CupertinoText(
+                    WbText(
                         text = ReleaseNotesFormatter.toPlainText(info.notes, 2000).ifBlank { "这个版本没有写更新说明" },
                         modifier = Modifier.padding(16.dp),
                         fontSize = 13.5.sp,
@@ -95,19 +97,19 @@ fun UpdateScreen(
                     )
                 }
 
-                WbSection(header = "下载", icon = CupertinoIcons.Outlined.SquareAndArrowUp) {
+                WbSection(header = "下载", icon = MiuixIcons.Share) {
                     Column(modifier = Modifier.padding(16.dp)) {
                         val progress = state.progress
                         if (progress != null) {
                             Row(verticalAlignment = Alignment.CenterVertically) {
-                                CupertinoText(
+                                WbText(
                                     text = "${progress.percent}%",
                                     fontSize = 15.sp,
                                     fontWeight = FontWeight.SemiBold,
                                     color = colors.tint,
                                 )
                                 Spacer(Modifier.weight(1f))
-                                CupertinoText(
+                                WbText(
                                     text = buildString {
                                         append(progress.speedText())
                                         append(" · ").append(progress.sizeText())
@@ -131,11 +133,7 @@ fun UpdateScreen(
                                         .fillMaxWidth((progress.percent / 100f).coerceIn(0f, 1f))
                                         .height(8.dp)
                                         .clip(RoundedCornerShape(percent = 50))
-                                        .background(
-                                            Brush.linearGradient(
-                                                listOf(colors.accent, colors.accentEnd),
-                                            ),
-                                        ),
+                                        .background(colors.tint),
                                 )
                             }
                             Spacer(Modifier.height(14.dp))
@@ -147,7 +145,7 @@ fun UpdateScreen(
                                     text = "安装更新",
                                     onClick = vm::install,
                                     modifier = Modifier.weight(1f),
-                                    icon = CupertinoIcons.Outlined.SquareAndArrowUp,
+                                    icon = MiuixIcons.Share,
                                 )
 
                                 state.downloading -> WbDangerButton(
@@ -173,16 +171,28 @@ fun UpdateScreen(
 
             WbSection(
                 header = "手动更新",
-                icon = CupertinoIcons.Outlined.ArrowClockwise,
+                icon = MiuixIcons.Refresh,
                 footer = "如果自动更新不可用，可以直接去 GitHub Releases 页面下载 APK。",
             ) {
                 Column(modifier = Modifier.padding(16.dp)) {
-                    CupertinoText(
-                        text = state.info?.pageUrl?.takeIf { it.isNotBlank() }
-                            ?: "https://github.com/${BuildConfig.GITHUB_OWNER}/${BuildConfig.GITHUB_REPO}/releases",
+                    val releasesUrl = state.info?.pageUrl?.takeIf { it.isNotBlank() }
+                        ?: "https://github.com/${BuildConfig.GITHUB_OWNER}/${BuildConfig.GITHUB_REPO}/releases"
+                    val context = LocalContext.current
+                    WbText(
+                        text = releasesUrl,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { openUrl(context, releasesUrl) }
+                            .padding(vertical = 4.dp),
                         fontSize = 12.sp,
                         lineHeight = 18.sp,
                         color = colors.tint,
+                    )
+                    Spacer(Modifier.height(8.dp))
+                    WbSecondaryButton(
+                        text = "打开下载页",
+                        onClick = { openUrl(context, releasesUrl) },
+                        modifier = Modifier.fillMaxWidth(),
                     )
                     Spacer(Modifier.height(14.dp))
                     WbSecondaryButton(
@@ -199,7 +209,7 @@ fun UpdateScreen(
                     .padding(horizontal = 28.dp, vertical = 12.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                CupertinoText(
+                WbText(
                     text = "更新来自 GitHub Releases（${BuildConfig.GITHUB_OWNER}/${BuildConfig.GITHUB_REPO}），直连失败会自动尝试镜像站。",
                     fontSize = 11.sp,
                     lineHeight = 16.sp,
@@ -229,7 +239,7 @@ private fun VersionCard(
     checked: Boolean,
 ) {
     val colors = wbColors()
-    GlassSurface(
+    WbSurface(
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = 16.dp),
@@ -243,7 +253,7 @@ private fun VersionCard(
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Column(modifier = Modifier.weight(1f)) {
-                CupertinoText(
+                WbText(
                     text = "当前版本",
                     fontSize = 11.sp,
                     fontWeight = FontWeight.SemiBold,
@@ -251,7 +261,7 @@ private fun VersionCard(
                     color = colors.secondaryLabel,
                 )
                 Spacer(Modifier.height(4.dp))
-                CupertinoText(
+                WbText(
                     text = currentVersion,
                     fontSize = 30.sp,
                     fontWeight = FontWeight.Bold,
@@ -259,7 +269,7 @@ private fun VersionCard(
                     color = colors.label,
                 )
                 Spacer(Modifier.height(6.dp))
-                CupertinoText(
+                WbText(
                     text = when {
                         checking -> "正在连接 GitHub…"
                         newVersion != null -> "发现新版本 $newVersion"
