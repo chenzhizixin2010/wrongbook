@@ -51,8 +51,14 @@ class UpdateRepository @Inject constructor(
         owner: String,
         repo: String,
         currentVersion: String,
+        includePrerelease: Boolean = false,
     ): WbResult<UpdateInfo?> = withContext(io) {
-        val url = "https://api.github.com/repos/$owner/$repo/releases/latest"
+        // Beta 通道要看全部 release（含 pre-release）；稳定通道只看 latest
+        val url = if (includePrerelease) {
+            "https://api.github.com/repos/$owner/$repo/releases?per_page=30"
+        } else {
+            "https://api.github.com/repos/$owner/$repo/releases/latest"
+        }
         try {
             val request = Request.Builder()
                 .url(url)
@@ -62,47 +68,71 @@ class UpdateRepository @Inject constructor(
 
             client.newCall(request).execute().use { response ->
                 when {
+                    // 只有预发布版本时，stable 通道会 404 —— 给一句能指导操作的提示
+                    response.code == 404 && !includePrerelease ->
+                        return@withContext WbResult.Err(
+                            "当前只发布了测试版；在「设置 → 关于 → Beta 计划」开启后即可获取",
+                        )
                     response.code == 404 -> return@withContext WbResult.Err("仓库还没有发布任何版本")
                     response.code == 403 -> return@withContext WbResult.Err("GitHub 接口被限流，过一会儿再试")
                     !response.isSuccessful -> return@withContext WbResult.Err("检查更新失败（HTTP ${response.code}）")
                 }
 
-                val root = runCatching {
-                    json.parseToJsonElement(response.body.string()).jsonObject
-                }.getOrNull() ?: return@withContext WbResult.Err("GitHub 返回内容无法解析")
+                val body = response.body.string()
+                val rootElement = runCatching { json.parseToJsonElement(body) }.getOrNull()
+                    ?: return@withContext WbResult.Err("GitHub 返回内容无法解析")
 
-                val tag = root["tag_name"]?.jsonPrimitive?.contentOrNull.orEmpty()
-                if (tag.isBlank()) return@withContext WbResult.Err("最新版本没有 tag 信息")
-
-                val assets = root["assets"]?.jsonArray.orEmpty()
-                val apk = assets.mapNotNull { it.jsonObject }.firstOrNull { asset ->
-                    asset["name"]?.jsonPrimitive?.contentOrNull?.endsWith(".apk", ignoreCase = true) == true
+                // 两条通道：单对象（latest）或多元素数组（含预发布）
+                val candidates = when (rootElement) {
+                    is kotlinx.serialization.json.JsonArray -> rootElement.mapNotNull { it as? kotlinx.serialization.json.JsonObject }
+                    is kotlinx.serialization.json.JsonObject -> listOf(rootElement)
+                    else -> emptyList()
                 }
 
-                if (apk == null) {
-                    return@withContext WbResult.Ok(null)
+                val infos = candidates.mapNotNull { obj -> toInfo(obj) }
+                    .filter { it.apkUrl.isNotBlank() }
+
+                if (infos.isEmpty()) return@withContext WbResult.Ok(null)
+
+                // Beta 通道取「版本号最大」的那个（可能同时存在正式版与预发布）
+                val best = if (includePrerelease) {
+                    infos.reduce { a, b ->
+                        if (com.chenzixin.wrongbook.domain.update.VersionComparator.isNewer(b.version, a.version)) b else a
+                    }
+                } else {
+                    infos.first()
                 }
-
-                val info = UpdateInfo(
-                    version = tag,
-                    notes = root["body"]?.jsonPrimitive?.contentOrNull.orEmpty(),
-                    apkUrl = apk["browser_download_url"]?.jsonPrimitive?.contentOrNull.orEmpty(),
-                    pageUrl = root["html_url"]?.jsonPrimitive?.contentOrNull.orEmpty(),
-                    sizeBytes = apk["size"]?.jsonPrimitive?.contentOrNull?.toLongOrNull() ?: 0L,
-                    publishedAt = root["published_at"]?.jsonPrimitive?.contentOrNull.orEmpty(),
-                )
-
-                if (info.apkUrl.isBlank()) return@withContext WbResult.Ok(null)
 
                 val newer = com.chenzixin.wrongbook.domain.update.VersionComparator
-                    .isNewer(info.version, currentVersion)
-                if (newer) WbResult.Ok(info) else WbResult.Ok(null)
+                    .isNewer(best.version, currentVersion)
+                if (newer) WbResult.Ok(best) else WbResult.Ok(null)
             }
         } catch (e: IOException) {
             WbResult.Err("网络不可用，检查更新失败", e)
         } catch (t: Throwable) {
             WbResult.Err("检查更新失败：${t.message ?: "未知错误"}", t)
         }
+    }
+
+    /** 把 GitHub 的 release JSON 转成 UpdateInfo；字段缺失就返回 null。 */
+    private fun toInfo(root: kotlinx.serialization.json.JsonObject): UpdateInfo? {
+        val tag = root["tag_name"]?.jsonPrimitive?.contentOrNull.orEmpty()
+        if (tag.isBlank()) return null
+        val apk = root["assets"]?.jsonArray.orEmpty()
+            .mapNotNull { it.jsonObject }
+            .firstOrNull { asset ->
+                asset["name"]?.jsonPrimitive?.contentOrNull?.endsWith(".apk", ignoreCase = true) == true
+            } ?: return null
+
+        return UpdateInfo(
+            version = tag,
+            notes = root["body"]?.jsonPrimitive?.contentOrNull.orEmpty(),
+            apkUrl = apk["browser_download_url"]?.jsonPrimitive?.contentOrNull.orEmpty(),
+            pageUrl = root["html_url"]?.jsonPrimitive?.contentOrNull.orEmpty(),
+            sizeBytes = apk["size"]?.jsonPrimitive?.contentOrNull?.toLongOrNull() ?: 0L,
+            publishedAt = root["published_at"]?.jsonPrimitive?.contentOrNull.orEmpty(),
+            isPrerelease = root["prerelease"]?.jsonPrimitive?.contentOrNull?.toBooleanStrictOrNull() ?: false,
+        )
     }
 
     /** 候选下载地址：直连 + 镜像，按顺序尝试。 */

@@ -37,6 +37,9 @@ class MainActivity : ComponentActivity() {
     @Inject
     lateinit var themePrefs: ThemePrefs
 
+    @Inject
+    lateinit var appPrefs: com.chenzixin.wrongbook.data.prefs.AppPrefs
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge(
@@ -56,6 +59,7 @@ class MainActivity : ComponentActivity() {
         }
         setContent {
             val mode by themePrefs.mode.collectAsState(initial = ThemeMode.SYSTEM)
+            val splashEnabled by appPrefs.splashEnabled.collectAsState(initial = true)
             val uiStyle by themePrefs.uiStyle.collectAsState(initial = UiStyle.MIUIX)
             val dark = when (mode) {
                 ThemeMode.LIGHT -> false
@@ -73,7 +77,7 @@ class MainActivity : ComponentActivity() {
             WrongBookTheme(darkTheme = dark, uiStyle = uiStyle) {
                 Box(modifier = Modifier.fillMaxSize()) {
                     AppNavHost()
-                    SplashHost()
+                    if (splashEnabled) SplashHost()
                 }
             }
         }

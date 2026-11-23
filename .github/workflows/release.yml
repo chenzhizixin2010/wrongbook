@@ -84,6 +84,8 @@ jobs:
           body_path: ${{ steps.notes.outputs.body_path }}
           generate_release_notes: ${{ steps.notes.outputs.custom == 'false' }}
           fail_on_unmatched_files: true
+          # 0.x 都是测试版，全部标成 pre-release；1.0 以后手动去掉这行
+          prerelease: ${{ startsWith(github.ref_name, 'v0.') }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 

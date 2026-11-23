@@ -48,7 +48,7 @@ fun WbPrimaryButton(
     icon: ImageVector? = null,
 ) {
     val style = wbUiStyle()
-    if (style == UiStyle.IOS || style == UiStyle.V090) {
+    if (style == UiStyle.IOS || style == UiStyle.V090 || style == UiStyle.MD3E) {
         val c = wbColors()
         IosButton(
             text = text,
@@ -101,7 +101,7 @@ fun WbSecondaryButton(
     enabled: Boolean = true,
     fontSize: Int = 17,
 ) {
-    if (wbUiStyle() == UiStyle.IOS || wbUiStyle() == UiStyle.V090) {
+    if (wbUiStyle() == UiStyle.IOS || wbUiStyle() == UiStyle.V090 || wbUiStyle() == UiStyle.MD3E) {
         val c = wbColors()
         IosButton(
             text = text,
@@ -138,7 +138,7 @@ fun WbDangerButton(
     enabled: Boolean = true,
     fontSize: Int = 17,
 ) {
-    if (wbUiStyle() == UiStyle.IOS || wbUiStyle() == UiStyle.V090) {
+    if (wbUiStyle() == UiStyle.IOS || wbUiStyle() == UiStyle.V090 || wbUiStyle() == UiStyle.MD3E) {
         val c = wbColors()
         IosButton(
             text = text,
@@ -180,7 +180,7 @@ fun WbTextButton(
     color: Color? = null,
     fontSize: Int = 15,
 ) {
-    if (wbUiStyle() == UiStyle.IOS || wbUiStyle() == UiStyle.V090) {
+    if (wbUiStyle() == UiStyle.IOS || wbUiStyle() == UiStyle.V090 || wbUiStyle() == UiStyle.MD3E) {
         val c = wbColors()
         Row(
             modifier = modifier
@@ -221,7 +221,7 @@ fun WbContentButton(
     enabled: Boolean = true,
     content: @Composable RowScope.() -> Unit,
 ) {
-    if (wbUiStyle() == UiStyle.IOS || wbUiStyle() == UiStyle.V090) {
+    if (wbUiStyle() == UiStyle.IOS || wbUiStyle() == UiStyle.V090 || wbUiStyle() == UiStyle.MD3E) {
         val c = wbColors()
         Row(
             modifier = modifier
@@ -257,6 +257,7 @@ private fun IosButton(
     backgroundBrush: Brush? = null,
 ) {
     val c = wbColors()
+    val md3e = wbUiStyle() == UiStyle.MD3E
     val bg = when {
         !enabled -> c.secondaryLabel.copy(alpha = 0.18f)
         filled -> background
@@ -269,7 +270,7 @@ private fun IosButton(
     }
     Row(
         modifier = modifier
-            .defaultMinSize(minHeight = 50.dp)
+            .defaultMinSize(minHeight = if (md3e) 56.dp else 50.dp)
             .clip(RoundedCornerShape(50))
             .background(backgroundBrush ?: SolidColor(bg))
             .clickable(enabled = enabled, onClick = onClick)

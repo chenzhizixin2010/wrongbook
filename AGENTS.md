@@ -37,7 +37,7 @@
 
 | # | 规则 | 原因 |
 | --- | --- | --- |
-| 1 | 不改包名 `com.chenzixin.wrongbook`、不改 `minSdk 24`；UI 基座为 **三皮肤（Miuix 默认 / iOS Cupertino / 0.9.0 液态玻璃）**，共用页面逻辑 | 甲方已确认 |
+| 1 | 不改包名 `com.chenzixin.wrongbook`、不改 `minSdk 24`；UI 基座为 **四皮肤（Miuix 默认 / iOS Cupertino / 0.9.0 液态玻璃 / MD3 Expressive）**，共用页面逻辑 | 甲方已确认 |
 | 2 | 新增依赖必须先写进 `gradle/libs.versions.toml`，版本要能在 Maven 上真实解析到 | 防止猜版本导致 Sync 失败 |
 | 3 | 不用 `fallbackToDestructiveMigration()`；改表必须写 Migration 并升 version | 会丢用户错题 |
 | 4 | API Key 只存密文（Keystore + EncryptedSharedPreferences），禁止出现在日志/导出/异常信息里 | 安全与合规 |
@@ -239,11 +239,11 @@ data class QuestionRegion(
 - ❌ 改动 `docs/DECISIONS.md` 里已确认的决策（要改先问）
 - ❌ Miuix 皮肤禁止使用任何线性/径向渐变（尤其蓝紫渐变），必须纯色
 - ✅ iOS / 0.9.0 皮肤允许柔和玻璃渐变/高光与 0.9.0 的蓝紫渐变（用户已确认），但不得扩散到 Miuix
-- ❌ 禁止为「三套皮肤」复制三份页面；必须共用 ViewModel 与语义组件
+- ❌ 禁止为「四套皮肤」复制四份页面；必须共用 ViewModel 与语义组件
 - ❌ 禁止把每个 ListItem 包在独立的大圆角卡片里。必须用标准内嵌列表（Card/Inset List）或 Miuix 标准组件
 - ❌ 禁止悬浮胶囊底部导航；Miuix / iOS 必须贴底，仅 0.9.0 皮肤允许复古悬浮胶囊
-- ❌ 禁止随意设置字号；Miuix 必须用 `textStyles` 且大标题 ≤28sp；iOS 用 Cupertino 字阶
-- ❌ 禁止散落硬编码颜色；Miuix 只用 `MiuixTheme.colorScheme`，iOS 用 `iosColors()`、0.9.0 用 `v090Colors()` 集中调色板
+- ❌ 禁止随意设置字号；Miuix 必须用 `textStyles` 且大标题 ≤28sp；iOS 用 Cupertino 字阶、MD3E 用 M3 字阶
+- ❌ 禁止散落硬编码颜色；Miuix 只用 `MiuixTheme.colorScheme`，iOS 用 `iosColors()`、0.9.0 用 `v090Colors()`、MD3E 用 `md3eColors()` 集中调色板
 
 ---
 

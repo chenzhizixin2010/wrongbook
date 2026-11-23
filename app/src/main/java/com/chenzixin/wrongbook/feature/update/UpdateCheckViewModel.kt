@@ -14,6 +14,7 @@ import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
@@ -28,6 +29,7 @@ import kotlinx.coroutines.launch
 class UpdateCheckViewModel @Inject constructor(
     private val repo: UpdateRepository,
     private val prefs: UpdatePrefs,
+    private val appPrefs: com.chenzixin.wrongbook.data.prefs.AppPrefs,
 ) : ViewModel() {
 
     data class UiState(
@@ -45,10 +47,12 @@ class UpdateCheckViewModel @Inject constructor(
         if (started) return
         started = true
         viewModelScope.launch {
+            val beta = runCatching { appPrefs.betaChannel.first() }.getOrDefault(false)
             val result = repo.check(
                 owner = BuildConfig.GITHUB_OWNER,
                 repo = BuildConfig.GITHUB_REPO,
                 currentVersion = BuildConfig.VERSION_NAME,
+                includePrerelease = beta,
             )
             val info = (result as? WbResult.Ok)?.value ?: return@launch
             val level = UpdateLevelClassifier.classify(BuildConfig.VERSION_NAME, info.version)
@@ -56,7 +60,8 @@ class UpdateCheckViewModel @Inject constructor(
             _state.value = UiState(
                 info = info,
                 level = level,
-                showDialog = level == UpdateLevel.MAJOR && dismissed != info.version,
+                // Beta 通道收到预发布版本时，无论版本级别一律弹窗
+                showDialog = info.isPrerelease || (level == UpdateLevel.MAJOR && dismissed != info.version),
             )
         }
     }

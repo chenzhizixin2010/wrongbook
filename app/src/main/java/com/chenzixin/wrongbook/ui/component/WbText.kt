@@ -38,6 +38,32 @@ fun WbText(
     softWrap: Boolean = true,
 ) {
     val style = wbUiStyle()
+    if (style == UiStyle.MD3E) {
+        val size = if (fontSize == TextUnit.Unspecified) 16f else fontSize.value
+        Text(
+            text = text,
+            modifier = modifier,
+            color = color,
+            fontSize = size.sp,
+            fontWeight = fontWeight ?: when {
+                size >= 28f -> FontWeight.Bold
+                size >= 20f -> FontWeight.SemiBold
+                size >= 15.5f -> FontWeight.Medium
+                else -> FontWeight.Normal
+            },
+            letterSpacing = if (letterSpacing == TextUnit.Unspecified) {
+                if (size >= 28f) (-0.6).sp else TextUnit.Unspecified
+            } else {
+                letterSpacing
+            },
+            lineHeight = if (lineHeight == TextUnit.Unspecified) (size * 1.28f).sp else lineHeight,
+            textAlign = textAlign,
+            maxLines = maxLines,
+            overflow = overflow,
+            softWrap = softWrap,
+        )
+        return
+    }
     if (style == UiStyle.V090) {
         val size = if (fontSize == TextUnit.Unspecified) 16f else fontSize.value
         Text(

@@ -56,7 +56,8 @@ fun ErrataMark(
 ) {
     val c = MiuixTheme.colorScheme
     val wb = wbColors()
-    val ios = wbUiStyle() == UiStyle.IOS
+    val style = wbUiStyle()
+    val ios = style == UiStyle.IOS || style == UiStyle.MD3E
     val container = when {
         onBrand -> c.onPrimary.copy(alpha = 0.14f)
         ios -> wb.tintSoft

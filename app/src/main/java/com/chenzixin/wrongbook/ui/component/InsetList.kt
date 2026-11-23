@@ -51,6 +51,7 @@ fun WbSection(
     val style = wbUiStyle()
     val ios = style == UiStyle.IOS
     val v090 = style == UiStyle.V090
+    val md3e = style == UiStyle.MD3E
     val c = wbColors()
 
     Column(
@@ -59,7 +60,7 @@ fun WbSection(
             .padding(
                 start = 16.dp,
                 end = 16.dp,
-                top = if (ios) 18.dp else 6.dp,
+                top = if (ios || md3e) 18.dp else 6.dp,
                 bottom = if (ios) 6.dp else 6.dp,
             ),
     ) {
@@ -76,12 +77,12 @@ fun WbSection(
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 if (header != null) {
-                    if (ios || v090) {
+                    if (ios || v090 || md3e) {
                         WbText(
-                            text = if (v090) header else header.uppercase(),
+                            text = if (v090 || md3e) header else header.uppercase(),
                             modifier = Modifier.weight(1f),
-                            fontSize = 13.sp,
-                            fontWeight = FontWeight.Normal,
+                            fontSize = if (md3e) 14.sp else 13.sp,
+                            fontWeight = if (md3e) FontWeight.SemiBold else FontWeight.Normal,
                             letterSpacing = 0.4.sp,
                             color = c.secondaryLabel,
                         )
@@ -99,10 +100,14 @@ fun WbSection(
             }
         }
 
-        if (ios || v090) {
+        if (ios || v090 || md3e) {
             WbSurface(
                 modifier = Modifier.fillMaxWidth(),
-                cornerRadius = if (v090) 24.dp else 12.dp,
+                cornerRadius = when {
+                    md3e -> 28.dp
+                    v090 -> 24.dp
+                    else -> 12.dp
+                },
                 elevation = if (v090) 12.dp else 0.dp,
             ) {
                 Column(content = content)
@@ -168,34 +173,39 @@ fun WbListRow(
     val style = wbUiStyle()
     val ios = style == UiStyle.IOS
     val v090 = style == UiStyle.V090
+    val md3e = style == UiStyle.MD3E
     val c = wbColors()
 
-    if (ios || v090) {
+    if (ios || v090 || md3e) {
         Column(modifier = Modifier.fillMaxWidth()) {
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
                     .then(if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier)
-                    .padding(horizontal = 16.dp, vertical = if (v090) 13.dp else 12.dp),
+                    .padding(horizontal = 16.dp, vertical = if (v090 || md3e) 13.dp else 12.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 if (leading != null) {
                     leading()
                     Spacer(Modifier.width(12.dp))
                 } else if (icon != null) {
-                    WbIcon(
-                        imageVector = icon,
-                        contentDescription = null,
-                        modifier = Modifier.size(if (v090) 20.dp else 22.dp),
-                        tint = c.accent,
-                    )
+                    if (md3e) {
+                        WbIconTile(icon = icon, size = 36.dp)
+                    } else {
+                        WbIcon(
+                            imageVector = icon,
+                            contentDescription = null,
+                            modifier = Modifier.size(if (v090) 20.dp else 22.dp),
+                            tint = c.accent,
+                        )
+                    }
                     Spacer(Modifier.width(12.dp))
                 }
                 Column(modifier = Modifier.weight(1f)) {
                     WbText(
                         text = title,
-                        fontSize = if (v090) 16.sp else 17.sp,
-                        fontWeight = if (v090) FontWeight.SemiBold else FontWeight.Normal,
+                        fontSize = if (v090 || md3e) 16.sp else 17.sp,
+                        fontWeight = if (v090 || md3e) FontWeight.SemiBold else FontWeight.Normal,
                         color = c.label,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,

@@ -141,7 +141,8 @@ fun ProfileEditScreen(
                         horizontalArrangement = Arrangement.spacedBy(8.dp),
                         verticalArrangement = Arrangement.spacedBy(8.dp),
                     ) {
-                        listOf(4096, 8192, 16384, 32768).forEach { n ->
+                        // 档位整体放大 50 倍：小数档位在实际模型上太容易截断
+listOf(204800, 409600, 819200, 1638400).forEach { n ->
                             WbChip(
                                 label = "$n",
                                 selected = state.maxTokens == n,
@@ -186,14 +187,19 @@ fun ProfileEditScreen(
                 }
             }
 
-            // 三个按钮挤一行会在窄屏上把文字压扁，拆成「保存」独占一行 + 两个测试并排
-            WbPrimaryButton(
-                text = if (state.saving) "保存中…" else "保存",
-                onClick = vm::save,
+            // 不再有「保存」按钮：改完自动落库，这里只显示状态
+            WbText(
+                text = when {
+                    state.saving -> "正在保存…"
+                    state.autoSaved -> "已自动保存"
+                    state.isNew -> "填完名称、接口地址和模型后会自动保存"
+                    else -> "修改后自动保存，无需手动提交"
+                },
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 12.dp),
-                enabled = !state.saving,
+                    .padding(horizontal = 16.dp, vertical = 10.dp),
+                fontSize = 12.sp,
+                color = colors.secondaryLabel,
             )
 
             Row(

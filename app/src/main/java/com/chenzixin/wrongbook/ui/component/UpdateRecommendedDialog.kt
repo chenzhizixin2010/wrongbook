@@ -48,13 +48,17 @@ fun UpdateRecommendedDialog(
                 .padding(20.dp),
         ) {
             WbText(
-                text = "发现新版本 ${info.version}",
+                text = if (info.isPrerelease) "发现测试版 ${info.version}" else "发现新版本 ${info.version}",
                 fontSize = 17.sp,
                 fontWeight = FontWeight.SemiBold,
                 color = colors.label,
             )
             WbText(
-                text = "当前 $currentVersion → 建议更新到大版本",
+                text = if (info.isPrerelease) {
+                "当前 $currentVersion → Beta 通道预发布版本"
+            } else {
+                "当前 $currentVersion → 建议更新到大版本"
+            },
                 modifier = Modifier.padding(top = 4.dp),
                 fontSize = 12.sp,
                 color = colors.tint,

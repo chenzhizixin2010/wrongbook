@@ -1,4 +1,4 @@
-package com.chenzixin.wrongbook.feature.settings
+﻿package com.chenzixin.wrongbook.feature.settings
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
@@ -37,6 +37,7 @@ import com.chenzixin.wrongbook.ui.component.WbDivider
 import com.chenzixin.wrongbook.ui.component.WbHintBar
 import com.chenzixin.wrongbook.ui.component.WbIcon
 import com.chenzixin.wrongbook.ui.component.WbListRow
+import com.chenzixin.wrongbook.ui.component.WbSwitchRow
 import com.chenzixin.wrongbook.ui.component.WbPageHeader
 import com.chenzixin.wrongbook.ui.component.WbSection
 import com.chenzixin.wrongbook.ui.component.WbSurface
@@ -65,6 +66,7 @@ fun SettingsTabScreen(
     onOpenStats: () -> Unit,
     onOpenExport: () -> Unit,
     onOpenImport: () -> Unit,
+    onOpenAboutDev: () -> Unit,
 ) {
     val vm: SettingsViewModel = hiltViewModel()
     val profiles by vm.profiles.collectAsState()
@@ -72,6 +74,8 @@ fun SettingsTabScreen(
     val uiStyle by vm.uiStyle.collectAsState()
     val reprocess by vm.reprocess.collectAsState()
     val reprocessMessage by vm.reprocessMessage.collectAsState()
+    val splashEnabled by vm.splashEnabled.collectAsState()
+    val betaChannel by vm.betaChannel.collectAsState()
     var showThemeDialog by remember { mutableStateOf(false) }
     var showPrivacy by remember { mutableStateOf(false) }
     var showStyleDialog by remember { mutableStateOf(false) }
@@ -178,7 +182,13 @@ fun SettingsTabScreen(
             WbListRow(
                 title = "动态取色",
                 subtitle = "由系统壁纸生成主题色；Android 12 以下使用默认蓝色",
-                showDivider = false,
+                showDivider = true,
+            )
+            WbSwitchRow(
+                title = "开屏动画",
+                summary = "关闭后启动直接进主界面，不播放品牌开屏",
+                checked = splashEnabled,
+                onCheckedChange = vm::setSplashEnabled,
             )
         }
 
@@ -218,6 +228,18 @@ fun SettingsTabScreen(
         }
 
         WbSection(header = "关于") {
+            WbSwitchRow(
+                title = "Beta 计划",
+                summary = "接收 GitHub 上的预发布版本；测试版更新一律弹窗提示",
+                checked = betaChannel,
+                onCheckedChange = vm::setBetaChannel,
+            )
+            WbListRow(
+                title = "关于开发者",
+                subtitle = "版本信息、仓库与开源许可",
+                showDivider = true,
+                onClick = onOpenAboutDev,
+            )
             WbListRow(
                 title = "隐私政策",
                 subtitle = "题目与对话只存在本机",
@@ -294,6 +316,7 @@ private fun ChoiceDialog(
     onDismiss: () -> Unit,
 ) {
     val c = wbColors()
+    val md3e = wbUiStyle() == UiStyle.MD3E
     Dialog(onDismissRequest = onDismiss) {
         CompositionLocalProvider(
             LocalWbColors provides c,
@@ -301,7 +324,7 @@ private fun ChoiceDialog(
         ) {
             WbSurface(
                 modifier = Modifier.width(320.dp),
-                cornerRadius = 16.dp,
+                cornerRadius = if (md3e) 28.dp else 16.dp,
                 elevation = 24.dp,
                 underlay = c.cardBackground,
             ) {
@@ -309,7 +332,7 @@ private fun ChoiceDialog(
                     WbText(
                         text = title,
                         modifier = Modifier.padding(start = 20.dp, end = 20.dp, top = 18.dp, bottom = 12.dp),
-                        fontSize = 17.sp,
+                        fontSize = if (md3e) 24.sp else 17.sp,
                         fontWeight = FontWeight.SemiBold,
                         color = c.label,
                     )

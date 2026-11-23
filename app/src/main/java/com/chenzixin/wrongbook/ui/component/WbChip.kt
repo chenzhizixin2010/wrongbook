@@ -1,6 +1,7 @@
 ﻿package com.chenzixin.wrongbook.ui.component
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.padding
@@ -32,6 +33,7 @@ fun WbChip(
     val style = wbUiStyle()
     val ios = style == UiStyle.IOS
     val v090 = style == UiStyle.V090
+    val md3e = style == UiStyle.MD3E
     val c = MiuixTheme.colorScheme
     val wb = wbColors()
     Row(
@@ -41,8 +43,16 @@ fun WbChip(
                 when {
                     v090 && selected -> Brush.linearGradient(listOf(wb.accent, wb.accentEnd))
                     v090 -> SolidColor(wb.tintSoft)
+                    md3e -> SolidColor(if (selected) wb.accent else wb.groupedBackground)
                     ios -> SolidColor(if (selected) wb.accent else wb.tintSoft)
                     else -> SolidColor(if (selected) c.primary else c.surfaceContainerHigh)
+                },
+            )
+            .then(
+                if (md3e && !selected) {
+                    Modifier.border(1.dp, wb.separator, RoundedCornerShape(50))
+                } else {
+                    Modifier
                 },
             )
             .clickable(onClick = onClick)
@@ -53,8 +63,8 @@ fun WbChip(
             text = label,
             fontSize = 13.sp,
             fontWeight = if (selected) FontWeight.Medium else FontWeight.Normal,
-            color = if (ios || v090) {
-                if (selected) wb.onAccent else wb.accent
+            color = if (ios || v090 || md3e) {
+                if (selected) wb.onAccent else if (md3e) wb.label else wb.accent
             } else {
                 if (selected) c.onPrimary else c.onSurface
             },
@@ -71,8 +81,9 @@ fun WbBadge(
     color: Color? = null,
 ) {
     val style = wbUiStyle()
-    val ios = style == UiStyle.IOS
+    val ios = style == UiStyle.IOS || style == UiStyle.V090 || style == UiStyle.MD3E
     val v090 = style == UiStyle.V090
+    val md3e = style == UiStyle.MD3E
     val c = MiuixTheme.colorScheme
     val wb = wbColors()
     val base = color ?: if (ios) wb.accent else c.primary

@@ -21,6 +21,7 @@ enum class UiStyle(val label: String, val summary: String) {
     MIUIX("澎湃 OS", "HyperOS 内嵌列表、贴底导航、纯色卡片"),
     IOS("iOS", "Cupertino 分组列表、玻璃材质、SF 风格字阶"),
     V090("0.9.0 液态玻璃", "极光背景、悬浮胶囊导航、蓝紫渐变按钮"),
+    MD3E("MD3 Expressive", "Material 3 Expressive：药丸按钮、大圆角、动态色、弹性导航"),
 }
 
 private val Context.themeDataStore by preferencesDataStore(name = "theme_prefs")
@@ -45,6 +46,7 @@ class ThemePrefs @Inject constructor(
         when (prefs[styleKey]) {
             UiStyle.IOS.name -> UiStyle.IOS
             UiStyle.V090.name -> UiStyle.V090
+            UiStyle.MD3E.name -> UiStyle.MD3E
             else -> UiStyle.MIUIX
         }
     }

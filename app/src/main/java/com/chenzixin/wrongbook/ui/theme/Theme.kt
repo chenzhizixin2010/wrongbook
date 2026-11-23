@@ -1,4 +1,4 @@
-﻿package com.chenzixin.wrongbook.ui.theme
+package com.chenzixin.wrongbook.ui.theme
 
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.runtime.Composable
@@ -82,9 +82,10 @@ fun WrongBookTheme(
 ) {
     val ios = uiStyle == UiStyle.IOS
     val v090 = uiStyle == UiStyle.V090
+    val md3e = uiStyle == UiStyle.MD3E
     val controller = remember(darkTheme, uiStyle) {
         ThemeController(
-            colorSchemeMode = if (ios || v090) {
+            colorSchemeMode = if (ios || v090 || md3e) {
                 if (darkTheme) ColorSchemeMode.Dark else ColorSchemeMode.Light
             } else {
                 ColorSchemeMode.MonetSystem
@@ -110,6 +111,7 @@ fun WrongBookTheme(
             typography = Typography(),
         ) {
             val colors = when {
+                md3e -> md3eColors(darkTheme)
                 v090 -> v090Colors(darkTheme)
                 ios -> iosColors(scheme, darkTheme)
                 else -> miuixColors(MiuixTheme.colorScheme, darkTheme)
@@ -156,6 +158,58 @@ private fun miuixColors(c: Colors, dark: Boolean): WbColors = WbColors(
     barScrim = c.surface,
     dialogScrim = Color.Black.copy(alpha = 0.32f),
 )
+
+private fun md3eColors(dark: Boolean): WbColors {
+    val primary = if (dark) Color(0xFFD0BCFF) else Color(0xFF6750A4)
+    val onPrimary = if (dark) Color(0xFF381E72) else Color.White
+    val primaryContainer = if (dark) Color(0xFF4F378B) else Color(0xFFEADDFF)
+    val onPrimaryContainer = if (dark) Color(0xFFEADDFF) else Color(0xFF21005D)
+    val secondary = if (dark) Color(0xFFCCC2DC) else Color(0xFF625B71)
+    val secondaryContainer = if (dark) Color(0xFF332D41) else Color(0xFFE8DEF8)
+    val tertiary = if (dark) Color(0xFFEFB8C8) else Color(0xFF7D5260)
+    val tertiaryContainer = if (dark) Color(0xFF633B48) else Color(0xFFFFD8E4)
+    val surface = if (dark) Color(0xFF141218) else Color(0xFFFEF7FF)
+    val surfaceContainer = if (dark) Color(0xFF211F26) else Color(0xFFF3EDF7)
+    val surfaceContainerHigh = if (dark) Color(0xFF2B2930) else Color(0xFFECE6F0)
+    val onSurface = if (dark) Color(0xFFE6E0E9) else Color(0xFF1D1B20)
+    val onSurfaceVariant = if (dark) Color(0xFFCAC4D0) else Color(0xFF49454F)
+    val outline = if (dark) Color(0xFF938F99) else Color(0xFF79747E)
+    val outlineVariant = if (dark) Color(0xFF49454F) else Color(0xFFCAC4D0)
+    val error = if (dark) Color(0xFFF2B8B5) else Color(0xFFB3261E)
+
+    return WbColors(
+        tint = primary,
+        groupedBackground = surfaceContainer,
+        cardBackground = surfaceContainer,
+        separator = outlineVariant,
+        label = onSurface,
+        secondaryLabel = onSurfaceVariant,
+        danger = error,
+
+        isDark = dark,
+
+        accent = primary,
+        accentEnd = tertiary,
+        success = if (dark) Color(0xFFB5CC9C) else Color(0xFF386A20),
+        warning = if (dark) Color(0xFFE8C48C) else Color(0xFF7D5700),
+        onAccent = onPrimary,
+
+        canvasTop = surface,
+        canvasBottom = if (dark) Color(0xFF1B1720) else Color(0xFFF7F2FA),
+        aurora = listOf(primaryContainer, secondaryContainer, tertiaryContainer, primaryContainer),
+
+        glassTop = surfaceContainerHigh,
+        glassBottom = surfaceContainerHigh,
+        glassStrokeTop = outlineVariant,
+        glassStrokeBottom = outlineVariant,
+        glassSheen = surfaceContainerHigh,
+        glassFill = surfaceContainer,
+        shadow = Color.Black.copy(alpha = if (dark) 0.40f else 0.10f),
+        tintSoft = primaryContainer,
+        barScrim = surfaceContainer,
+        dialogScrim = Color.Black.copy(alpha = 0.32f),
+    )
+}
 
 private fun v090Colors(dark: Boolean): WbColors {
     val accent = if (dark) Color(0xFF6EA8FF) else Color(0xFF3867F5)

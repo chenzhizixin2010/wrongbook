@@ -8,6 +8,8 @@ import com.chenzixin.wrongbook.data.local.entity.ApiProfileEntity
 import com.chenzixin.wrongbook.data.repository.SettingsRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -23,13 +25,15 @@ data class ProfileEditUiState(
     val apiKeyInput: String = "",
     val hasSavedKey: Boolean = false,
     val temperature: Float = 0.7f,
-    val maxTokens: Int = 4096,
+    val maxTokens: Int = 0,
     val isDefault: Boolean = false,
     val isNew: Boolean = true,
     val saving: Boolean = false,
     val testing: Boolean = false,
     val visionTesting: Boolean = false,
     val message: String? = null,
+    /** 刚自动保存过，标题栏显示「已自动保存」 */
+    val autoSaved: Boolean = false,
     val finished: Boolean = false,
 )
 
@@ -68,15 +72,37 @@ class ProfileEditViewModel @Inject constructor(
         }
     }
 
-    fun onNameChange(v: String) = _state.update { it.copy(name = v) }
-    fun onBaseUrlChange(v: String) = _state.update { it.copy(baseUrl = v) }
-    fun onChatModelChange(v: String) = _state.update { it.copy(chatModel = v) }
-    fun onVisionModelChange(v: String) = _state.update { it.copy(visionModel = v) }
-    fun onApiKeyChange(v: String) = _state.update { it.copy(apiKeyInput = v) }
+    fun onNameChange(v: String) {
+        _state.update { it.copy(name = v) }
+        scheduleAutoSave()
+    }
 
-    fun setMaxTokens(value: Int) = _state.update {
-        // 0 表示「不限制」，其余夹在合理区间
-        it.copy(maxTokens = if (value <= 0) 0 else value.coerceIn(1024, 32768))
+    fun onBaseUrlChange(v: String) {
+        _state.update { it.copy(baseUrl = v) }
+        scheduleAutoSave()
+    }
+
+    fun onChatModelChange(v: String) {
+        _state.update { it.copy(chatModel = v) }
+        scheduleAutoSave()
+    }
+
+    fun onVisionModelChange(v: String) {
+        _state.update { it.copy(visionModel = v) }
+        scheduleAutoSave()
+    }
+
+    fun onApiKeyChange(v: String) {
+        _state.update { it.copy(apiKeyInput = v) }
+        scheduleAutoSave()
+    }
+
+    fun setMaxTokens(value: Int) {
+        _state.update {
+            // 0 表示「不限制」，其余夹在合理区间（上限按 50 倍档位放宽）
+            it.copy(maxTokens = if (value <= 0) 0 else value.coerceIn(1024, 4096000))
+        }
+        scheduleAutoSave()
     }
 
     /** 一键填入服务商预设（只填地址与模型名，Key 仍需用户自己贴）。 */
@@ -89,17 +115,36 @@ class ProfileEditViewModel @Inject constructor(
                 visionModel = preset.visionModel,
             )
         }
+        scheduleAutoSave()
     }
 
-    fun adjustTemperature(delta: Float) = _state.update {
-        it.copy(temperature = (it.temperature + delta).coerceIn(0f, 2f))
+    fun adjustTemperature(delta: Float) {
+        _state.update { it.copy(temperature = (it.temperature + delta).coerceIn(0f, 2f)) }
+        scheduleAutoSave()
     }
 
     fun clearMessage() = _state.update { it.copy(message = null) }
 
-    fun save() {
+    private var autoSaveJob: Job? = null
+
+    /** 任何字段改动都排一次自动保存（防抖 700ms），不再需要手动点保存。 */
+    fun scheduleAutoSave() {
+        autoSaveJob?.cancel()
+        autoSaveJob = viewModelScope.launch {
+            delay(700)
+            performSave(silent = true)
+        }
+    }
+
+    /**
+     * 真正落库。
+     * @param silent true = 自动保存：成功时不跳转、不弹提示，只在标题栏显示「已自动保存」
+     */
+    fun performSave(silent: Boolean = false) {
         val s = _state.value
         if (s.saving) return
+        // 新建配置时，关键字段没填全就别写库，避免产生一堆空配置
+        if (s.name.isBlank() || s.baseUrl.isBlank() || s.chatModel.isBlank()) return
         _state.update { it.copy(saving = true, message = null) }
         viewModelScope.launch {
             val entity = ApiProfileEntity(
@@ -122,7 +167,9 @@ class ProfileEditViewModel @Inject constructor(
                         hasSavedKey = it.hasSavedKey || key != null,
                         apiKeyInput = "",
                         saving = false,
-                        finished = true,
+                        finished = !silent,
+                        message = if (silent) null else it.message,
+                        autoSaved = silent,
                     )
                 }
                 is WbResult.Err -> _state.update { it.copy(saving = false, message = r.message) }

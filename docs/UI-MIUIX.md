@@ -1,19 +1,20 @@
-﻿# Errata UI 规范（Miuix + iOS + 0.9.0 三皮肤）
+﻿# Errata UI 规范（Miuix + iOS + 0.9.0 + MD3E 四皮肤）
 
-> 2026-11 起，App 支持三套**真正独立**的界面语言，在「设置 → 外观 → 界面风格」实时切换，不需要重启：
+> 2026-11 起，App 支持四套**真正独立**的界面语言，在「设置 → 外观 → 界面风格」实时切换，不需要重启：
 > - **澎湃 OS（Miuix）**：HyperOS 内嵌列表、贴底 NavigationBar、纯色卡片、Monet 动态取色。
 > - **iOS（Cupertino）**：SF 字阶、inset grouped 列表、玻璃卡片、Cupertino 开关、iOS TabBar。
 > - **0.9.0（液态玻璃）**：极光背景、悬浮胶囊 TabBar、24dp 玻璃卡、蓝紫渐变按钮、30sp 标题。
+> - **MD3 Expressive**：Material 3 动态紫、28dp 大圆角、药丸按钮/导航、34sp 大标题。
 >
-> 三套皮肤共用同一套页面逻辑与 ViewModel，不复制页面。旧版单一液态玻璃稿归档在 `docs/legacy/`。
+> 四套皮肤共用同一套页面逻辑与 ViewModel，不复制页面。旧版单一液态玻璃稿归档在 `docs/legacy/`。
 
 ## 1. 切换方式
 
 1. 打开「设置」。
 2. 进入「外观 → 界面风格」。
-3. 选择「澎湃 OS」「iOS」或「0.9.0 液态玻璃」，立即生效；选择会持久化到 DataStore。
+3. 选择「澎湃 OS」「iOS」「0.9.0 液态玻璃」或「MD3 Expressive」，立即生效；选择会持久化到 DataStore。
 
-主题（跟随系统/浅色/深色）与界面风格是**两个独立维度**，可以组合出 6 种常用状态。
+主题（跟随系统/浅色/深色）与界面风格是**两个独立维度**，可以组合出 8 种常用状态。
 
 ## 2. 设计原则
 
@@ -60,10 +61,10 @@
 - `docs/screens/ios-home-dark.png`
 - `docs/screens/ios-settings-dark.png`
 - `docs/screens/ios-chat-dark.png`\n- `docs/screens/v090-home.png`
-- `docs/screens/v090-home-dark.png`\n- `docs/screens/v090-settings.png`\n- `docs/screens/v090-scan.png`
+- `docs/screens/v090-home-dark.png`\n- `docs/screens/v090-settings.png`\n- `docs/screens/v090-scan.png`\n- `docs/screens/md3e-home.png`\n- `docs/screens/md3e-settings.png`\n- `docs/screens/md3e-scan.png`
 - `docs/screens/ios-generate-dark.png`
 - `docs/screens/ios-theme-dialog-light.png`
 - `docs/screens/style-dialog-dark.png`
 - `docs/screens/splash.png`
 
-### 0.9.0 液态玻璃专属\n\n- 极光背景 + 24dp 玻璃卡 + 悬浮胶囊底栏。\n- 主按钮用蓝→紫渐变；这是 0.9.0 的视觉记忆点。\n- 只在 V090 皮肤内启用，Miuix 侧仍严格纯色。\n\n> 截图只用于 UI 走查；相机画面来自模拟器虚拟摄像头，OCR 精度与真机壁纸取色仍需真机验收。
+### MD3 Expressive 专属\n\n- 紫/青/粉三组 tonal 色，28dp 大圆角、药丸按钮、药丸导航指示器。\n- 背景用大块 primary/secondary/tertiaryContainer 圆形色块，不做玻璃模糊。\n- 开关是自绘 M3 Switch；标题 34sp、正文 16/14sp。\n\n### 0.9.0 液态玻璃专属\n\n- 极光背景 + 24dp 玻璃卡 + 悬浮胶囊底栏。\n- 主按钮用蓝→紫渐变；这是 0.9.0 的视觉记忆点。\n- 只在 V090 皮肤内启用，Miuix 侧仍严格纯色。\n\n> 截图只用于 UI 走查；相机画面来自模拟器虚拟摄像头，OCR 精度与真机壁纸取色仍需真机验收。

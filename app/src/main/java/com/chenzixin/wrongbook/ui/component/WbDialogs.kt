@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.runtime.Composable
@@ -41,7 +42,53 @@ fun WbAlertDialog(
     if (!visible) return
     val style = wbUiStyle()
     val ios = style == UiStyle.IOS || style == UiStyle.V090
+    val md3e = style == UiStyle.MD3E
     val c = wbColors()
+
+    if (md3e) {
+        Dialog(onDismissRequest = onDismiss) {
+            WbSurface(
+                modifier = Modifier.width(320.dp),
+                cornerRadius = 28.dp,
+                elevation = 12.dp,
+                underlay = c.cardBackground,
+            ) {
+                Column(modifier = Modifier.padding(start = 24.dp, end = 24.dp, top = 24.dp, bottom = 12.dp)) {
+                    WbText(
+                        text = title,
+                        fontSize = 24.sp,
+                        fontWeight = FontWeight.Normal,
+                        color = c.label,
+                    )
+                    if (message != null) {
+                        WbText(
+                            text = message,
+                            modifier = Modifier.padding(top = 14.dp),
+                            fontSize = 14.sp,
+                            lineHeight = 20.sp,
+                            color = c.secondaryLabel,
+                        )
+                    }
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(top = 20.dp),
+                        horizontalArrangement = Arrangement.End,
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        WbTextButton(text = dismissText, onClick = onDismiss)
+                        Spacer(Modifier.width(4.dp))
+                        WbTextButton(
+                            text = confirmText,
+                            onClick = onConfirm,
+                            color = if (destructive) c.danger else c.accent,
+                        )
+                    }
+                }
+            }
+        }
+        return
+    }
 
     if (ios) {
         Dialog(onDismissRequest = onDismiss) {

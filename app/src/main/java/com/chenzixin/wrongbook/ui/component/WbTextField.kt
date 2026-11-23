@@ -48,6 +48,7 @@ fun WbTextField(
     val style = wbUiStyle()
     val ios = style == UiStyle.IOS
     val v090 = style == UiStyle.V090
+    val md3e = style == UiStyle.MD3E
     val c = MiuixTheme.colorScheme
     val wb = wbColors()
     val body = MiuixTheme.textStyles.body1
@@ -71,10 +72,12 @@ fun WbTextField(
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .clip(RoundedCornerShape(if (v090) 18.dp else if (ios) 10.dp else 12.dp))
+                    .clip(RoundedCornerShape(if (v090) 18.dp else if (md3e) 16.dp else if (ios) 10.dp else 12.dp))
                     .background(
                         if (v090) {
                             wb.glassFill
+                        } else if (md3e) {
+                            wb.groupedBackground
                         } else if (ios) {
                             wb.cardBackground
                         } else {
@@ -90,7 +93,7 @@ fun WbTextField(
                         imageVector = leadingIcon,
                         contentDescription = null,
                         modifier = Modifier.size(18.dp),
-                        tint = if (v090) wb.accent else if (ios) wb.secondaryLabel else c.onSurfaceVariantSummary,
+                        tint = if (v090 || md3e) wb.accent else if (ios) wb.secondaryLabel else c.onSurfaceVariantSummary,
                     )
                     Spacer(Modifier.width(8.dp))
                 }

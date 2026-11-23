@@ -4,10 +4,10 @@
 
 - 包名：`com.chenzixin.wrongbook`
 - 系统要求：Android 7.0（API 24）+，编译/目标 API 37
-- 视觉风格：**Miuix / iOS / 0.9.0 液态玻璃 三皮肤**，设置内实时切换；Miuix 纯色 Monet，iOS Cupertino 玻璃，0.9.0 极光 + 悬浮胶囊
+- 视觉风格：**Miuix / iOS / 0.9.0 液态玻璃 / MD3 Expressive 四皮肤**，设置内实时切换；Miuix 纯色 Monet，iOS Cupertino 玻璃，0.9.0 极光 + 悬浮胶囊，MD3E 大圆角 + 药丸导航
 - 数据：纯本地（Room + 私有目录图片），手动导出 ZIP
 
-**仓库**：https://github.com/chenzhizixin2010/wrongbook ｜ **当前版本**：v0.10.1
+**仓库**：https://github.com/chenzhizixin2010/wrongbook ｜ **当前版本**：v0.11.0
 
 ## 当前状态
 
@@ -16,7 +16,7 @@ P0~P8 **功能全部落地**，编译与单元测试通过；真实模型链路�
 ```
 gradle :app:assembleDebug + :app:testDebugUnitTest
 -> BUILD SUCCESSFUL
--> 139 tests, 0 failures
+-> 149 tests, 0 failures
 -> app-debug.apk 65.0 MB
 ```
 

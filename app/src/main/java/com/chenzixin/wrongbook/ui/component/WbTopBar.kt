@@ -1,6 +1,7 @@
 ﻿package com.chenzixin.wrongbook.ui.component
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -15,6 +16,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -43,6 +45,7 @@ fun WbTopBar(
     val style = wbUiStyle()
     val ios = style == UiStyle.IOS
     val v090 = style == UiStyle.V090
+    val md3e = style == UiStyle.MD3E
     val c = wbColors()
 
     Column(
@@ -53,7 +56,7 @@ fun WbTopBar(
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(if (ios) 44.dp else if (v090) 52.dp else 56.dp)
+                .height(if (ios) 44.dp else if (v090) 52.dp else if (md3e) 64.dp else 56.dp)
                 .padding(horizontal = if (ios) 4.dp else 8.dp),
         ) {
             if (onBack != null) {
@@ -93,7 +96,7 @@ fun WbTopBar(
                 modifier = Modifier
                     .align(Alignment.Center)
                     .padding(horizontal = 56.dp),
-                fontSize = 17.sp,
+                fontSize = if (md3e) 22.sp else 17.sp,
                 fontWeight = FontWeight.SemiBold,
                 color = c.label,
                 textAlign = TextAlign.Center,
@@ -121,32 +124,51 @@ fun WbLargeTitle(
     val style = wbUiStyle()
     val ios = style == UiStyle.IOS
     val v090 = style == UiStyle.V090
+    val md3e = style == UiStyle.MD3E
     val c = wbColors()
     Column(modifier = modifier) {
         if (kicker != null) {
-            WbText(
-                text = when {
-                    v090 -> "• $kicker"
-                    ios -> kicker.uppercase()
-                    else -> kicker
-                },
-                modifier = Modifier.padding(bottom = if (ios) 2.dp else 4.dp),
-                fontSize = 11.sp,
-                letterSpacing = if (ios) 1.sp else 0.sp,
-                color = if (ios || v090) c.secondaryLabel else c.tint,
-                maxLines = 1,
-            )
+            if (md3e) {
+                Box(
+                    modifier = Modifier
+                        .padding(bottom = 8.dp)
+                        .clip(RoundedCornerShape(50))
+                        .background(c.tintSoft)
+                        .padding(horizontal = 10.dp, vertical = 4.dp),
+                ) {
+                    WbText(
+                        text = kicker,
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Medium,
+                        color = c.accent,
+                        maxLines = 1,
+                    )
+                }
+            } else {
+                WbText(
+                    text = when {
+                        v090 -> "• $kicker"
+                        ios -> kicker.uppercase()
+                        else -> kicker
+                    },
+                    modifier = Modifier.padding(bottom = if (ios) 2.dp else 4.dp),
+                    fontSize = 11.sp,
+                    letterSpacing = if (ios) 1.sp else 0.sp,
+                    color = if (ios || v090) c.secondaryLabel else c.tint,
+                    maxLines = 1,
+                )
+            }
         }
         WbText(
             text = text,
             fontSize = when {
-                ios -> 34.sp
+                ios || md3e -> 34.sp
                 v090 -> 30.sp
                 else -> 28.sp
             },
             fontWeight = FontWeight.Bold,
             lineHeight = when {
-                ios -> 41.sp
+                ios || md3e -> 41.sp
                 v090 -> 36.sp
                 else -> 34.sp
             },

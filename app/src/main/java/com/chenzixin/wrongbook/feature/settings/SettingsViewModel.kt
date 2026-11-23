@@ -23,7 +23,28 @@ class SettingsViewModel @Inject constructor(
     repo: SettingsRepository,
     private val themePrefs: ThemePrefs,
     private val maintenance: ImageMaintenance,
+    private val appPrefs: com.chenzixin.wrongbook.data.prefs.AppPrefs,
 ) : ViewModel() {
+
+    val splashEnabled: StateFlow<Boolean> = appPrefs.splashEnabled.stateIn(
+        scope = viewModelScope,
+        started = SharingStarted.WhileSubscribed(5_000),
+        initialValue = true,
+    )
+
+    val betaChannel: StateFlow<Boolean> = appPrefs.betaChannel.stateIn(
+        scope = viewModelScope,
+        started = SharingStarted.WhileSubscribed(5_000),
+        initialValue = false,
+    )
+
+    fun setSplashEnabled(value: Boolean) {
+        viewModelScope.launch { appPrefs.setSplashEnabled(value) }
+    }
+
+    fun setBetaChannel(value: Boolean) {
+        viewModelScope.launch { appPrefs.setBetaChannel(value) }
+    }
 
     /** 图片重处理进度；null 表示没在跑。 */
     private val _reprocess = MutableStateFlow<ImageMaintenance.Progress?>(null)

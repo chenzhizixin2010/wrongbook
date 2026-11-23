@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -46,7 +47,51 @@ fun WbInputDialog(
     var value by remember(visible) { mutableStateOf(initialValue) }
     val style = wbUiStyle()
     val ios = style == UiStyle.IOS || style == UiStyle.V090
+    val md3e = style == UiStyle.MD3E
     val c = wbColors()
+
+    if (md3e) {
+        Dialog(onDismissRequest = onDismiss) {
+            WbSurface(
+                modifier = Modifier.width(320.dp),
+                cornerRadius = 28.dp,
+                elevation = 12.dp,
+                underlay = c.cardBackground,
+            ) {
+                Column(modifier = Modifier.padding(24.dp)) {
+                    WbText(
+                        text = title,
+                        fontSize = 24.sp,
+                        color = c.label,
+                    )
+                    Spacer(Modifier.height(16.dp))
+                    WbTextField(
+                        value = value,
+                        onValueChange = { value = it },
+                        placeholder = placeholder,
+                        singleLine = !multiline,
+                    )
+                    Spacer(Modifier.height(20.dp))
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.End,
+                    ) {
+                        WbTextButton(text = "取消", onClick = onDismiss)
+                        Spacer(Modifier.width(4.dp))
+                        WbTextButton(
+                            text = confirmText,
+                            onClick = {
+                                val trimmed = value.trim()
+                                if (trimmed.isNotEmpty()) onConfirm(trimmed)
+                            },
+                            color = c.accent,
+                        )
+                    }
+                }
+            }
+        }
+        return
+    }
 
     if (ios) {
         Dialog(onDismissRequest = onDismiss) {

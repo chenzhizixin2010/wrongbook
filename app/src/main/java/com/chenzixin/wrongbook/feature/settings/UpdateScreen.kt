@@ -170,7 +170,7 @@ fun UpdateScreen(
             }
 
             WbSection(
-                header = "手动更新",
+                header = if (state.info?.isPrerelease == true) "手动更新（预发布）" else "手动更新",
                 icon = MiuixIcons.Refresh,
                 footer = "如果自动更新不可用，可以直接去 GitHub Releases 页面下载 APK。",
             ) {

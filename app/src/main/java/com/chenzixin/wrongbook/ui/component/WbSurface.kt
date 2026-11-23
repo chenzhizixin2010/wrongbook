@@ -1,4 +1,4 @@
-﻿package com.chenzixin.wrongbook.ui.component
+package com.chenzixin.wrongbook.ui.component
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -17,6 +17,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.BlendMode
@@ -40,7 +41,42 @@ fun WbScreenBackground(
     val style = wbUiStyle()
     val glass = style == UiStyle.IOS || style == UiStyle.V090
     val v090 = style == UiStyle.V090
+    val md3e = style == UiStyle.MD3E
     val c = wbColors()
+    if (md3e) {
+        Box(
+            modifier = modifier
+                .fillMaxSize()
+                .drawBehind {
+                    drawRect(c.canvasTop)
+                    val colors = c.aurora
+                    if (colors.isNotEmpty()) {
+                        drawCircle(
+                            color = colors[0].copy(alpha = if (c.isDark) 0.45f else 0.70f),
+                            radius = size.width * 0.62f,
+                            center = Offset(size.width * 0.08f, size.height * 0.10f),
+                        )
+                        if (colors.size > 1) {
+                            drawCircle(
+                                color = colors[1].copy(alpha = if (c.isDark) 0.38f else 0.55f),
+                                radius = size.width * 0.66f,
+                                center = Offset(size.width * 0.98f, size.height * 0.28f),
+                            )
+                        }
+                        if (colors.size > 2) {
+                            drawRoundRect(
+                                color = colors[2].copy(alpha = if (c.isDark) 0.28f else 0.42f),
+                                topLeft = Offset(-size.width * 0.15f, size.height * 0.78f),
+                                size = Size(size.width * 0.8f, size.height * 0.42f),
+                                cornerRadius = CornerRadius(size.width * 0.35f),
+                            )
+                        }
+                    }
+                },
+            content = content,
+        )
+        return
+    }
     if (!glass) {
         Box(
             modifier = modifier
@@ -105,6 +141,7 @@ fun WbSurface(
     val style = wbUiStyle()
     val ios = style == UiStyle.IOS
     val v090 = style == UiStyle.V090
+    val md3e = style == UiStyle.MD3E
     val c = wbColors()
     val shape = RoundedCornerShape(cornerRadius)
 
@@ -112,7 +149,7 @@ fun WbSurface(
         Box(
             modifier = modifier
                 .clip(shape)
-                .background(tint ?: underlay ?: MiuixTheme.colorScheme.surfaceContainer)
+                .background(tint ?: underlay ?: if (md3e) c.cardBackground else MiuixTheme.colorScheme.surfaceContainer)
                 .then(if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier)
                 .padding(contentPadding),
             content = content,
@@ -196,8 +233,25 @@ fun WbIconButton(
 ) {
     val style = wbUiStyle()
     val ios = style == UiStyle.IOS || style == UiStyle.V090
+    val md3e = style == UiStyle.MD3E
     val c = wbColors()
-    if (ios) {
+    if (md3e) {
+        Box(
+            modifier = modifier
+                .size(size)
+                .clip(RoundedCornerShape(50))
+                .background(containerColor ?: c.tintSoft)
+                .clickable(onClick = onClick),
+            contentAlignment = Alignment.Center,
+        ) {
+            WbIcon(
+                imageVector = icon,
+                contentDescription = contentDescription,
+                modifier = Modifier.size(iconSize),
+                tint = tint ?: c.accent,
+            )
+        }
+    } else if (ios) {
         Box(
             modifier = modifier
                 .size(size)
@@ -241,19 +295,20 @@ fun WbIconTile(
 ) {
     val style = wbUiStyle()
     val ios = style == UiStyle.IOS || style == UiStyle.V090
+    val md3e = style == UiStyle.MD3E
     val c = wbColors()
     Box(
         modifier = modifier
             .size(size)
-            .clip(RoundedCornerShape(if (ios) 10.dp else corner))
-            .background(color ?: if (ios) c.tintSoft else MiuixTheme.colorScheme.primaryContainer),
+            .clip(RoundedCornerShape(if (ios || md3e) 50.dp else corner))
+            .background(color ?: if (ios || md3e) c.tintSoft else MiuixTheme.colorScheme.primaryContainer),
         contentAlignment = Alignment.Center,
     ) {
         WbIcon(
             imageVector = icon,
             contentDescription = null,
             modifier = Modifier.size(size * 0.55f),
-            tint = if (ios) c.accent else MiuixTheme.colorScheme.onPrimaryContainer,
+            tint = if (ios || md3e) c.accent else MiuixTheme.colorScheme.onPrimaryContainer,
         )
     }
 }

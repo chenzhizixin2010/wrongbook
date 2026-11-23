@@ -14,12 +14,14 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
 @HiltViewModel
 class UpdateViewModel @Inject constructor(
     private val repo: UpdateRepository,
+    private val appPrefs: com.chenzixin.wrongbook.data.prefs.AppPrefs,
 ) : ViewModel() {
 
     data class UiState(
@@ -48,10 +50,12 @@ class UpdateViewModel @Inject constructor(
         if (_state.value.checking) return
         _state.update { it.copy(checking = true, message = null) }
         viewModelScope.launch {
+            val beta = runCatching { appPrefs.betaChannel.first() }.getOrDefault(false)
             val result = repo.check(
                 owner = BuildConfig.GITHUB_OWNER,
                 repo = BuildConfig.GITHUB_REPO,
                 currentVersion = BuildConfig.VERSION_NAME,
+                includePrerelease = beta,
             )
             when (result) {
                 is WbResult.Ok -> _state.update {

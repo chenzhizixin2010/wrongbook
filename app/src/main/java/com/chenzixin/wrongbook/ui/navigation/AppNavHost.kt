@@ -1,4 +1,4 @@
-﻿package com.chenzixin.wrongbook.ui.navigation
+package com.chenzixin.wrongbook.ui.navigation
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.shape.CircleShape
@@ -100,6 +100,7 @@ object Routes {
     const val STATS = "settings/stats"
     const val EXPORT = "settings/export"
     const val IMPORT = "settings/import"
+    const val ABOUT_DEV = "settings/about"
 }
 
 /** 5 个主 Tab，图标全部来自 Miuix 图标库。 */
@@ -165,6 +166,7 @@ fun AppNavHost() {
     val style = wbUiStyle()
     val ios = style == UiStyle.IOS
     val v090 = style == UiStyle.V090
+    val md3e = style == UiStyle.MD3E
     val c = wbColors()
     LaunchedEffect(Unit) {
         // 等开屏淡出后再查更新，避免「建议更新」弹窗压在品牌页上。
@@ -174,11 +176,25 @@ fun AppNavHost() {
 
     WbScreenBackground {
     Scaffold(
-        containerColor = if (ios || v090) androidx.compose.ui.graphics.Color.Transparent else MiuixTheme.colorScheme.background,
+        containerColor = if (ios || v090 || md3e) androidx.compose.ui.graphics.Color.Transparent else MiuixTheme.colorScheme.background,
         contentWindowInsets = WindowInsets(0, 0, 0, 0),
         bottomBar = {
             if (showBottomBar) {
-                if (v090) {
+                if (md3e) {
+                    Md3TabBar(
+                        tabs = WbTabs,
+                        currentRoute = currentRoute,
+                        onSelect = { tab ->
+                            if (currentRoute != tab.route) {
+                                navController.navigate(tab.route) {
+                                    popUpTo(navController.graph.startDestinationId) { saveState = true }
+                                    launchSingleTop = true
+                                    restoreState = true
+                                }
+                            }
+                        },
+                    )
+                } else if (v090) {
                     V090TabBar(
                         tabs = WbTabs,
                         currentRoute = currentRoute,
@@ -274,6 +290,7 @@ fun AppNavHost() {
                             onOpenTags = { navController.navigate(Routes.TAGS) },
                             onOpenUpdate = { navController.navigate(Routes.UPDATE) },
                             onOpenStats = { navController.navigate(Routes.STATS) },
+                        onOpenAboutDev = { navController.navigate(Routes.ABOUT_DEV) },
                             onOpenExport = { navController.navigate(Routes.EXPORT) },
                             onOpenImport = { navController.navigate(Routes.IMPORT) },
                         )
@@ -324,7 +341,15 @@ fun AppNavHost() {
                         com.chenzixin.wrongbook.feature.tag.TagsScreen(onBack = { navController.popBackStack() })
                     }
                 }
-                composable(Routes.STATS) {
+                composable(Routes.ABOUT_DEV) {
+                WbRoute {
+                    com.chenzixin.wrongbook.feature.settings.AboutDeveloperScreen(
+                        onBack = { navController.popBackStack() },
+                        onOpenUpdate = { navController.navigate(Routes.UPDATE) },
+                    )
+                }
+            }
+            composable(Routes.STATS) {
                     WbRoute {
                         com.chenzixin.wrongbook.feature.stats.StatsScreen(onBack = { navController.popBackStack() })
                     }
@@ -360,6 +385,67 @@ fun AppNavHost() {
             }
         }
     }
+    }
+}
+
+/**
+ * MD3 Expressive 底部导航：贴底 + 药丸指示器 + 大图标。
+ */
+@Composable
+private fun Md3TabBar(
+    tabs: List<WbTab>,
+    currentRoute: String?,
+    onSelect: (WbTab) -> Unit,
+) {
+    val c = wbColors()
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(c.cardBackground),
+    ) {
+        WbDivider()
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .windowInsetsPadding(WindowInsets.navigationBars)
+                .padding(top = 8.dp, bottom = 4.dp),
+            horizontalArrangement = Arrangement.SpaceEvenly,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            tabs.forEach { tab ->
+                val selected = currentRoute == tab.route
+                Column(
+                    modifier = Modifier
+                        .weight(1f)
+                        .clickable { onSelect(tab) },
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .width(64.dp)
+                            .height(32.dp)
+                            .clip(androidx.compose.foundation.shape.RoundedCornerShape(50))
+                            .background(if (selected) c.tintSoft else androidx.compose.ui.graphics.Color.Transparent),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        WbIcon(
+                            imageVector = tab.icon,
+                            contentDescription = tab.label,
+                            modifier = Modifier.size(22.dp),
+                            tint = if (selected) c.accent else c.secondaryLabel,
+                        )
+                    }
+                    Spacer(Modifier.height(2.dp))
+                    WbText(
+                        text = tab.label,
+                        fontSize = 12.sp,
+                        fontWeight = if (selected) androidx.compose.ui.text.font.FontWeight.SemiBold else androidx.compose.ui.text.font.FontWeight.Normal,
+                        color = if (selected) c.label else c.secondaryLabel,
+                        maxLines = 1,
+                    )
+                }
+            }
+        }
     }
 }
 
