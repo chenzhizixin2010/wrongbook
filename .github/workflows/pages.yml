@@ -1,5 +1,7 @@
 name: Deploy website to GitHub Pages
 
+# Pages 源是 gh-pages 分支（Deploy from a branch: gh-pages / root）。
+# 这里在 main 上把 website/ 子树推到 gh-pages，触发 Pages 重新构建。
 on:
   push:
     branches: [main]
@@ -9,9 +11,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
-  pages: write
-  id-token: write
+  contents: write
 
 concurrency:
   group: "pages"
@@ -19,27 +19,17 @@ concurrency:
 
 jobs:
   deploy:
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-
-      - name: Setup Pages
-        uses: actions/configure-pages@v5
         with:
-          # 若仓库尚未开启 Pages，尝试自动开启（需要 pages: write 权限）。
-          # 失败时：Settings → Pages → Source 选 “GitHub Actions”，再重新运行本工作流。
-          enablement: true
+          fetch-depth: 0
 
-      - name: Upload static site
-        uses: actions/upload-pages-artifact@v3
-        with:
-          path: website
-
-      - name: Deploy
-        id: deployment
-        uses: actions/deploy-pages@v4
+      - name: Publish website to gh-pages
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git subtree split --prefix=website -b site-build
+          git push --force origin site-build:gh-pages

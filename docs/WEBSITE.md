@@ -32,27 +32,24 @@ python -m http.server 8080 --directory website
 
 ## 部署到 GitHub Pages
 
-1. 提交并推送 `website/` 与 `.github/workflows/pages.yml`：
+线上地址：<https://chenzhizixin2010.github.io/wrongbook/>
 
-   ```powershell
-   $env:Path = "D:\dev-tools\git\cmd;" + $env:Path
-   git add website .github/workflows/pages.yml docs/WEBSITE.md
-   git commit -m "site: add official website and GitHub Pages workflow"
-   git push origin main
-   ```
-
-   > 如果本地 `main` 比 `origin/main` 多出了一些还没推送的提交，上面这条 `push` 会把这些提交一起发布。只想发布官网的话，请从 `origin/main` 拉一个分支、只提交 `website/`、`pages.yml` 和本说明，再开 PR 合并。
-
-2. 打开仓库 **Settings → Pages**，把 **Build and deployment → Source** 设为 **GitHub Actions**。
-   （工作流里带了 `enablement: true`，部分仓库可以自动开启；如果首次运行报 Pages 未启用，按这一步手动设置后重跑。）
-3. 打开 **Actions → Deploy website to GitHub Pages**，等 `deploy` 成功。
-4. 访问 <https://chenzhizixin2010.github.io/wrongbook/>。
+当前 Pages 的源是 **`gh-pages` 分支根目录**（Deploy from a branch）。`.github/workflows/pages.yml` 会在 `main` 上的 `website/**` 有变更时，把 `website/` 子树推到 `gh-pages`，触发 Pages 重新构建；不需要手动操作。
 
 以后只改 `website/` 下的文件，push 到 `main` 就会自动重新部署。
 
+如果 Actions 不可用，可以手动发布：
+
+```powershell
+$env:Path = "D:\dev-tools\git\cmd;" + $env:Path
+git subtree push --prefix website origin gh-pages
+```
+
+如果 Pages 被关闭，在 **Settings → Pages → Build and deployment** 里选择 **Deploy from a branch**，分支选 `gh-pages`，目录选 `/ (root)`，保存后等待构建完成。
+
 ## 内容维护
 
-- **版本号 / APK 下载地址 / 文件大小 / 发布日期**：页面加载时会调用 GitHub API 读取最新 Release，自动更新。API 被限流或离线时，HTML 里写死的 `v0.12.0` 和下载地址作为回退。发布新版本后无需改页面，但建议偶尔同步一下回退值。
+- **版本号 / APK 下载地址 / 文件大小 / 发布日期**：页面加载时会调用 GitHub API 读取最新 Release，自动更新。API 被限流或离线时，HTML 里写死的 `v0.13.0` 和下载地址作为回退。发布新版本后无需改页面，但建议偶尔同步一下回退值。
 - **截图**：`assets/img/screens/` 下是 720×1280 WebP。原图在 `docs/screens/`，新增截图后按同样尺寸压缩再替换。
 - **隐私政策**：`privacy.html` 是当前正式文本；仓库里的 `docs/release/PRIVACY.md` 是早期草稿。权限列表以 App 的 `AndroidManifest.xml` 为准，目前是 CAMERA / INTERNET / ACCESS_NETWORK_STATE / REQUEST_INSTALL_PACKAGES。
 - **域名**：如果以后绑定自定义域名，在 `website/` 放 `CNAME` 文件，并同步修改三个 HTML 里的 canonical / OG URL 与 `sitemap.xml`、`robots.txt`。
