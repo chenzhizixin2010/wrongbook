@@ -10,6 +10,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.sp
 import com.chenzixin.wrongbook.data.prefs.UiStyle
+import androidx.compose.material3.Text as M3Text
 import com.chenzixin.wrongbook.ui.theme.wbUiStyle
 import top.yukonga.miuix.kmp.basic.Icon
 import top.yukonga.miuix.kmp.basic.Text
@@ -40,7 +41,7 @@ fun WbText(
     val style = wbUiStyle()
     if (style == UiStyle.MD3E) {
         val size = if (fontSize == TextUnit.Unspecified) 16f else fontSize.value
-        Text(
+        M3Text(
             text = text,
             modifier = modifier,
             color = color,

@@ -14,6 +14,8 @@ permissions:
 
 jobs:
   build:
+    # Alpha 内测版（v0.13.A01 这种）不在这里发：它们走 alpha.yml 发到「只有包、没有源码」的仓库
+    if: ${{ !contains(github.ref_name, '.A') }}
     runs-on: ubuntu-latest
     env:
       ANDROID_HOME: /usr/local/lib/android/sdk
@@ -51,6 +53,21 @@ jobs:
       - name: Grant execute permission for gradlew
         run: chmod +x ./gradlew
 
+      # 版本号守卫：tag 必须和 app/build.gradle.kts 里的 versionName 一致，
+      # 否则 App 内「检查更新」会把自己判成旧版本（或永远提示有更新）。
+      # Alpha 内测版的 tag 形如 v0.13.A01。
+      - name: Verify versionName matches tag
+        run: |
+          set -e
+          tag="${GITHUB_REF_NAME#v}"
+          ver="$(grep -oE 'versionName[[:space:]]*=[[:space:]]*"[^"]+"' app/build.gradle.kts \
+                 | head -n1 | sed -E 's/.*"(.*)"/\1/')"
+          echo "tag=$tag versionName=$ver"
+          if [ "${GITHUB_REF_TYPE:-tag}" = "tag" ] && [ "$tag" != "$ver" ]; then
+            echo "::error::app/build.gradle.kts 的 versionName ($ver) 与 tag ($tag) 不一致"
+            exit 1
+          fi
+
       - name: Unit tests
         run: ./gradlew :app:testDebugUnitTest --no-daemon --stacktrace
 
@@ -84,12 +101,14 @@ jobs:
           body_path: ${{ steps.notes.outputs.body_path }}
           generate_release_notes: ${{ steps.notes.outputs.custom == 'false' }}
           fail_on_unmatched_files: true
-          # 0.x 都是测试版，全部标成 pre-release；1.0 以后手动去掉这行
+          # 0.x 都是测试版，全部标成 pre-release；1.0 以后手动去掉这行。
+          # Alpha 内测版（v0.13.A01）也走这条，App 里只有 Alpha 通道能收到。
           prerelease: ${{ startsWith(github.ref_name, 'v0.') }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
 # 发版约定：
 # 1. 改 app/build.gradle.kts 的 versionCode(+1) 与 versionName
+#    - 正式版：0.13.0    Beta：0.13.0    Alpha 内测：0.13.A01 / 0.13.A02 …
 # 2. 写 docs/release-notes/<tag>.md（这份正文会显示在 App 的更新弹窗里）
 # 3. 推 tag，CI 自动构建并发布

@@ -1,4 +1,4 @@
-﻿package com.chenzixin.wrongbook.feature.settings
+package com.chenzixin.wrongbook.feature.settings
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
@@ -30,6 +30,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import com.chenzixin.wrongbook.BuildConfig
 import com.chenzixin.wrongbook.data.prefs.ThemeMode
 import com.chenzixin.wrongbook.data.prefs.UiStyle
+import com.chenzixin.wrongbook.domain.update.UpdateChannel
 import com.chenzixin.wrongbook.ui.component.ErrataMark
 import com.chenzixin.wrongbook.ui.component.WbAlertDialog
 import com.chenzixin.wrongbook.ui.component.WbBadge
@@ -67,6 +68,7 @@ fun SettingsTabScreen(
     onOpenExport: () -> Unit,
     onOpenImport: () -> Unit,
     onOpenAboutDev: () -> Unit,
+    onOpenGuide: () -> Unit,
 ) {
     val vm: SettingsViewModel = hiltViewModel()
     val profiles by vm.profiles.collectAsState()
@@ -75,10 +77,14 @@ fun SettingsTabScreen(
     val reprocess by vm.reprocess.collectAsState()
     val reprocessMessage by vm.reprocessMessage.collectAsState()
     val splashEnabled by vm.splashEnabled.collectAsState()
-    val betaChannel by vm.betaChannel.collectAsState()
+    val updateChannel by vm.updateChannel.collectAsState()
+    val superResolution by vm.superResolution.collectAsState()
+    val srInfo by vm.srInfo.collectAsState()
+    val srTest by vm.srTest.collectAsState()
     var showThemeDialog by remember { mutableStateOf(false) }
     var showPrivacy by remember { mutableStateOf(false) }
     var showStyleDialog by remember { mutableStateOf(false) }
+    var showChannelDialog by remember { mutableStateOf(false) }
     val c = wbColors()
 
     Column(
@@ -192,6 +198,26 @@ fun SettingsTabScreen(
             )
         }
 
+        WbSection(
+            header = "图像增强",
+            footer = "「题目详情 → 题目插图 → 高清重绘」会用模型把小图放大 4 倍（约 5–8 秒）；关掉则秒出。",
+        ) {
+            Column(modifier = Modifier.padding(14.dp)) {
+                WbSwitchRow(
+                    title = "AI 超分放大",
+                    summary = srInfo,
+                    checked = superResolution,
+                    onCheckedChange = vm::setSuperResolution,
+                )
+            }
+            WbListRow(
+                title = "超分自检",
+                subtitle = srTest ?: "在这台手机上跑一次，确认模型可用",
+                showDivider = false,
+                onClick = vm::runSrSelfTest,
+            )
+        }
+
         WbSection(header = "数据") {
             WbListRow(
                 title = "导出题库",
@@ -208,7 +234,7 @@ fun SettingsTabScreen(
             WbListRow(
                 title = "重新处理题目图片",
                 subtitle = when (val p = reprocess) {
-                    null -> "统一摆正、白底黑字；不会删除原图"
+                    null -> "统一摆正、白底黑字；会覆盖现有图片，建议先导出备份"
                     else -> "处理中 ${p.done}/${p.total}…"
                 },
                 showDivider = false,
@@ -227,12 +253,21 @@ fun SettingsTabScreen(
             )
         }
 
+        WbSection(header = "帮助") {
+            WbListRow(
+                title = "使用手册",
+                subtitle = "第一次使用？5 页快速上手，完整说明随时重看",
+                showDivider = false,
+                onClick = onOpenGuide,
+            )
+        }
+
         WbSection(header = "关于") {
-            WbSwitchRow(
-                title = "Beta 计划",
-                summary = "接收 GitHub 上的预发布版本；测试版更新一律弹窗提示",
-                checked = betaChannel,
-                onCheckedChange = vm::setBetaChannel,
+            WbListRow(
+                title = "测试版计划",
+                subtitle = "${updateChannel.label} · ${updateChannel.summary}",
+                showDivider = true,
+                onClick = { showChannelDialog = true },
             )
             WbListRow(
                 title = "关于开发者",
@@ -291,6 +326,19 @@ fun SettingsTabScreen(
                 showStyleDialog = false
             },
             onDismiss = { showStyleDialog = false },
+        )
+    }
+
+    if (showChannelDialog) {
+        ChoiceDialog(
+            title = "选择版本计划",
+            options = UpdateChannel.entries.map { it.label to it.summary },
+            selectedIndex = UpdateChannel.entries.indexOf(updateChannel),
+            onPick = {
+                vm.setUpdateChannel(UpdateChannel.entries[it])
+                showChannelDialog = false
+            },
+            onDismiss = { showChannelDialog = false },
         )
     }
 

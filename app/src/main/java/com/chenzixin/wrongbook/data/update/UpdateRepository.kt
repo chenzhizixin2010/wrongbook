@@ -7,6 +7,7 @@ import androidx.core.content.FileProvider
 import com.chenzixin.wrongbook.BuildConfig
 import com.chenzixin.wrongbook.core.WbResult
 import com.chenzixin.wrongbook.di.IoDispatcher
+import com.chenzixin.wrongbook.domain.update.UpdateChannel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import java.io.File
 import java.io.IOException
@@ -51,13 +52,17 @@ class UpdateRepository @Inject constructor(
         owner: String,
         repo: String,
         currentVersion: String,
-        includePrerelease: Boolean = false,
+        channel: UpdateChannel = UpdateChannel.DEFAULT,
+        /** Alpha 通道专用的分发仓库（只有 Release、没有源码）；留空表示与主仓库相同 */
+        alphaRepo: String = "",
     ): WbResult<UpdateInfo?> = withContext(io) {
-        // Beta 通道要看全部 release（含 pre-release）；稳定通道只看 latest
-        val url = if (includePrerelease) {
-            "https://api.github.com/repos/$owner/$repo/releases?per_page=30"
+        // Alpha 走独立仓库：主仓库留给源码与正式版，Alpha 的包单独放，互不干扰
+        val effectiveRepo = if (channel == UpdateChannel.ALPHA && alphaRepo.isNotBlank()) alphaRepo else repo
+        // 正式版通道只看 latest；Beta / Alpha 要自己拉列表再按通道过滤
+        val url = if (channel == UpdateChannel.STABLE) {
+            "https://api.github.com/repos/$owner/$effectiveRepo/releases/latest"
         } else {
-            "https://api.github.com/repos/$owner/$repo/releases/latest"
+            "https://api.github.com/repos/$owner/$effectiveRepo/releases?per_page=30"
         }
         try {
             val request = Request.Builder()
@@ -68,12 +73,18 @@ class UpdateRepository @Inject constructor(
 
             client.newCall(request).execute().use { response ->
                 when {
-                    // 只有预发布版本时，stable 通道会 404 —— 给一句能指导操作的提示
-                    response.code == 404 && !includePrerelease ->
+                    // 只有预发布版本时，稳定通道会 404 —— 给一句能指导操作的提示
+                    response.code == 404 && channel == UpdateChannel.STABLE ->
                         return@withContext WbResult.Err(
-                            "当前只发布了测试版；在「设置 → 关于 → Beta 计划」开启后即可获取",
+                            "当前只发布了测试版；在「设置 → 关于 → 测试版计划」切到 Beta 或 Alpha 即可获取",
                         )
-                    response.code == 404 -> return@withContext WbResult.Err("仓库还没有发布任何版本")
+                    response.code == 404 -> return@withContext WbResult.Err(
+                        if (effectiveRepo != repo) {
+                            "Alpha 仓库还没有发布任何版本（$owner/$effectiveRepo）"
+                        } else {
+                            "仓库还没有发布任何版本"
+                        },
+                    )
                     response.code == 403 -> return@withContext WbResult.Err("GitHub 接口被限流，过一会儿再试")
                     !response.isSuccessful -> return@withContext WbResult.Err("检查更新失败（HTTP ${response.code}）")
                 }
@@ -91,16 +102,14 @@ class UpdateRepository @Inject constructor(
 
                 val infos = candidates.mapNotNull { obj -> toInfo(obj) }
                     .filter { it.apkUrl.isNotBlank() }
+                    // 通道过滤：正式版通道不认预发布，Beta 不认 Alpha
+                    .filter { channel.accepts(it.version, it.isPrerelease) }
 
                 if (infos.isEmpty()) return@withContext WbResult.Ok(null)
 
-                // Beta 通道取「版本号最大」的那个（可能同时存在正式版与预发布）
-                val best = if (includePrerelease) {
-                    infos.reduce { a, b ->
-                        if (com.chenzixin.wrongbook.domain.update.VersionComparator.isNewer(b.version, a.version)) b else a
-                    }
-                } else {
-                    infos.first()
+                // 列表模式下取「版本号最大」的那个（可能同时存在正式版、Beta 与 Alpha）
+                val best = infos.reduce { a, b ->
+                    if (com.chenzixin.wrongbook.domain.update.VersionComparator.isNewer(b.version, a.version)) b else a
                 }
 
                 val newer = com.chenzixin.wrongbook.domain.update.VersionComparator
@@ -132,6 +141,7 @@ class UpdateRepository @Inject constructor(
             sizeBytes = apk["size"]?.jsonPrimitive?.contentOrNull?.toLongOrNull() ?: 0L,
             publishedAt = root["published_at"]?.jsonPrimitive?.contentOrNull.orEmpty(),
             isPrerelease = root["prerelease"]?.jsonPrimitive?.contentOrNull?.toBooleanStrictOrNull() ?: false,
+            isAlpha = com.chenzixin.wrongbook.domain.update.VersionComparator.isAlpha(tag),
         )
     }
 

@@ -2,6 +2,9 @@
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.material3.FilterChip
+import androidx.compose.material3.MaterialTheme as M3MaterialTheme
+import androidx.compose.material3.Text as M3Text
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.padding
@@ -36,6 +39,20 @@ fun WbChip(
     val md3e = style == UiStyle.MD3E
     val c = MiuixTheme.colorScheme
     val wb = wbColors()
+    if (md3e) {
+        FilterChip(
+            selected = selected,
+            onClick = onClick,
+            label = {
+                M3Text(
+                    text = label,
+                    style = M3MaterialTheme.typography.labelLarge,
+                )
+            },
+            modifier = modifier,
+        )
+        return
+    }
     Row(
         modifier = modifier
             .clip(RoundedCornerShape(50))

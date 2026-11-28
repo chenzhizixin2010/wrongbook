@@ -63,4 +63,25 @@ class PracticeSheetHtmlTest {
         )
         assertTrue(html.contains("（未提供答案）"))
     }
+
+    @Test
+    fun `插图以 data URI 内嵌`() {
+        val sheet = PracticeSheet(
+            title = "t",
+            subtitle = "",
+            items = listOf(PracticeItem(1, "看图", "", "", figures = listOf("figures/a.webp"))),
+            withAnswers = false,
+        )
+        val html = PracticeSheetHtml.build(sheet) { "data:image/jpeg;base64,AAA" }
+        assertTrue(html.contains("data:image/jpeg;base64,AAA"))
+        assertTrue(html.contains("class=\"fig\""))
+    }
+
+    @Test
+    fun `没有插图的题目不输出图片标签`() {
+        val html = PracticeSheetHtml.build(
+            PracticeSheet("t", "", listOf(PracticeItem(1, "题目", "", "")), false),
+        )
+        assertFalse(html.contains("<img"))
+    }
 }

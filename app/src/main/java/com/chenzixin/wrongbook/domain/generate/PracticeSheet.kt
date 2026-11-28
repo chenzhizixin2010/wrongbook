@@ -12,6 +12,8 @@ data class PracticeItem(
     val stem: String,
     val answer: String = "",
     val analysis: String = "",
+    /** 题目插图的相对路径（几何图等），打印/导出时内嵌 */
+    val figures: List<String> = emptyList(),
 )
 
 @kotlinx.serialization.Serializable
@@ -24,11 +26,13 @@ data class PracticeSheet(
 
 object PracticeSheetHtml {
 
-    fun build(sheet: PracticeSheet): String {
+    fun build(sheet: PracticeSheet, imageSrc: (String) -> String? = { null }): String {
         val questions = sheet.items.joinToString("\n") { item ->
             """
             <section class="q">
               <div class="stem"><span class="no">${item.index}.</span> ${MathHtml.format(item.stem)}</div>
+              ${item.figures.mapNotNull { path -> imageSrc(path) }
+                    .joinToString("") { src -> "<div class=\"fig\"><img src=\"$src\" alt=\"插图\"/></div>" }}
               <div class="space"></div>
             </section>
             """.trimIndent()
@@ -71,6 +75,8 @@ object PracticeSheetHtml {
   .stem { white-space: pre-wrap; overflow-wrap: anywhere; word-break: break-word; }
   .math { font-family: "Cambria Math", "Times New Roman", serif; font-style: italic; }
   sup, sub { font-size: 70%; }
+  .fig { margin: 6pt 0; text-align: center; }
+  .fig img { max-width: 70%; max-height: 260pt; }
   .no { font-weight: 600; }
   .space { height: 52pt; border-bottom: 0.5pt dashed #bbb; margin-top: 6pt; }
   .answers h2 { font-size: 14pt; border-bottom: 1pt solid #111; padding-bottom: 4pt; }

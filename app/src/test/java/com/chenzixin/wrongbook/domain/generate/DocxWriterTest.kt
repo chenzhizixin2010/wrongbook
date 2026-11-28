@@ -91,4 +91,32 @@ class DocxWriterTest {
         assertEquals(original.items.size, parsed.items.size)
         assertEquals(original.items[1].answer, parsed.items[1].answer)
     }
+
+    @Test
+    fun `插图会写成 media 部件并引用`() {
+        val sheet = PracticeSheet(
+            title = "t",
+            subtitle = "",
+            items = listOf(
+                PracticeItem(1, "看下图", "", "", figures = listOf("figures/a.webp")),
+            ),
+            withAnswers = false,
+        )
+        val jpeg = byteArrayOf(0xFF.toByte(), 0xD8.toByte(), 1, 2, 3)
+        val files = entries(
+            DocxWriter.build(sheet) { path ->
+                if (path == "figures/a.webp") DocxWriter.Figure(jpeg, 800, 600) else null
+            },
+        )
+        assertTrue(files.containsKey("word/media/image1.jpeg"))
+        assertTrue(files.containsKey("word/_rels/document.xml.rels"))
+        assertTrue(files["word/document.xml"].orEmpty().contains("r:embed=\"rIdImg"))
+        assertTrue(files["[Content_Types].xml"].orEmpty().contains("image/jpeg"))
+    }
+
+    @Test
+    fun `没有插图时不生成媒体部件`() {
+        val files = entries(DocxWriter.build(sheet()))
+        assertTrue(!files.keys.any { it.startsWith("word/media/") })
+    }
 }

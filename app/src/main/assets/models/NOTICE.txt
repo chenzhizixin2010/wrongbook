@@ -1,0 +1,17 @@
+﻿EDSR ×4 图像超分模型（题目插图「高清重绘」用）
+================================================
+
+文件      : edsr_x4.tflite
+大小      : 7714836 字节
+SHA-256   : 77fdb8655436844e94187ce6675f5c8c73ed5bf3080327d8ebe96e15da829bde
+输入/输出 : NCHW float32 [1,3,128,128] → [1,3,512,512]（×4）
+
+来源      : https://huggingface.co/litert-community/EDSR-x4-LiteRT
+权重来源  : https://huggingface.co/eugenesiow/edsr-base
+论文      : Enhanced Deep Residual Networks for Single Image
+            Super-Resolution, Lim et al., CVPR 2017 (NTIRE 2017 winner)
+许可      : Apache License 2.0
+            https://www.apache.org/licenses/LICENSE-2.0
+
+说明：本模型仅做像素级放大，不使用生成式（GAN）增强 ——
+生成式超分会「脑补」笔画，数学图形与公式被改一笔就成了错题。

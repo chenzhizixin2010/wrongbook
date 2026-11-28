@@ -12,3 +12,8 @@ gradlew text eol=lf
 *.webp binary
 *.png binary
 *.jpg binary
+*.tflite binary
+*.pb binary
+*.jks binary
+*.keystore binary
+*.ttf binary

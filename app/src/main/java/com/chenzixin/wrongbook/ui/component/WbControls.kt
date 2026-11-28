@@ -8,6 +8,9 @@ import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.MaterialTheme as M3MaterialTheme
+import androidx.compose.material3.Switch as M3Switch
+import androidx.compose.material3.Text as M3Text
 import androidx.compose.ui.draw.clip
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -64,7 +67,7 @@ fun WbSwitchRow(
                 }
             }
             Spacer(Modifier.width(12.dp))
-            Md3Switch(checked = checked, onCheckedChange = onCheckedChange)
+            M3Switch(checked = checked, onCheckedChange = onCheckedChange)
         }
         return
     }

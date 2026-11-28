@@ -11,6 +11,10 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.material3.MaterialTheme as M3MaterialTheme
+import androidx.compose.material3.Text as M3Text
+import androidx.compose.material3.TextField
+import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -52,6 +56,48 @@ fun WbTextField(
     val c = MiuixTheme.colorScheme
     val wb = wbColors()
     val body = MiuixTheme.textStyles.body1
+    if (md3e) {
+        TextField(
+            value = value,
+            onValueChange = onValueChange,
+            modifier = modifier.fillMaxWidth(),
+            enabled = enabled,
+            singleLine = singleLine,
+            textStyle = M3MaterialTheme.typography.bodyLarge,
+            placeholder = {
+                M3Text(
+                    text = placeholder,
+                    style = M3MaterialTheme.typography.bodyLarge,
+                    color = M3MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            },
+            leadingIcon = if (leadingIcon != null) {
+                {
+                    WbIcon(
+                        imageVector = leadingIcon,
+                        contentDescription = null,
+                        modifier = Modifier.size(20.dp),
+                        tint = M3MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            } else {
+                null
+            },
+            trailingIcon = trailing,
+            shape = M3MaterialTheme.shapes.medium,
+            colors = TextFieldDefaults.colors(
+                focusedContainerColor = M3MaterialTheme.colorScheme.surfaceContainerHighest,
+                unfocusedContainerColor = M3MaterialTheme.colorScheme.surfaceContainerHighest,
+                disabledContainerColor = M3MaterialTheme.colorScheme.surfaceContainer,
+                focusedIndicatorColor = androidx.compose.ui.graphics.Color.Transparent,
+                unfocusedIndicatorColor = androidx.compose.ui.graphics.Color.Transparent,
+                disabledIndicatorColor = androidx.compose.ui.graphics.Color.Transparent,
+            ),
+            keyboardOptions = KeyboardOptions(keyboardType = keyboardType),
+            visualTransformation = visualTransformation,
+        )
+        return
+    }
 
     BasicTextField(
         value = value,

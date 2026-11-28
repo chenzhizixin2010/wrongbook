@@ -1,4 +1,4 @@
-﻿package com.chenzixin.wrongbook.ui.component
+package com.chenzixin.wrongbook.ui.component
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Column
@@ -48,17 +48,21 @@ fun UpdateRecommendedDialog(
                 .padding(20.dp),
         ) {
             WbText(
-                text = if (info.isPrerelease) "发现测试版 ${info.version}" else "发现新版本 ${info.version}",
+                text = when {
+                    info.isAlpha -> "发现 Alpha 内测版 ${info.version}"
+                    info.isPrerelease -> "发现测试版 ${info.version}"
+                    else -> "发现新版本 ${info.version}"
+                },
                 fontSize = 17.sp,
                 fontWeight = FontWeight.SemiBold,
                 color = colors.label,
             )
             WbText(
-                text = if (info.isPrerelease) {
-                "当前 $currentVersion → Beta 通道预发布版本"
-            } else {
-                "当前 $currentVersion → 建议更新到大版本"
-            },
+                text = when {
+                    info.isAlpha -> "当前 $currentVersion → Alpha 通道最新功能，可能有 Bug"
+                    info.isPrerelease -> "当前 $currentVersion → Beta 通道预发布版本"
+                    else -> "当前 $currentVersion → 建议更新到大版本"
+                },
                 modifier = Modifier.padding(top = 4.dp),
                 fontSize = 12.sp,
                 color = colors.tint,

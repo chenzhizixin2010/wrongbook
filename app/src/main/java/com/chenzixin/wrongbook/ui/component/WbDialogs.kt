@@ -21,6 +21,10 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.MaterialTheme as M3MaterialTheme
+import androidx.compose.material3.Text as M3Text
+import androidx.compose.material3.TextButton as M3TextButton
 import com.chenzixin.wrongbook.data.prefs.UiStyle
 import com.chenzixin.wrongbook.ui.theme.wbColors
 import com.chenzixin.wrongbook.ui.theme.wbUiStyle
@@ -46,47 +50,29 @@ fun WbAlertDialog(
     val c = wbColors()
 
     if (md3e) {
-        Dialog(onDismissRequest = onDismiss) {
-            WbSurface(
-                modifier = Modifier.width(320.dp),
-                cornerRadius = 28.dp,
-                elevation = 12.dp,
-                underlay = c.cardBackground,
-            ) {
-                Column(modifier = Modifier.padding(start = 24.dp, end = 24.dp, top = 24.dp, bottom = 12.dp)) {
-                    WbText(
-                        text = title,
-                        fontSize = 24.sp,
-                        fontWeight = FontWeight.Normal,
-                        color = c.label,
-                    )
-                    if (message != null) {
-                        WbText(
-                            text = message,
-                            modifier = Modifier.padding(top = 14.dp),
-                            fontSize = 14.sp,
-                            lineHeight = 20.sp,
-                            color = c.secondaryLabel,
-                        )
-                    }
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(top = 20.dp),
-                        horizontalArrangement = Arrangement.End,
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        WbTextButton(text = dismissText, onClick = onDismiss)
-                        Spacer(Modifier.width(4.dp))
-                        WbTextButton(
-                            text = confirmText,
-                            onClick = onConfirm,
-                            color = if (destructive) c.danger else c.accent,
-                        )
-                    }
+        AlertDialog(
+            onDismissRequest = onDismiss,
+            title = {
+                M3Text(text = title, style = M3MaterialTheme.typography.headlineSmall)
+            },
+            text = if (message != null) {
+                { M3Text(text = message, style = M3MaterialTheme.typography.bodyMedium) }
+            } else {
+                null
+            },
+            confirmButton = {
+                M3TextButton(onClick = onConfirm) {
+                    M3Text(text = confirmText, color = if (destructive) M3MaterialTheme.colorScheme.error else M3MaterialTheme.colorScheme.primary)
                 }
-            }
-        }
+            },
+            dismissButton = {
+                M3TextButton(onClick = onDismiss) {
+                    M3Text(text = dismissText)
+                }
+            },
+            shape = M3MaterialTheme.shapes.extraLarge,
+            containerColor = M3MaterialTheme.colorScheme.surfaceContainerHigh,
+        )
         return
     }
 

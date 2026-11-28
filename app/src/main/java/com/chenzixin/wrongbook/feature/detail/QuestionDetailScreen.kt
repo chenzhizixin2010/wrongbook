@@ -2,12 +2,15 @@
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -84,6 +87,32 @@ fun QuestionDetailScreen(
     var editingText by remember { mutableStateOf(false) }
     var editingTags by remember { mutableStateOf(false) }
     val allTags by vm.allTags.collectAsState()
+    val figures by vm.figures.collectAsState()
+    val answerScan by vm.answerScan.collectAsState()
+    val scanningAnswer by vm.scanningAnswer.collectAsState()
+    var showAnswerCamera by remember { mutableStateOf(false) }
+    val answerPicker = androidx.activity.compose.rememberLauncherForActivityResult(
+        androidx.activity.result.contract.ActivityResultContracts.GetContent(),
+    ) { uri ->
+        if (uri != null) {
+            runCatching {
+                context.contentResolver.openInputStream(uri)?.use {
+                    android.graphics.BitmapFactory.decodeStream(it)
+                }
+            }.getOrNull()?.let { vm.scanAnswer(it) }
+        }
+    }
+    val figurePicker = androidx.activity.compose.rememberLauncherForActivityResult(
+        androidx.activity.result.contract.ActivityResultContracts.GetContent(),
+    ) { uri ->
+        if (uri != null) {
+            runCatching {
+                context.contentResolver.openInputStream(uri)?.use {
+                    android.graphics.BitmapFactory.decodeStream(it)
+                }
+            }.getOrNull()?.let { vm.addFigure(it) }
+        }
+    }
     var editingValue by remember { mutableStateOf("") }
     var editingRefined by remember { mutableStateOf<RefinedQuestion?>(null) }
     var variantsToSave by remember { mutableStateOf<List<RefinedQuestion>?>(null) }
@@ -182,8 +211,70 @@ fun QuestionDetailScreen(
                 )
             }
 
+            WbSection(
+                header = "题目插图",
+                footer = "几何图、实验装置等可以单独上传；「高清」会放大并锐化一份新图。",
+                action = {
+                    WbTextButton(text = "添加", onClick = { figurePicker.launch("image/*") })
+                },
+            ) {
+                if (figures.isEmpty()) {
+                    WbText(
+                        text = "还没有插图",
+                        modifier = Modifier.padding(16.dp),
+                        fontSize = 13.sp,
+                        color = colors.secondaryLabel,
+                    )
+                } else {
+                    LazyRow(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(12.dp),
+                        horizontalArrangement = Arrangement.spacedBy(10.dp),
+                    ) {
+                        items(figures, key = { it.id }) { figure ->
+                            androidx.compose.foundation.layout.Column(
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                            ) {
+                                coil3.compose.AsyncImage(
+                                    model = java.io.File(context.filesDir, figure.path),
+                                    contentDescription = "题目插图",
+                                    modifier = Modifier
+                                        .size(120.dp)
+                                        .clip(androidx.compose.foundation.shape.RoundedCornerShape(12.dp))
+                                        .background(colors.groupedBackground),
+                                    contentScale = androidx.compose.ui.layout.ContentScale.Crop,
+                                )
+                                Row {
+                                    WbTextButton(
+                                        text = "高清",
+                                        fontSize = 11,
+                                        onClick = { vm.restoreFigureHd(figure) },
+                                    )
+                                    WbTextButton(
+                                        text = "删除",
+                                        fontSize = 11,
+                                        onClick = { vm.deleteFigure(figure) },
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
             if (!question.answer.isNullOrBlank() || !question.analysis.isNullOrBlank()) {
-                WbSection(header = "答案与解析", icon = MiuixIcons.Ok) {
+                WbSection(
+                    header = "答案与解析",
+                    icon = MiuixIcons.Ok,
+                    footer = if (scanningAnswer) "正在识别答案照片…" else "可以拍/选一张答案页照片，自动写入答案与解析。",
+                    action = {
+                        WbTextButton(
+                            text = "扫答案",
+                            onClick = { showAnswerCamera = true },
+                        )
+                    },
+                ) {
                     Column(modifier = Modifier.padding(16.dp)) {
                         if (!question.answer.isNullOrBlank()) {
                             WbText(
@@ -350,6 +441,30 @@ fun QuestionDetailScreen(
                 variantsToSave = null
                 vm.saveVariants(variants)
             },
+        )
+    }
+
+    if (showAnswerCamera) {
+        AnswerCameraDialog(
+            scanning = scanningAnswer,
+            onCaptured = { bitmap ->
+                showAnswerCamera = false
+                vm.scanAnswer(bitmap)
+            },
+            onPickGallery = {
+                showAnswerCamera = false
+                answerPicker.launch("image/*")
+            },
+            onDismiss = { showAnswerCamera = false },
+        )
+    }
+
+    answerScan?.let { scanned ->
+        AnswerConfirmDialog(
+            initialAnswer = scanned.answer,
+            initialAnalysis = scanned.analysis,
+            onConfirm = { a, b -> vm.saveScannedAnswer(a, b) },
+            onDismiss = vm::dismissAnswerScan,
         )
     }
 
@@ -546,4 +661,59 @@ private fun DialogTitle(text: String) {
         fontWeight = FontWeight.SemiBold,
         color = wbColors().label,
     )
+}
+
+/** 答案扫描结果确认：两段都可改，确认后写库。 */
+@androidx.compose.runtime.Composable
+private fun AnswerConfirmDialog(
+    initialAnswer: String,
+    initialAnalysis: String,
+    onConfirm: (String, String) -> Unit,
+    onDismiss: () -> Unit,
+) {
+    var answer by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(initialAnswer) }
+    var analysis by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(initialAnalysis) }
+
+    androidx.compose.ui.window.Dialog(onDismissRequest = onDismiss) {
+        com.chenzixin.wrongbook.ui.component.WbSurface(cornerRadius = 24.dp) {
+            androidx.compose.foundation.layout.Column(
+                modifier = Modifier.padding(18.dp),
+            ) {
+                com.chenzixin.wrongbook.ui.component.WbText(
+                    text = "确认答案",
+                    fontSize = 16.sp,
+                    fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold,
+                )
+                Spacer(Modifier.height(10.dp))
+                com.chenzixin.wrongbook.ui.component.WbTextField(
+                    value = answer,
+                    onValueChange = { answer = it },
+                    placeholder = "答案",
+                    singleLine = false,
+                    modifier = Modifier.fillMaxWidth().heightIn(min = 56.dp),
+                )
+                Spacer(Modifier.height(10.dp))
+                com.chenzixin.wrongbook.ui.component.WbTextField(
+                    value = analysis,
+                    onValueChange = { analysis = it },
+                    placeholder = "解析",
+                    singleLine = false,
+                    modifier = Modifier.fillMaxWidth().heightIn(min = 80.dp),
+                )
+                Spacer(Modifier.height(14.dp))
+                Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                    com.chenzixin.wrongbook.ui.component.WbSecondaryButton(
+                        text = "取消",
+                        onClick = onDismiss,
+                        modifier = Modifier.weight(1f),
+                    )
+                    com.chenzixin.wrongbook.ui.component.WbPrimaryButton(
+                        text = "写入",
+                        onClick = { onConfirm(answer, analysis) },
+                        modifier = Modifier.weight(1f),
+                    )
+                }
+            }
+        }
+    }
 }

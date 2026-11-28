@@ -46,7 +46,8 @@
 - **扫描**：极简入口 + 「能力/流程」两组列表。
 - **AI 对话**：会话分组列表；会话页顶栏 + 消息流 + 底部输入条。
 - **生成**：标签 → 出题方式 → 题量/答案 → 生成按钮（随内容滚动）。
-- **设置**：应用 / 模型与 API / 题库分类 / 外观 / 数据 / 关于；外观里含「界面风格」与「主题」。
+- **设置**：应用 / 模型与 API / 题库分类 / 外观 / 数据 / 帮助 / 关于；外观里含「界面风格」与「主题」。
+- **使用手册**：顶栏 + 品牌头 + 快速开始 / 五个入口 / 功能说明 / FAQ；首次启动以 5 页横向引导覆盖在主界面上，可跳过。
 - **二级页**：统一 `WbTopBar` + `WbSection`；相机/透视页固定深色，不受皮肤影响。
 
 ## 5. 截图
@@ -66,5 +67,9 @@
 - `docs/screens/ios-theme-dialog-light.png`
 - `docs/screens/style-dialog-dark.png`
 - `docs/screens/splash.png`
+- `docs/screens/guide-welcome.png`
+- `docs/screens/guide-last.png`
+- `docs/screens/user-guide.png`
+- `docs/screens/user-guide-faq.png`
 
 ### MD3 Expressive 专属\n\n- 紫/青/粉三组 tonal 色，28dp 大圆角、药丸按钮、药丸导航指示器。\n- 背景用大块 primary/secondary/tertiaryContainer 圆形色块，不做玻璃模糊。\n- 开关是自绘 M3 Switch；标题 34sp、正文 16/14sp。\n\n### 0.9.0 液态玻璃专属\n\n- 极光背景 + 24dp 玻璃卡 + 悬浮胶囊底栏。\n- 主按钮用蓝→紫渐变；这是 0.9.0 的视觉记忆点。\n- 只在 V090 皮肤内启用，Miuix 侧仍严格纯色。\n\n> 截图只用于 UI 走查；相机画面来自模拟器虚拟摄像头，OCR 精度与真机壁纸取色仍需真机验收。

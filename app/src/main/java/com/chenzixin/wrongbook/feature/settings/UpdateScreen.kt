@@ -1,4 +1,4 @@
-﻿package com.chenzixin.wrongbook.feature.settings
+package com.chenzixin.wrongbook.feature.settings
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -80,6 +80,7 @@ fun UpdateScreen(
                 checking = state.checking,
                 newVersion = state.info?.version,
                 checked = state.checked,
+                channelLabel = state.channel.label,
             )
 
             val info = state.info
@@ -170,7 +171,11 @@ fun UpdateScreen(
             }
 
             WbSection(
-                header = if (state.info?.isPrerelease == true) "手动更新（预发布）" else "手动更新",
+                header = when {
+                    state.info?.isAlpha == true -> "手动更新（Alpha 内测）"
+                    state.info?.isPrerelease == true -> "手动更新（预发布）"
+                    else -> "手动更新"
+                },
                 icon = MiuixIcons.Refresh,
                 footer = "如果自动更新不可用，可以直接去 GitHub Releases 页面下载 APK。",
             ) {
@@ -237,6 +242,7 @@ private fun VersionCard(
     checking: Boolean,
     newVersion: String?,
     checked: Boolean,
+    channelLabel: String,
 ) {
     val colors = wbColors()
     WbSurface(
@@ -277,6 +283,12 @@ private fun VersionCard(
                         else -> "尚未检查"
                     },
                     fontSize = 12.sp,
+                    color = colors.secondaryLabel,
+                )
+                Spacer(Modifier.height(2.dp))
+                WbText(
+                    text = "版本计划：$channelLabel（在 设置 → 关于 里切换）",
+                    fontSize = 11.sp,
                     color = colors.secondaryLabel,
                 )
             }

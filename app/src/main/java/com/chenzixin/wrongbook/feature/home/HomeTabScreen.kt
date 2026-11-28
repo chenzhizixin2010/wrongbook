@@ -80,6 +80,7 @@ fun HomeTabScreen(
     onOpenQuestion: (Long) -> Unit,
     onNewQuestion: () -> Unit,
     onOpenScan: () -> Unit,
+    onOpenGuide: () -> Unit,
     vm: HomeViewModel = hiltViewModel(),
 ) {
     val state by vm.uiState.collectAsState()
@@ -193,6 +194,7 @@ fun HomeTabScreen(
                     HomeEmptyState(
                         filtered = !state.filter.isEmpty,
                         onOpenScan = onOpenScan,
+                        onOpenGuide = onOpenGuide,
                     )
                 }
             } else {
@@ -291,20 +293,41 @@ fun HomeTabScreen(
 
 /** 空状态：页面居中，极简线框图标 + 一句话 + 一个按钮；无卡片、无渐变。 */
 @Composable
-private fun HomeEmptyState(filtered: Boolean, onOpenScan: () -> Unit) {
+private fun HomeEmptyState(
+    filtered: Boolean,
+    onOpenScan: () -> Unit,
+    onOpenGuide: () -> Unit,
+) {
     val c = wbColors()
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 32.dp, vertical = 72.dp),
+            .padding(horizontal = 32.dp, vertical = if (wbUiStyle() == UiStyle.MD3E) 20.dp else 72.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        WbIcon(
-            imageVector = MiuixIcons.Notes,
-            contentDescription = null,
-            modifier = Modifier.size(56.dp),
-            tint = c.secondaryLabel,
-        )
+        if (wbUiStyle() == UiStyle.MD3E) {
+            Box(
+                modifier = Modifier
+                    .size(88.dp)
+                    .clip(RoundedCornerShape(28.dp))
+                    .background(c.tintSoft),
+                contentAlignment = Alignment.Center,
+            ) {
+                WbIcon(
+                    imageVector = MiuixIcons.Notes,
+                    contentDescription = null,
+                    modifier = Modifier.size(38.dp),
+                    tint = c.accent,
+                )
+            }
+        } else {
+            WbIcon(
+                imageVector = MiuixIcons.Notes,
+                contentDescription = null,
+                modifier = Modifier.size(56.dp),
+                tint = c.secondaryLabel,
+            )
+        }
         Spacer(Modifier.height(16.dp))
         WbText(
             text = if (filtered) "没有匹配的题目" else "还没有错题",
@@ -325,6 +348,11 @@ private fun HomeEmptyState(filtered: Boolean, onOpenScan: () -> Unit) {
                 text = "去扫描",
                 onClick = onOpenScan,
                 icon = MiuixIcons.Scan,
+            )
+            Spacer(Modifier.height(2.dp))
+            WbTextButton(
+                text = "查看使用手册",
+                onClick = onOpenGuide,
             )
         }
     }

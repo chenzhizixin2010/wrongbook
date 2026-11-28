@@ -1,4 +1,4 @@
-package com.chenzixin.wrongbook.ui.component
+﻿package com.chenzixin.wrongbook.ui.component
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -12,6 +12,11 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
+import androidx.compose.material3.FilledIconButton
+import androidx.compose.material3.FilledTonalIconButton
+import androidx.compose.material3.IconButtonDefaults
+import androidx.compose.material3.MaterialTheme as M3MaterialTheme
+import androidx.compose.material3.Surface as M3Surface
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -51,24 +56,26 @@ fun WbScreenBackground(
                     drawRect(c.canvasTop)
                     val colors = c.aurora
                     if (colors.isNotEmpty()) {
-                        drawCircle(
-                            color = colors[0].copy(alpha = if (c.isDark) 0.45f else 0.70f),
-                            radius = size.width * 0.62f,
-                            center = Offset(size.width * 0.08f, size.height * 0.10f),
+                        // 大块 expressive squircle：M3E 的标志性形状，压在标题下方
+                        drawRoundRect(
+                            color = colors[0].copy(alpha = if (c.isDark) 0.32f else 0.62f),
+                            topLeft = Offset(-size.width * 0.20f, -size.height * 0.06f),
+                            size = Size(size.width * 0.98f, size.height * 0.34f),
+                            cornerRadius = CornerRadius(size.width * 0.30f),
                         )
                         if (colors.size > 1) {
                             drawCircle(
-                                color = colors[1].copy(alpha = if (c.isDark) 0.38f else 0.55f),
-                                radius = size.width * 0.66f,
-                                center = Offset(size.width * 0.98f, size.height * 0.28f),
+                                color = colors[1].copy(alpha = if (c.isDark) 0.24f else 0.42f),
+                                radius = size.width * 0.34f,
+                                center = Offset(size.width * 1.00f, size.height * 0.12f),
                             )
                         }
                         if (colors.size > 2) {
                             drawRoundRect(
-                                color = colors[2].copy(alpha = if (c.isDark) 0.28f else 0.42f),
-                                topLeft = Offset(-size.width * 0.15f, size.height * 0.78f),
-                                size = Size(size.width * 0.8f, size.height * 0.42f),
-                                cornerRadius = CornerRadius(size.width * 0.35f),
+                                color = colors[2].copy(alpha = if (c.isDark) 0.20f else 0.34f),
+                                topLeft = Offset(-size.width * 0.12f, size.height * 0.83f),
+                                size = Size(size.width * 0.78f, size.height * 0.26f),
+                                cornerRadius = CornerRadius(size.width * 0.13f),
                             )
                         }
                     }
@@ -144,6 +151,31 @@ fun WbSurface(
     val md3e = style == UiStyle.MD3E
     val c = wbColors()
     val shape = RoundedCornerShape(cornerRadius)
+
+    if (md3e) {
+        val color = tint ?: underlay ?: c.cardBackground
+        if (onClick != null) {
+            M3Surface(
+                onClick = onClick,
+                modifier = modifier,
+                shape = shape,
+                color = color,
+                tonalElevation = 0.dp,
+            ) {
+                Box(modifier = Modifier.padding(contentPadding), content = content)
+            }
+        } else {
+            M3Surface(
+                modifier = modifier,
+                shape = shape,
+                color = color,
+                tonalElevation = 0.dp,
+            ) {
+                Box(modifier = Modifier.padding(contentPadding), content = content)
+            }
+        }
+        return
+    }
 
     if (!ios && !v090) {
         Box(
@@ -236,20 +268,39 @@ fun WbIconButton(
     val md3e = style == UiStyle.MD3E
     val c = wbColors()
     if (md3e) {
-        Box(
-            modifier = modifier
-                .size(size)
-                .clip(RoundedCornerShape(50))
-                .background(containerColor ?: c.tintSoft)
-                .clickable(onClick = onClick),
-            contentAlignment = Alignment.Center,
-        ) {
-            WbIcon(
-                imageVector = icon,
-                contentDescription = contentDescription,
-                modifier = Modifier.size(iconSize),
-                tint = tint ?: c.accent,
-            )
+        val isPrimary = containerColor == c.accent
+        if (isPrimary) {
+            FilledIconButton(
+                onClick = onClick,
+                modifier = modifier.size(size),
+                colors = IconButtonDefaults.filledIconButtonColors(
+                    containerColor = M3MaterialTheme.colorScheme.primary,
+                    contentColor = M3MaterialTheme.colorScheme.onPrimary,
+                ),
+            ) {
+                WbIcon(
+                    imageVector = icon,
+                    contentDescription = contentDescription,
+                    modifier = Modifier.size(iconSize),
+                    tint = tint ?: M3MaterialTheme.colorScheme.onPrimary,
+                )
+            }
+        } else {
+            FilledTonalIconButton(
+                onClick = onClick,
+                modifier = modifier.size(size),
+                colors = IconButtonDefaults.filledTonalIconButtonColors(
+                    containerColor = containerColor ?: M3MaterialTheme.colorScheme.secondaryContainer,
+                    contentColor = M3MaterialTheme.colorScheme.onSecondaryContainer,
+                ),
+            ) {
+                WbIcon(
+                    imageVector = icon,
+                    contentDescription = contentDescription,
+                    modifier = Modifier.size(iconSize),
+                    tint = tint ?: M3MaterialTheme.colorScheme.onSecondaryContainer,
+                )
+            }
         }
     } else if (ios) {
         Box(

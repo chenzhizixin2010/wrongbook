@@ -2,6 +2,12 @@
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.IconButton as M3IconButton
+import androidx.compose.material3.MaterialTheme as M3MaterialTheme
+import androidx.compose.material3.Text as M3Text
+import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -35,6 +41,7 @@ import top.yukonga.miuix.kmp.theme.MiuixTheme
  * Miuix：56dp + 居中标题 + 底部分隔线。
  * iOS：44dp nav bar + 左侧返回 + 状态栏下方毛玻璃底。
  */
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun WbTopBar(
     title: String,
@@ -47,6 +54,33 @@ fun WbTopBar(
     val v090 = style == UiStyle.V090
     val md3e = style == UiStyle.MD3E
     val c = wbColors()
+
+    if (md3e) {
+        TopAppBar(
+            title = {
+                M3Text(text = title, style = M3MaterialTheme.typography.titleLarge)
+            },
+            navigationIcon = {
+                if (onBack != null) {
+                    M3IconButton(onClick = onBack) {
+                        WbIcon(
+                            imageVector = MiuixIcons.ChevronBackward,
+                            contentDescription = "返回",
+                            modifier = Modifier.size(24.dp),
+                            tint = M3MaterialTheme.colorScheme.onSurface,
+                        )
+                    }
+                }
+            },
+            actions = actions,
+            colors = TopAppBarDefaults.topAppBarColors(
+                containerColor = M3MaterialTheme.colorScheme.surface,
+                titleContentColor = M3MaterialTheme.colorScheme.onSurface,
+                navigationIconContentColor = M3MaterialTheme.colorScheme.onSurface,
+            ),
+        )
+        return
+    }
 
     Column(
         modifier = modifier
@@ -162,13 +196,15 @@ fun WbLargeTitle(
         WbText(
             text = text,
             fontSize = when {
-                ios || md3e -> 34.sp
+                md3e -> 36.sp
+                ios -> 34.sp
                 v090 -> 30.sp
                 else -> 28.sp
             },
             fontWeight = FontWeight.Bold,
             lineHeight = when {
-                ios || md3e -> 41.sp
+                md3e -> 44.sp
+                ios -> 41.sp
                 v090 -> 36.sp
                 else -> 34.sp
             },

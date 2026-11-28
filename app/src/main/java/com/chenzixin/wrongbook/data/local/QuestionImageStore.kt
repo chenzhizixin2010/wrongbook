@@ -63,6 +63,36 @@ class QuestionImageStore @Inject constructor(
         }
     }
 
+
+    /**
+     * 保存一张插图（几何图、实验图等）。
+     *
+     * 和题面图不同：插图多为线条图，不做过强处理，只限制尺寸并生成缩略图。
+     */
+    suspend fun saveFigure(source: Bitmap, folder: String = DIR_FIGURES): WbResult<SavedImage> =
+        withContext(io) {
+            runCatchingWb("插图保存失败") {
+                val name = UUID.randomUUID().toString()
+                val dir = File(context.filesDir, folder).apply { if (!exists()) mkdirs() }
+
+                val full = source.scaledToMaxSide(FIGURE_MAX_SIDE)
+                val fullFile = File(dir, "$name.webp")
+                fullFile.writeBytes(full.toWebp(quality = 88))
+
+                val thumb = source.scaledToMaxSide(THUMB_SIDE)
+                val thumbFile = File(dir, "${name}_thumb.webp")
+                thumbFile.writeBytes(thumb.toWebp(quality = 72))
+
+                if (full !== source) full.recycle()
+                if (thumb !== source) thumb.recycle()
+
+                SavedImage(
+                    imagePath = "$folder/${fullFile.name}",
+                    thumbPath = "$folder/${thumbFile.name}",
+                )
+            }
+        }
+
     /** 删题时清理图片；失败不抛（文件被占用不值得阻塞主流程）。 */
     suspend fun delete(paths: List<String>): Unit = withContext(io) {
         paths.filter { it.isNotBlank() }.forEach { relative ->
@@ -77,6 +107,8 @@ class QuestionImageStore @Inject constructor(
 
     private companion object {
         const val DIR_QUESTIONS = "questions"
+        const val DIR_FIGURES = "figures"
+        const val FIGURE_MAX_SIDE = 2000
         const val MAX_SIDE = 1600
         const val THUMB_SIDE = 200
     }

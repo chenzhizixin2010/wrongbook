@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://chenzhizixin2010.github.io/wrongbook/sitemap.xml

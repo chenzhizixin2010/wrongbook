@@ -30,7 +30,13 @@ fun MarkdownText(
     val markwon = remember(context) {
         val density = context.resources.displayMetrics.scaledDensity
         Markwon.builder(context)
-            .usePlugin(JLatexMathPlugin.create(textSizeSp * density))
+            // 关键：inlinesEnabled 默认是 false，不开的话 $...$ 行内公式不会被渲染
+            .usePlugin(
+                JLatexMathPlugin.create(textSizeSp * density) { builder ->
+                    builder.inlinesEnabled(true)
+                    builder.blocksEnabled(true)
+                },
+            )
             .build()
     }
 
@@ -46,7 +52,7 @@ fun MarkdownText(
         update = { view ->
             view.setTextSize(TypedValue.COMPLEX_UNIT_SP, textSizeSp)
             view.setTextColor(textColor)
-            markwon.setMarkdown(view, markdown)
+            markwon.setMarkdown(view, com.chenzixin.wrongbook.core.LatexSanitizer.sanitize(markdown))
         },
     )
 }

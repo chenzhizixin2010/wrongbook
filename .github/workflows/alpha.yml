@@ -1,0 +1,114 @@
+name: Publish Alpha APK
+
+# Alpha 内测版（tag 形如 v0.13.A01）构建后发布到「只有 Release、没有源码」的分发仓库。
+#
+# 为什么单开一个仓库：Alpha 是给尝鲜用户的高频内测包，跟源码仓库的 Release 混在一起
+# 会让「版本列表」变得难读；分开之后主仓库只留正式版/Beta，Alpha 仓库只留包。
+#
+# 需要仓库 Secret：ALPHA_TOKEN —— 一把对 <owner>/wrongbook-alpha 有 contents:write 的 token
+# （经典 PAT 的 repo 作用域，或 fine-grained token 勾选该仓库的 Contents: Read and write）。
+# 没配置时这一 job 会明确失败在「发布」这一步，不会静默成功。
+on:
+  push:
+    tags:
+      - "v*.*.A*"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    env:
+      ANDROID_HOME: /usr/local/lib/android/sdk
+      ANDROID_SDK_ROOT: /usr/local/lib/android/sdk
+      ALPHA_REPO: ${{ github.repository_owner }}/wrongbook-alpha
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Cache Gradle
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: gradle-${{ runner.os }}-${{ hashFiles('gradle/wrapper/gradle-wrapper.properties', 'gradle/libs.versions.toml') }}
+          restore-keys: gradle-${{ runner.os }}-
+
+      - name: Install SDK packages
+        run: |
+          set -e
+          SDKMGR="$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager"
+          if [ ! -x "$SDKMGR" ]; then
+            SDKMGR="$(find "$ANDROID_HOME" -name sdkmanager -type f | head -n 1)"
+          fi
+          echo "using sdkmanager: $SDKMGR"
+          yes | "$SDKMGR" --licenses > /dev/null || true
+          yes | "$SDKMGR" "platform-tools" "platforms;android-37.0" "build-tools;37.0.0" > /dev/null
+          ls "$ANDROID_HOME/platforms" "$ANDROID_HOME/build-tools"
+
+      - name: Grant execute permission for gradlew
+        run: chmod +x ./gradlew
+
+      - name: Verify versionName matches tag
+        run: |
+          set -e
+          tag="${GITHUB_REF_NAME#v}"
+          ver="$(grep -oE 'versionName[[:space:]]*=[[:space:]]*"[^"]+"' app/build.gradle.kts \
+                 | head -n1 | sed -E 's/.*"(.*)"/\1/')"
+          echo "tag=$tag versionName=$ver"
+          if [ "${GITHUB_REF_TYPE:-tag}" = "tag" ] && [ "$tag" != "$ver" ]; then
+            echo "::error::versionName ($ver) 与 tag ($tag) 不一致"
+            exit 1
+          fi
+          case "$tag" in
+            *.A*) echo "是 Alpha 版本号" ;;
+            *) echo "::error::$tag 不是 Alpha 版本号（应形如 0.13.A01）"; exit 1 ;;
+          esac
+
+      - name: Unit tests
+        run: ./gradlew :app:testDebugUnitTest --no-daemon --stacktrace
+
+      - name: Build debug APK
+        run: ./gradlew :app:assembleDebug --no-daemon --stacktrace
+
+      - name: Collect APK
+        run: |
+          mkdir -p dist
+          cp app/build/outputs/apk/debug/app-debug.apk "dist/wrongbook-${GITHUB_REF_NAME}.apk"
+          ls -lh dist
+
+      - name: Resolve release notes
+        id: notes
+        run: |
+          f="docs/release-notes/${GITHUB_REF_NAME}.md"
+          if [ -f "$f" ]; then
+            echo "body_path=$f" >> "$GITHUB_OUTPUT"
+            echo "custom=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "custom=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      # 发布到独立仓库：这里必须用 PAT（默认 GITHUB_TOKEN 只对本仓库有权限）
+      - name: Publish to alpha repo
+        uses: softprops/action-gh-release@v2
+        with:
+          repository: ${{ env.ALPHA_REPO }}
+          token: ${{ secrets.ALPHA_TOKEN }}
+          tag_name: ${{ github.ref_name }}
+          name: "Alpha ${{ github.ref_name }}"
+          body_path: ${{ steps.notes.outputs.body_path }}
+          generate_release_notes: ${{ steps.notes.outputs.custom == 'false' }}
+          files: dist/*.apk
+          fail_on_unmatched_files: true
+          prerelease: true
+          make_latest: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.ALPHA_TOKEN }}

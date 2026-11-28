@@ -50,6 +50,8 @@ data class QuestionDto(
     val createdAt: Long = 0L,
     val updatedAt: Long = 0L,
     val tagIds: List<Long> = emptyList(),
+    /** 题目插图的相对路径（几何图等），随备份一起打包 */
+    val figures: List<String> = emptyList(),
 )
 
 @Serializable

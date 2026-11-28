@@ -3,8 +3,6 @@ package com.chenzixin.wrongbook.feature.scan
 import android.graphics.Bitmap
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.chenzixin.wrongbook.core.ImageUtils.rotated
-import com.chenzixin.wrongbook.core.ImageUtils.scaledToMaxSide
 import com.chenzixin.wrongbook.core.WbResult
 import com.chenzixin.wrongbook.data.local.QuestionImageStore
 import com.chenzixin.wrongbook.data.local.entity.QuestionEntity
@@ -28,6 +26,7 @@ import kotlinx.coroutines.launch
 @HiltViewModel
 class ScanViewModel @Inject constructor(
     private val ocr: OcrEngine,
+    private val orienter: com.chenzixin.wrongbook.data.ocr.OcrOrienter,
     private val vision: VisionQuestionSegmenter,
     private val settings: SettingsRepository,
     private val imageStore: QuestionImageStore,
@@ -49,6 +48,8 @@ class ScanViewModel @Inject constructor(
         val progress: String? = null,
         /** 本次识别用的引擎：AI 识图 / 本地识别 */
         val engine: String = "",
+        /** OCR 文本分析出的推荐标签 */
+        val suggestedTags: List<com.chenzixin.wrongbook.domain.tag.TagRecommender.Suggestion> = emptyList(),
     )
 
     private val _state = MutableStateFlow(UiState())
@@ -123,6 +124,12 @@ class ScanViewModel @Inject constructor(
                     return@launch
                 }
                 val selectable = regions.indices.filter { !regions[it].isSectionHeader }.toSet()
+                // 用全部识别文本推一次标签，纯离线规则，不花钱
+                val allText = regions.joinToString("\n") { it.text }
+                val suggested = runCatching {
+                    com.chenzixin.wrongbook.domain.tag.TagRecommender.suggest(allText)
+                }.getOrDefault(emptyList())
+
                 _state.update {
                     it.copy(
                         stage = Stage.Selecting,
@@ -131,6 +138,7 @@ class ScanViewModel @Inject constructor(
                         engine = engine,
                         message = fallbackHint,
                         bitmap = upright,
+                        suggestedTags = suggested,
                     )
                 }
             } catch (t: Throwable) {
@@ -141,29 +149,8 @@ class ScanViewModel @Inject constructor(
         }
     }
 
-    /**
-     * 自动摆正：竖图直接返回；横图用低分辨率试 0/90/270 三个方向，
-     * 取「识别出的有效字符最多」的那个（试卷文字远多于噪声，这个判据很稳）。
-     */
-    private suspend fun autoOrient(bitmap: Bitmap): Bitmap {
-        val landscape = bitmap.width > bitmap.height
-        // 竖图也可能上下颠倒（拍反了），所以竖图比 0°/180°；横图比四个方向
-        val candidates = if (landscape) listOf(0, 90, 180, 270) else listOf(0, 180)
-        val small = bitmap.scaledToMaxSide(1200)
-        var bestDeg = 0
-        var bestScore = -1
-        candidates.forEach { deg ->
-            val rotated = if (deg == 0) small else small.rotated(deg.toFloat())
-            val score = runCatching {
-                ocr.recognize(rotated).lines.sumOf { it.text.trim().count { c -> c.isLetterOrDigit() } }
-            }.getOrDefault(0)
-            if (score > bestScore) {
-                bestScore = score
-                bestDeg = deg
-            }
-        }
-        return if (bestDeg == 0) bitmap else bitmap.rotated(bestDeg.toFloat())
-    }
+    /** 自动摆正：横拍先转正（判据见 OcrOrienter）。 */
+    private suspend fun autoOrient(bitmap: Bitmap): Bitmap = orienter.upright(bitmap)
 
     fun toggleRegion(index: Int) = _state.update { s ->
         val next = if (index in s.selected) s.selected - index else s.selected + index
@@ -250,5 +237,25 @@ class ScanViewModel @Inject constructor(
 
     fun reset() {
         _state.update { UiState(tags = it.tags) }
+    }
+
+    /** 采纳推荐标签：同名标签存在就直接勾选，不存在则新建后勾选。 */
+    fun applySuggestedTag(name: String) {
+        viewModelScope.launch {
+            val existing = _state.value.tags.firstOrNull { it.name.equals(name, ignoreCase = true) }
+            if (existing != null) {
+                if (existing.id !in _state.value.selectedTagIds) toggleTag(existing.id)
+                return@launch
+            }
+            when (val r = tagRepo.create(name = name)) {
+                is WbResult.Ok -> {
+                    val latest = runCatching { tagRepo.observeAll().first() }.getOrDefault(emptyList())
+                    _state.update {
+                        it.copy(tags = latest, selectedTagIds = it.selectedTagIds + r.value)
+                    }
+                }
+                is WbResult.Err -> _state.update { it.copy(message = r.message) }
+            }
+        }
     }
 }

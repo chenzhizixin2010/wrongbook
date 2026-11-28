@@ -8,6 +8,14 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.defaultMinSize
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material3.Button as M3Button
+import androidx.compose.material3.ButtonDefaults as M3ButtonDefaults
+import androidx.compose.material3.FilledTonalButton
+import androidx.compose.material3.MaterialTheme as M3MaterialTheme
+import androidx.compose.material3.Text as M3Text
+import androidx.compose.material3.TextButton as M3TextButton
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -48,7 +56,27 @@ fun WbPrimaryButton(
     icon: ImageVector? = null,
 ) {
     val style = wbUiStyle()
-    if (style == UiStyle.IOS || style == UiStyle.V090 || style == UiStyle.MD3E) {
+    if (style == UiStyle.MD3E) {
+        val colors = M3MaterialTheme.colorScheme
+        M3Button(
+            onClick = onClick,
+            modifier = modifier.heightIn(min = 56.dp),
+            enabled = enabled,
+            shape = CircleShape,
+            colors = M3ButtonDefaults.buttonColors(
+                containerColor = colors.primary,
+                contentColor = colors.onPrimary,
+            ),
+        ) {
+            if (icon != null) {
+                WbIcon(icon, null, Modifier.size(19.dp), colors.onPrimary)
+                Spacer(Modifier.width(7.dp))
+            }
+            M3Text(text = text, style = M3MaterialTheme.typography.titleMedium)
+        }
+        return
+    }
+    if (style == UiStyle.IOS || style == UiStyle.V090) {
         val c = wbColors()
         IosButton(
             text = text,
@@ -101,7 +129,18 @@ fun WbSecondaryButton(
     enabled: Boolean = true,
     fontSize: Int = 17,
 ) {
-    if (wbUiStyle() == UiStyle.IOS || wbUiStyle() == UiStyle.V090 || wbUiStyle() == UiStyle.MD3E) {
+    if (wbUiStyle() == UiStyle.MD3E) {
+        FilledTonalButton(
+            onClick = onClick,
+            modifier = modifier.heightIn(min = 56.dp),
+            enabled = enabled,
+            shape = CircleShape,
+        ) {
+            M3Text(text = text, style = M3MaterialTheme.typography.titleMedium)
+        }
+        return
+    }
+    if (wbUiStyle() == UiStyle.IOS || wbUiStyle() == UiStyle.V090) {
         val c = wbColors()
         IosButton(
             text = text,
@@ -138,7 +177,23 @@ fun WbDangerButton(
     enabled: Boolean = true,
     fontSize: Int = 17,
 ) {
-    if (wbUiStyle() == UiStyle.IOS || wbUiStyle() == UiStyle.V090 || wbUiStyle() == UiStyle.MD3E) {
+    if (wbUiStyle() == UiStyle.MD3E) {
+        val colors = M3MaterialTheme.colorScheme
+        M3Button(
+            onClick = onClick,
+            modifier = modifier.heightIn(min = 56.dp),
+            enabled = enabled,
+            shape = CircleShape,
+            colors = M3ButtonDefaults.buttonColors(
+                containerColor = colors.error,
+                contentColor = colors.onError,
+            ),
+        ) {
+            M3Text(text = text, style = M3MaterialTheme.typography.titleMedium)
+        }
+        return
+    }
+    if (wbUiStyle() == UiStyle.IOS || wbUiStyle() == UiStyle.V090) {
         val c = wbColors()
         IosButton(
             text = text,
@@ -180,7 +235,20 @@ fun WbTextButton(
     color: Color? = null,
     fontSize: Int = 15,
 ) {
-    if (wbUiStyle() == UiStyle.IOS || wbUiStyle() == UiStyle.V090 || wbUiStyle() == UiStyle.MD3E) {
+    if (wbUiStyle() == UiStyle.MD3E) {
+        M3TextButton(
+            onClick = onClick,
+            modifier = modifier,
+            enabled = enabled,
+            colors = M3ButtonDefaults.textButtonColors(
+                contentColor = color ?: M3MaterialTheme.colorScheme.primary,
+            ),
+        ) {
+            M3Text(text = text, style = M3MaterialTheme.typography.labelLarge)
+        }
+        return
+    }
+    if (wbUiStyle() == UiStyle.IOS || wbUiStyle() == UiStyle.V090) {
         val c = wbColors()
         Row(
             modifier = modifier
@@ -221,7 +289,17 @@ fun WbContentButton(
     enabled: Boolean = true,
     content: @Composable RowScope.() -> Unit,
 ) {
-    if (wbUiStyle() == UiStyle.IOS || wbUiStyle() == UiStyle.V090 || wbUiStyle() == UiStyle.MD3E) {
+    if (wbUiStyle() == UiStyle.MD3E) {
+        M3Button(
+            onClick = onClick,
+            modifier = modifier.heightIn(min = 56.dp),
+            enabled = enabled,
+            shape = CircleShape,
+            content = content,
+        )
+        return
+    }
+    if (wbUiStyle() == UiStyle.IOS || wbUiStyle() == UiStyle.V090) {
         val c = wbColors()
         Row(
             modifier = modifier

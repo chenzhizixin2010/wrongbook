@@ -7,6 +7,7 @@ import com.chenzixin.wrongbook.core.WbResult
 import com.chenzixin.wrongbook.data.prefs.UpdatePrefs
 import com.chenzixin.wrongbook.data.update.UpdateInfo
 import com.chenzixin.wrongbook.data.update.UpdateRepository
+import com.chenzixin.wrongbook.domain.update.UpdateChannel
 import com.chenzixin.wrongbook.domain.update.UpdateLevel
 import com.chenzixin.wrongbook.domain.update.UpdateLevelClassifier
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -36,6 +37,7 @@ class UpdateCheckViewModel @Inject constructor(
         val info: UpdateInfo? = null,
         val level: UpdateLevel = UpdateLevel.NONE,
         val showDialog: Boolean = false,
+        val channel: UpdateChannel = UpdateChannel.DEFAULT,
     )
 
     private val _state = MutableStateFlow(UiState())
@@ -47,12 +49,14 @@ class UpdateCheckViewModel @Inject constructor(
         if (started) return
         started = true
         viewModelScope.launch {
-            val beta = runCatching { appPrefs.betaChannel.first() }.getOrDefault(false)
+            val channel = runCatching { appPrefs.updateChannel.first() }
+                .getOrDefault(UpdateChannel.DEFAULT)
             val result = repo.check(
                 owner = BuildConfig.GITHUB_OWNER,
                 repo = BuildConfig.GITHUB_REPO,
                 currentVersion = BuildConfig.VERSION_NAME,
-                includePrerelease = beta,
+                channel = channel,
+                alphaRepo = BuildConfig.ALPHA_GITHUB_REPO,
             )
             val info = (result as? WbResult.Ok)?.value ?: return@launch
             val level = UpdateLevelClassifier.classify(BuildConfig.VERSION_NAME, info.version)
@@ -60,8 +64,11 @@ class UpdateCheckViewModel @Inject constructor(
             _state.value = UiState(
                 info = info,
                 level = level,
-                // Beta 通道收到预发布版本时，无论版本级别一律弹窗
-                showDialog = info.isPrerelease || (level == UpdateLevel.MAJOR && dismissed != info.version),
+                channel = channel,
+                // 测试通道（Beta / Alpha）收到测试版时，无论版本级别一律弹窗
+                showDialog = info.isPrerelease ||
+                    info.isAlpha ||
+                    (level == UpdateLevel.MAJOR && dismissed != info.version),
             )
         }
     }

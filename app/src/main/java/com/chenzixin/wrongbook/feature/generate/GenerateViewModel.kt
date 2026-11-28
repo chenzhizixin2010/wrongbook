@@ -25,6 +25,7 @@ class GenerateViewModel @Inject constructor(
     private val tagRepo: TagRepository,
     private val settings: SettingsRepository,
     private val sheetStore: PracticeSheetStore,
+    private val appPrefs: com.chenzixin.wrongbook.data.prefs.AppPrefs,
 ) : ViewModel() {
 
     data class UiState(
@@ -34,7 +35,10 @@ class GenerateViewModel @Inject constructor(
         val count: Int = 10,
         val withAnswers: Boolean = true,
         val useAi: Boolean = false,
+        val webSearch: Boolean = true,
         val generating: Boolean = false,
+        /** 生成过程中的阶段文案，例如「按考点出题…」 */
+        val stage: String? = null,
         val html: String? = null,
         val sheetTitle: String = "错题巩固练习",
         val message: String? = null,
@@ -62,6 +66,11 @@ class GenerateViewModel @Inject constructor(
             _state.update { it.copy(aiAvailable = available) }
             refreshHistory()
         }
+        viewModelScope.launch {
+            runCatching { appPrefs.aiWebSearch.first() }.onSuccess { on ->
+                _state.update { it.copy(webSearch = on) }
+            }
+        }
     }
 
     fun toggleTag(id: Long) = _state.update { s ->
@@ -75,6 +84,11 @@ class GenerateViewModel @Inject constructor(
     fun setWithAnswers(value: Boolean) = _state.update { it.copy(withAnswers = value) }
 
     fun setUseAi(value: Boolean) = _state.update { it.copy(useAi = value) }
+
+    fun setWebSearch(value: Boolean) {
+        _state.update { it.copy(webSearch = value) }
+        viewModelScope.launch { appPrefs.setAiWebSearch(value) }
+    }
 
     fun clearSheet() = _state.update { it.copy(html = null) }
 
@@ -122,7 +136,8 @@ class GenerateViewModel @Inject constructor(
 
     private suspend fun produce(plan: PracticeRepository.Plan, fillMissing: Boolean) {
         val request = _state.value.toRequest()
-        when (val result = practiceRepo.generate(plan, request, fillMissing)) {
+        val onStage: (String) -> Unit = { text -> _state.update { it.copy(stage = text) } }
+        when (val result = practiceRepo.generate(plan, request, fillMissing, onStage)) {
             is WbResult.Ok -> {
                 val sheet = result.value.sheet
                 val html = practiceRepo.renderHtml(sheet)
@@ -139,6 +154,7 @@ class GenerateViewModel @Inject constructor(
                 _state.update {
                     it.copy(
                         generating = false,
+                        stage = null,
                         html = html,
                         warning = result.value.warning,
                         lastSheet = sheet,
@@ -146,7 +162,9 @@ class GenerateViewModel @Inject constructor(
                 }
                 refreshHistory()
             }
-            is WbResult.Err -> _state.update { it.copy(generating = false, message = result.message) }
+            is WbResult.Err -> _state.update {
+                it.copy(generating = false, stage = null, message = result.message)
+            }
         }
     }
 
@@ -156,6 +174,7 @@ class GenerateViewModel @Inject constructor(
         useAi = useAi,
         withAnswers = withAnswers,
         title = sheetTitle.ifBlank { "错题巩固练习" },
+        webSearch = webSearch,
     )
 
     // ---------------------------------------------------------------- 历史记录
@@ -195,7 +214,7 @@ class GenerateViewModel @Inject constructor(
     /** 导出 Word：返回 docx 字节；没有卷子时返回 null。 */
     fun buildDocx(): ByteArray? {
         val sheet = _state.value.lastSheet ?: return null
-        return runCatching { DocxWriter.build(sheet) }.getOrNull()
+        return runCatching { DocxWriter.build(sheet, practiceRepo::figureJpeg) }.getOrNull()
     }
 
     private fun sheetJsonOf(sheet: com.chenzixin.wrongbook.domain.generate.PracticeSheet): String =

@@ -8,8 +8,10 @@ data class UpdateInfo(
     val pageUrl: String,
     val sizeBytes: Long,
     val publishedAt: String,
-    /** GitHub 上标记为 pre-release 的版本（Beta 通道） */
+    /** GitHub 上标记为 pre-release 的版本（Beta / Alpha 通道） */
     val isPrerelease: Boolean = false,
+    /** 版本号带 Alpha 编号（`0.13.A01`），只有 Alpha 通道会收到 */
+    val isAlpha: Boolean = false,
 )
 
 /** 下载进度；[sourceLabel] 用于告诉用户这次走的是直连还是哪个镜像。 */

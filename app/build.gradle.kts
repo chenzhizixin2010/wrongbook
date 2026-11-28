@@ -19,16 +19,25 @@ android {
         applicationId = "com.chenzixin.wrongbook"
         minSdk = 24
         targetSdk = 37
-        versionCode = 14
-        versionName = "0.12.0"
+        versionCode = 16
+        versionName = "0.13.0"
 
         // 更新源：仓库信息与镜像前缀。owner/repo 也可以在设置页里改。
         buildConfigField("String", "GITHUB_OWNER", "\"chenzhizixin2010\"")
         buildConfigField("String", "GITHUB_REPO", "\"wrongbook\"")
+        // Alpha 通道走「只有 Release、没有源码」的分发仓库
+        buildConfigField("String", "ALPHA_GITHUB_REPO", "\"wrongbook-alpha\"")
         buildConfigField("String", "UPDATE_MIRRORS", "\"https://gh-proxy.org/,https://gh-proxy.com/,https://gh.monlor.com/,https://ghproxy.net/,https://ghfast.top/\"")
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables { useSupportLibrary = true }
+
+        // 只保留真机 + 主流模拟器的 ABI：
+        // - 32 位 x86 已经没有在售 Android 设备，留着白占 ~16MB（ML Kit 那套 .so 尤其大）
+        // - arm 两种 + x86_64（MuMu 模拟器就是 x86_64，走查要用）
+        ndk {
+            abiFilters += listOf("arm64-v8a", "armeabi-v7a", "x86_64")
+        }
     }
 
     signingConfigs {
@@ -71,6 +80,11 @@ android {
         resources {
             excludes += "/META-INF/{AL2.0,LGPL2.1}"
         }
+    }
+
+    androidResources {
+        // 超分模型必须原样映射进内存，压缩后 TFLite 无法 mmap
+        noCompress += "tflite"
     }
 }
 
@@ -123,6 +137,9 @@ dependencies {
 
     // 图片
     implementation(libs.coil.compose)
+
+    // 超分推理（题目插图「高清重绘」用，模型内置在 assets/models）
+    implementation(libs.tensorflow.lite)
 
     // 网络与序列化（P1 起使用）
     implementation(libs.okhttp)

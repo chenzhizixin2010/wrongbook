@@ -1,6 +1,18 @@
-package com.chenzixin.wrongbook.ui.theme
+﻿package com.chenzixin.wrongbook.ui.theme
 
+import android.os.Build
 import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.ColorScheme as M3ColorScheme
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Shapes as M3Shapes
+import androidx.compose.material3.Typography as M3Typography
+import androidx.compose.material3.darkColorScheme as m3DarkColorScheme
+import androidx.compose.material3.dynamicDarkColorScheme
+import androidx.compose.material3.dynamicLightColorScheme
+import androidx.compose.material3.lightColorScheme as m3LightColorScheme
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.unit.dp
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.remember
@@ -102,25 +114,53 @@ fun WrongBookTheme(
         )
     }
     val scheme = if (darkTheme) darkColorScheme() else lightColorScheme()
+    val context = LocalContext.current
+    val m3Scheme = remember(darkTheme, md3e, context) {
+        if (md3e) {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                if (darkTheme) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
+            } else {
+                if (darkTheme) md3eDarkScheme() else md3eLightScheme()
+            }
+        } else {
+            if (darkTheme) m3DarkColorScheme() else m3LightColorScheme()
+        }
+    }
+    val m3Shapes = remember {
+        M3Shapes(
+            extraSmall = RoundedCornerShape(8.dp),
+            small = RoundedCornerShape(12.dp),
+            medium = RoundedCornerShape(16.dp),
+            large = RoundedCornerShape(24.dp),
+            extraLarge = RoundedCornerShape(28.dp),
+        )
+    }
+    val m3Typography = remember { M3Typography() }
 
-    // 两套 provider 始终存在，只切换取值；内容树位置不变，切风格不会重置导航。
+    // 三套 provider 始终存在，只切换取值；内容树位置不变，切风格不会重置导航。
     MiuixTheme(controller = controller, textStyles = textStyles) {
         CupertinoTheme(
             colorScheme = scheme,
             shapes = Shapes(),
             typography = Typography(),
         ) {
-            val colors = when {
-                md3e -> md3eColors(darkTheme)
-                v090 -> v090Colors(darkTheme)
-                ios -> iosColors(scheme, darkTheme)
-                else -> miuixColors(MiuixTheme.colorScheme, darkTheme)
-            }
-            CompositionLocalProvider(
-                LocalWbColors provides colors,
-                LocalUiStyle provides uiStyle,
+            MaterialTheme(
+                colorScheme = m3Scheme,
+                shapes = m3Shapes,
+                typography = m3Typography,
             ) {
-                content()
+                val colors = when {
+                    md3e -> md3eColors(m3Scheme, darkTheme)
+                    v090 -> v090Colors(darkTheme)
+                    ios -> iosColors(scheme, darkTheme)
+                    else -> miuixColors(MiuixTheme.colorScheme, darkTheme)
+                }
+                CompositionLocalProvider(
+                    LocalWbColors provides colors,
+                    LocalUiStyle provides uiStyle,
+                ) {
+                    content()
+                }
             }
         }
     }
@@ -159,23 +199,70 @@ private fun miuixColors(c: Colors, dark: Boolean): WbColors = WbColors(
     dialogScrim = Color.Black.copy(alpha = 0.32f),
 )
 
-private fun md3eColors(dark: Boolean): WbColors {
-    val primary = if (dark) Color(0xFFD0BCFF) else Color(0xFF6750A4)
-    val onPrimary = if (dark) Color(0xFF381E72) else Color.White
-    val primaryContainer = if (dark) Color(0xFF4F378B) else Color(0xFFEADDFF)
-    val onPrimaryContainer = if (dark) Color(0xFFEADDFF) else Color(0xFF21005D)
-    val secondary = if (dark) Color(0xFFCCC2DC) else Color(0xFF625B71)
-    val secondaryContainer = if (dark) Color(0xFF332D41) else Color(0xFFE8DEF8)
-    val tertiary = if (dark) Color(0xFFEFB8C8) else Color(0xFF7D5260)
-    val tertiaryContainer = if (dark) Color(0xFF633B48) else Color(0xFFFFD8E4)
-    val surface = if (dark) Color(0xFF141218) else Color(0xFFFEF7FF)
-    val surfaceContainer = if (dark) Color(0xFF211F26) else Color(0xFFF3EDF7)
-    val surfaceContainerHigh = if (dark) Color(0xFF2B2930) else Color(0xFFECE6F0)
-    val onSurface = if (dark) Color(0xFFE6E0E9) else Color(0xFF1D1B20)
-    val onSurfaceVariant = if (dark) Color(0xFFCAC4D0) else Color(0xFF49454F)
-    val outline = if (dark) Color(0xFF938F99) else Color(0xFF79747E)
-    val outlineVariant = if (dark) Color(0xFF49454F) else Color(0xFFCAC4D0)
-    val error = if (dark) Color(0xFFF2B8B5) else Color(0xFFB3261E)
+private fun md3eLightScheme(): M3ColorScheme = m3LightColorScheme(
+    primary = Color(0xFF6750A4),
+    onPrimary = Color.White,
+    primaryContainer = Color(0xFFEADDFF),
+    onPrimaryContainer = Color(0xFF21005D),
+    secondary = Color(0xFF625B71),
+    onSecondary = Color.White,
+    secondaryContainer = Color(0xFFE8DEF8),
+    onSecondaryContainer = Color(0xFF1D192B),
+    tertiary = Color(0xFF7D5260),
+    onTertiary = Color.White,
+    tertiaryContainer = Color(0xFFFFD8E4),
+    onTertiaryContainer = Color(0xFF31111D),
+    background = Color(0xFFFEF7FF),
+    onBackground = Color(0xFF1D1B20),
+    surface = Color(0xFFFEF7FF),
+    onSurface = Color(0xFF1D1B20),
+    surfaceVariant = Color(0xFFE7E0EC),
+    onSurfaceVariant = Color(0xFF49454F),
+    outline = Color(0xFF79747E),
+    outlineVariant = Color(0xFFCAC4D0),
+    error = Color(0xFFB3261E),
+    onError = Color.White,
+)
+
+private fun md3eDarkScheme(): M3ColorScheme = m3DarkColorScheme(
+    primary = Color(0xFFD0BCFF),
+    onPrimary = Color(0xFF381E72),
+    primaryContainer = Color(0xFF4F378B),
+    onPrimaryContainer = Color(0xFFEADDFF),
+    secondary = Color(0xFFCCC2DC),
+    onSecondary = Color(0xFF332D41),
+    secondaryContainer = Color(0xFF332D41),
+    onSecondaryContainer = Color(0xFFE8DEF8),
+    tertiary = Color(0xFFEFB8C8),
+    onTertiary = Color(0xFF492532),
+    tertiaryContainer = Color(0xFF633B48),
+    onTertiaryContainer = Color(0xFFFFD8E4),
+    background = Color(0xFF141218),
+    onBackground = Color(0xFFE6E0E9),
+    surface = Color(0xFF141218),
+    onSurface = Color(0xFFE6E0E9),
+    surfaceVariant = Color(0xFF49454F),
+    onSurfaceVariant = Color(0xFFCAC4D0),
+    outline = Color(0xFF938F99),
+    outlineVariant = Color(0xFF49454F),
+    error = Color(0xFFF2B8B5),
+    onError = Color(0xFF601410),
+)
+
+private fun md3eColors(scheme: M3ColorScheme, dark: Boolean): WbColors {
+    val primary = scheme.primary
+    val onPrimary = scheme.onPrimary
+    val primaryContainer = scheme.primaryContainer
+    val secondaryContainer = scheme.secondaryContainer
+    val tertiary = scheme.tertiary
+    val tertiaryContainer = scheme.tertiaryContainer
+    val surface = scheme.surface
+    val surfaceContainer = scheme.surfaceContainer
+    val surfaceContainerHigh = scheme.surfaceContainerHigh
+    val onSurface = scheme.onSurface
+    val onSurfaceVariant = scheme.onSurfaceVariant
+    val outlineVariant = scheme.outlineVariant
+    val error = scheme.error
 
     return WbColors(
         tint = primary,

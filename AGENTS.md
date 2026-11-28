@@ -75,6 +75,7 @@
 | 图片 | Coil 3 | 3.6.3 | `io.coil-kt.coil3:coil-compose` |
 | 序列化 | kotlinx.serialization | 1.13.0 | |
 | Markdown | Markwon + ext-latex + JLatexMath | 4.6.2 / 0.2.0 | 离线渲染公式 |
+| 超分 | `org.tensorflow:tensorflow-lite` + 内置 EDSR×4 | 2.17.0 / Apache-2.0 | 插图高清重绘；模型在 `assets/models/edsr_x4.tflite`，分块见 `domain/sr/TilingPlanner` |
 
 `minSdk = 24`，JVM target 17。
 
@@ -104,6 +105,7 @@ app/src/main/java/com/chenzixin/wrongbook/
 │   ├── export/           备份 DTO 与 ZIP 读写
 │   ├── security/         Keystore AES/GCM
 │   ├── prefs/             主题与更新提示的 DataStore
+│   ├── ml/                本地模型推理（超分 EDSR×4）
 │   └── generate/          练习卷生成
 ├── domain/               UseCase：SegmentQuestions、SaveQuestions、ReviewScheduler、RefineQuestion
 ├── feature/{home,scan,chat,generate,detail,tag,settings,export,stats,update}/
@@ -242,6 +244,7 @@ data class QuestionRegion(
 - ❌ 禁止为「四套皮肤」复制四份页面；必须共用 ViewModel 与语义组件
 - ❌ 禁止把每个 ListItem 包在独立的大圆角卡片里。必须用标准内嵌列表（Card/Inset List）或 Miuix 标准组件
 - ❌ 禁止悬浮胶囊底部导航；Miuix / iOS 必须贴底，仅 0.9.0 皮肤允许复古悬浮胶囊
+- ✅ MD3E 必须优先使用 `androidx.compose.material3` 官方组件（NavigationBar/ListItem/FilterChip/Switch/TextField/AlertDialog/TopAppBar/Button）；禁止用自绘 Box 冒充
 - ❌ 禁止随意设置字号；Miuix 必须用 `textStyles` 且大标题 ≤28sp；iOS 用 Cupertino 字阶、MD3E 用 M3 字阶
 - ❌ 禁止散落硬编码颜色；Miuix 只用 `MiuixTheme.colorScheme`，iOS 用 `iosColors()`、0.9.0 用 `v090Colors()`、MD3E 用 `md3eColors()` 集中调色板
 
@@ -280,7 +283,10 @@ gradle :app:assembleDebug :app:testDebugUnitTest
 ## 13. 发版约定（每次发版都要照做）
 
 1. `app/build.gradle.kts`：`versionCode` +1，`versionName` 改成新版本。
-2. **写更新日志**：`docs/release-notes/<tag>.md`（例如 `v0.4.1.md`）。
+   - 正式版 / Beta：`0.13.0`
+   - **Alpha 内测**：`0.13.A01`、`0.13.A02`…（第 3 段 = `A` + 两位内测序号）
+   - tag 必须与 `versionName` 完全一致（CI 会校验，不一致直接失败）
+2. **写更新日志**：`docs/release-notes/<tag>.md`（例如 `v0.13.A01.md`）。
    - CI 会把这个文件作为 Release 正文；
    - App 的「大版本更新弹窗」和「检查更新」页显示的就是它，所以要用**用户能看懂的中文**，`## 新增 / ## 修复 / ## 移除` 分块。
 3. 本地验证：`gradle :app:assembleDebug :app:testDebugUnitTest`。
@@ -288,3 +294,14 @@ gradle :app:assembleDebug :app:testDebugUnitTest
 5. 发布后核对：Release 里有 `wrongbook-<tag>.apk`，且正文是中文更新日志。
 
 > 更新提示分级：主版本/次版本变化弹「建议更新」；只有修订号变化不弹窗。
+> 版本计划（设置 → 关于 → 测试版计划）三档，默认 **Beta**：
+> - 正式版：只收非 pre-release
+> - Beta：收 pre-release，但**不收** Alpha（`0.13.A01`）
+> - Alpha：全收
+>
+> 通道过滤逻辑在 `domain/update/UpdateChannel.kt`，版本比较在 `VersionComparator.kt`（正式版 > 同号 Alpha）。
+> 测试版更新一律弹窗，不看版本级别。
+>
+> **Alpha 的包不在主仓库**：发到 `chenzhizixin2010/wrongbook-alpha`（只有 Release，不含源码），
+> 由 `.github/workflows/alpha.yml` 发布，需要仓库 Secret `ALPHA_TOKEN`（对该仓库有 contents:write 的 PAT）。
+> 主仓库的 `release.yml` 显式跳过 `.A` 的 tag，两条链路互不覆盖。

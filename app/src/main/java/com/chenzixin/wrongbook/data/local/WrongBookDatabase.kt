@@ -5,12 +5,14 @@ import androidx.room.RoomDatabase
 import com.chenzixin.wrongbook.data.local.dao.ApiProfileDao
 import com.chenzixin.wrongbook.data.local.dao.ChatDao
 import com.chenzixin.wrongbook.data.local.dao.QuestionDao
+import com.chenzixin.wrongbook.data.local.dao.QuestionImageDao
 import com.chenzixin.wrongbook.data.local.dao.QuestionTagCrossRefDao
 import com.chenzixin.wrongbook.data.local.dao.TagDao
 import com.chenzixin.wrongbook.data.local.entity.ApiProfileEntity
 import com.chenzixin.wrongbook.data.local.entity.ChatMessageEntity
 import com.chenzixin.wrongbook.data.local.entity.ChatSessionEntity
 import com.chenzixin.wrongbook.data.local.entity.QuestionEntity
+import com.chenzixin.wrongbook.data.local.entity.QuestionImageEntity
 import com.chenzixin.wrongbook.data.local.entity.QuestionTagCrossRef
 import com.chenzixin.wrongbook.data.local.entity.TagEntity
 
@@ -29,8 +31,9 @@ import com.chenzixin.wrongbook.data.local.entity.TagEntity
         ApiProfileEntity::class,
         ChatSessionEntity::class,
         ChatMessageEntity::class,
+        QuestionImageEntity::class,
     ],
-    version = 1,
+    version = 2,
     exportSchema = true,
 )
 abstract class WrongBookDatabase : RoomDatabase() {
@@ -43,4 +46,6 @@ abstract class WrongBookDatabase : RoomDatabase() {
 
     abstract fun apiProfileDao(): ApiProfileDao
     abstract fun chatDao(): ChatDao
+
+    abstract fun questionImageDao(): QuestionImageDao
 }

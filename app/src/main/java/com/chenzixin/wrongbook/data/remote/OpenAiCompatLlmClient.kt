@@ -15,6 +15,7 @@ import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.buildJsonArray
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
+import kotlinx.serialization.json.addJsonObject
 import kotlinx.serialization.json.putJsonArray
 import kotlinx.serialization.json.putJsonObject
 import okhttp3.MediaType.Companion.toMediaType
@@ -91,9 +92,18 @@ class OpenAiCompatLlmClient @Inject constructor(
         messages: List<ChatMsg>,
         jsonMode: Boolean,
         maxTokens: Int?,
+        webSearch: Boolean,
     ): WbResult<String> = withContext(io) {
         try {
-            val request = buildRequest(profile, apiKey, messages, stream = false, jsonMode = jsonMode, maxTokens = maxTokens)
+            val request = buildRequest(
+                profile = profile,
+                apiKey = apiKey,
+                messages = messages,
+                stream = false,
+                jsonMode = jsonMode,
+                maxTokens = maxTokens,
+                webSearch = webSearch,
+            )
             client.newCall(request).execute().use { response ->
                 val text = response.body.string()
                 if (!response.isSuccessful) {
@@ -136,6 +146,7 @@ class OpenAiCompatLlmClient @Inject constructor(
         stream: Boolean,
         jsonMode: Boolean,
         maxTokens: Int?,
+        webSearch: Boolean = false,
     ): Request {
         val url = endpointOf(profile.baseUrl)
         val payload = buildJsonObject {
@@ -152,6 +163,12 @@ class OpenAiCompatLlmClient @Inject constructor(
             if (budget > 0) put("max_tokens", budget)
             if (jsonMode) {
                 putJsonObject("response_format") { put("type", "json_object") }
+            }
+            // 服务端内置检索：认的服务端会去搜真实题目/资料，不认的回 400（调用方去掉重试）
+            if (webSearch) {
+                putJsonArray("tools") {
+                    addJsonObject { put("type", "web_search") }
+                }
             }
             put("messages", buildJsonArray {
                 messages.forEach { msg -> add(messageJson(msg)) }

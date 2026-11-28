@@ -95,7 +95,7 @@ fun AboutDeveloperScreen(
                 )
             }
 
-            WbSection(header = "版本与更新", footer = "预发布版本（Beta）需要在设置里打开 Beta 计划才会推送。") {
+            WbSection(header = "版本与更新", footer = "版本计划在 设置 → 关于 → 测试版计划：正式版 / Beta / Alpha 三档，默认 Beta。") {
                 WbListRow(
                     title = "检查更新",
                     subtitle = "从 GitHub Releases 拉取",
@@ -120,6 +120,8 @@ fun AboutDeveloperScreen(
                         "ML Kit 中文 OCR" to "Google 条款",
                         "Markwon + JLatexMath" to "Apache-2.0 / MIT",
                         "Coil 3" to "Apache-2.0",
+                        "TensorFlow Lite" to "Apache-2.0",
+                        "EDSR ×4 超分模型" to "Apache-2.0",
                     ).forEach { (name, license) ->
                         Row(
                             modifier = Modifier

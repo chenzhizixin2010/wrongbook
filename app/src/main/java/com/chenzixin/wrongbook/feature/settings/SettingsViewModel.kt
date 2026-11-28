@@ -24,6 +24,7 @@ class SettingsViewModel @Inject constructor(
     private val themePrefs: ThemePrefs,
     private val maintenance: ImageMaintenance,
     private val appPrefs: com.chenzixin.wrongbook.data.prefs.AppPrefs,
+    private val superResolutionEngine: com.chenzixin.wrongbook.data.ml.SuperResolutionEngine,
 ) : ViewModel() {
 
     val splashEnabled: StateFlow<Boolean> = appPrefs.splashEnabled.stateIn(
@@ -32,18 +33,56 @@ class SettingsViewModel @Inject constructor(
         initialValue = true,
     )
 
-    val betaChannel: StateFlow<Boolean> = appPrefs.betaChannel.stateIn(
-        scope = viewModelScope,
-        started = SharingStarted.WhileSubscribed(5_000),
-        initialValue = false,
-    )
+    val updateChannel: StateFlow<com.chenzixin.wrongbook.domain.update.UpdateChannel> =
+        appPrefs.updateChannel.stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5_000),
+            initialValue = com.chenzixin.wrongbook.domain.update.UpdateChannel.DEFAULT,
+        )
 
     fun setSplashEnabled(value: Boolean) {
         viewModelScope.launch { appPrefs.setSplashEnabled(value) }
     }
 
-    fun setBetaChannel(value: Boolean) {
-        viewModelScope.launch { appPrefs.setBetaChannel(value) }
+    fun setUpdateChannel(channel: com.chenzixin.wrongbook.domain.update.UpdateChannel) {
+        viewModelScope.launch { appPrefs.setUpdateChannel(channel) }
+    }
+
+    // ---------------------------------------------------------------- 超分模型
+
+    val superResolution: StateFlow<Boolean> = appPrefs.superResolution.stateIn(
+        scope = viewModelScope,
+        started = SharingStarted.WhileSubscribed(5_000),
+        initialValue = true,
+    )
+
+    /** 模型一句话描述：进设置页后才在后台算，不在构造期碰磁盘/模型。 */
+    private val _srInfo = MutableStateFlow("EDSR ×4 · 内置模型")
+    val srInfo: StateFlow<String> = _srInfo.asStateFlow()
+
+    init {
+        viewModelScope.launch {
+            _srInfo.value = runCatching { superResolutionEngine.describe() }
+                .getOrDefault("EDSR ×4 · 内置模型")
+        }
+    }
+
+    private val _srTest = MutableStateFlow<String?>(null)
+    val srTest: StateFlow<String?> = _srTest.asStateFlow()
+
+    fun setSuperResolution(value: Boolean) {
+        viewModelScope.launch { appPrefs.setSuperResolution(value) }
+    }
+
+    /** 在这台机器上真跑一次模型，把耗时/失败原因告诉用户。 */
+    fun runSrSelfTest() {
+        _srTest.value = "自检中…（最多几秒）"
+        viewModelScope.launch {
+            _srTest.value = when (val r = superResolutionEngine.selfTest()) {
+                is WbResult.Ok -> "模型可用：一张 128×128 用时 ${r.value} ms"
+                is WbResult.Err -> r.message
+            }
+        }
     }
 
     /** 图片重处理进度；null 表示没在跑。 */

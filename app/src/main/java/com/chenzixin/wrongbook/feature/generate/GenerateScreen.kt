@@ -1,4 +1,4 @@
-﻿package com.chenzixin.wrongbook.feature.generate
+package com.chenzixin.wrongbook.feature.generate
 
 import android.content.Context
 import android.print.PrintAttributes
@@ -75,6 +75,7 @@ fun GenerateScreen(vm: GenerateViewModel = hiltViewModel()) {
             onCount = vm::setCount,
             onWithAnswers = vm::setWithAnswers,
             onUseAi = vm::setUseAi,
+            onWebSearch = vm::setWebSearch,
             onTitle = vm::onTitleChange,
             onGenerate = vm::generate,
         )
@@ -98,6 +99,17 @@ fun GenerateScreen(vm: GenerateViewModel = hiltViewModel()) {
             onDismiss = vm::clearMessage,
         )
     }
+
+    if (state.warning != null) {
+        WbAlertDialog(
+            visible = true,
+            title = "出题提示",
+            message = state.warning,
+            confirmText = "知道了",
+            onConfirm = vm::dismissWarning,
+            onDismiss = vm::dismissWarning,
+        )
+    }
 }
 
 @Composable
@@ -108,6 +120,7 @@ private fun SetupContent(
     onCount: (Int) -> Unit,
     onWithAnswers: (Boolean) -> Unit,
     onUseAi: (Boolean) -> Unit,
+    onWebSearch: (Boolean) -> Unit,
     onTitle: (String) -> Unit,
     onGenerate: () -> Unit,
 ) {
@@ -194,9 +207,9 @@ private fun SetupContent(
             )
             WbListRow(
                 title = "AI 同类题",
-                subtitle = "换个数字再练；失败自动回退为整理错题",
+                subtitle = "先分析考点再出题，自动质检；失败自动回退为整理错题",
                 onClick = { onUseAi(true) },
-                showDivider = false,
+                showDivider = state.useAi,
                 trailing = {
                     if (state.useAi) {
                         WbIcon(
@@ -208,6 +221,14 @@ private fun SetupContent(
                     }
                 },
             )
+            if (state.useAi) {
+                WbSwitchRow(
+                    title = "联网搜题",
+                    summary = "模型支持联网检索时会先查真实题目；不支持会自动改用本地题型库",
+                    checked = state.webSearch,
+                    onCheckedChange = onWebSearch,
+                )
+            }
         }
 
         WbSection(header = "题量与答案") {
@@ -245,7 +266,11 @@ private fun SetupContent(
         Spacer(Modifier.height(16.dp))
 
         WbPrimaryButton(
-            text = if (state.generating) "生成中…" else "生成练习卷",
+            text = when {
+                !state.generating -> "生成练习卷"
+                state.stage != null -> state.stage
+                else -> "生成中…"
+            },
             onClick = onGenerate,
             modifier = Modifier
                 .fillMaxWidth()

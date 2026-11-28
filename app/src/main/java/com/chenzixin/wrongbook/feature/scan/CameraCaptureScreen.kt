@@ -158,6 +158,7 @@ private fun CameraCaptureContent(
                 onInvert = vm::invertSelection,
                 onToggleTag = vm::toggleTag,
                 onCreateTag = vm::createTag,
+                onApplySuggestedTag = vm::applySuggestedTag,
                 onSave = vm::save,
                 onDiscard = vm::discard,
             )
@@ -489,6 +490,7 @@ private fun SelectionStage(
     onInvert: () -> Unit,
     onToggleTag: (Long) -> Unit,
     onCreateTag: (String) -> Unit,
+    onApplySuggestedTag: (String) -> Unit,
     onSave: () -> Unit,
     onDiscard: () -> Unit,
 ) {
@@ -566,6 +568,35 @@ private fun SelectionStage(
                         onClick = { showTagDialog = true },
                         onLight = true,
                     )
+                }
+
+                // OCR 文本自动推荐的标签：点一下即建/选
+                if (state.suggestedTags.isNotEmpty()) {
+                    Spacer(Modifier.height(8.dp))
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .horizontalScroll(rememberScrollState()),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        com.chenzixin.wrongbook.ui.component.WbText(
+                            text = "推荐：",
+                            fontSize = 12.sp,
+                            color = com.chenzixin.wrongbook.ui.theme.wbColors().secondaryLabel,
+                        )
+                        state.suggestedTags.forEach { suggestion ->
+                            com.chenzixin.wrongbook.ui.component.WbChip(
+                                label = suggestion.name,
+                                selected = state.tags.any {
+                                    it.name.equals(suggestion.name, ignoreCase = true) &&
+                                        it.id in state.selectedTagIds
+                                },
+                                onClick = { onApplySuggestedTag(suggestion.name) },
+                                onLight = true,
+                            )
+                        }
+                    }
                 }
             }
             Spacer(Modifier.height(12.dp))

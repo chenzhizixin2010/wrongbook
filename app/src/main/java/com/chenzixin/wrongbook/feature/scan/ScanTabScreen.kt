@@ -1,5 +1,7 @@
 ﻿package com.chenzixin.wrongbook.feature.scan
 
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -7,11 +9,13 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -21,7 +25,9 @@ import com.chenzixin.wrongbook.ui.component.WbPageHeader
 import com.chenzixin.wrongbook.ui.component.WbPrimaryButton
 import com.chenzixin.wrongbook.ui.component.WbSection
 import com.chenzixin.wrongbook.ui.component.WbText
+import com.chenzixin.wrongbook.data.prefs.UiStyle
 import com.chenzixin.wrongbook.ui.theme.wbColors
+import com.chenzixin.wrongbook.ui.theme.wbUiStyle
 import top.yukonga.miuix.kmp.icon.MiuixIcons
 import top.yukonga.miuix.kmp.icon.extended.Notes
 import top.yukonga.miuix.kmp.icon.extended.Ok
@@ -57,12 +63,29 @@ fun ScanTabScreen(onStartCapture: () -> Unit) {
                 .padding(horizontal = 32.dp, vertical = 32.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
-            WbIcon(
-                imageVector = MiuixIcons.Scan,
-                contentDescription = null,
-                modifier = Modifier.size(64.dp),
-                tint = c.accent,
-            )
+            if (wbUiStyle() == UiStyle.MD3E) {
+                Box(
+                    modifier = Modifier
+                        .size(104.dp)
+                        .clip(RoundedCornerShape(34.dp))
+                        .background(c.tintSoft),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    WbIcon(
+                        imageVector = MiuixIcons.Scan,
+                        contentDescription = null,
+                        modifier = Modifier.size(48.dp),
+                        tint = c.accent,
+                    )
+                }
+            } else {
+                WbIcon(
+                    imageVector = MiuixIcons.Scan,
+                    contentDescription = null,
+                    modifier = Modifier.size(64.dp),
+                    tint = c.accent,
+                )
+            }
             Spacer(Modifier.height(16.dp))
             WbText(
                 text = "把整页错题拍下来",

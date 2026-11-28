@@ -25,6 +25,10 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.MaterialTheme as M3MaterialTheme
+import androidx.compose.material3.Text as M3Text
+import androidx.compose.material3.TextButton as M3TextButton
 import com.chenzixin.wrongbook.data.prefs.UiStyle
 import com.chenzixin.wrongbook.ui.theme.wbColors
 import com.chenzixin.wrongbook.ui.theme.wbUiStyle
@@ -51,45 +55,37 @@ fun WbInputDialog(
     val c = wbColors()
 
     if (md3e) {
-        Dialog(onDismissRequest = onDismiss) {
-            WbSurface(
-                modifier = Modifier.width(320.dp),
-                cornerRadius = 28.dp,
-                elevation = 12.dp,
-                underlay = c.cardBackground,
-            ) {
-                Column(modifier = Modifier.padding(24.dp)) {
-                    WbText(
-                        text = title,
-                        fontSize = 24.sp,
-                        color = c.label,
-                    )
-                    Spacer(Modifier.height(16.dp))
-                    WbTextField(
-                        value = value,
-                        onValueChange = { value = it },
-                        placeholder = placeholder,
-                        singleLine = !multiline,
-                    )
-                    Spacer(Modifier.height(20.dp))
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.End,
-                    ) {
-                        WbTextButton(text = "取消", onClick = onDismiss)
-                        Spacer(Modifier.width(4.dp))
-                        WbTextButton(
-                            text = confirmText,
-                            onClick = {
-                                val trimmed = value.trim()
-                                if (trimmed.isNotEmpty()) onConfirm(trimmed)
-                            },
-                            color = c.accent,
-                        )
-                    }
+        AlertDialog(
+            onDismissRequest = onDismiss,
+            title = {
+                M3Text(text = title, style = M3MaterialTheme.typography.headlineSmall)
+            },
+            text = {
+                WbTextField(
+                    value = value,
+                    onValueChange = { value = it },
+                    placeholder = placeholder,
+                    singleLine = !multiline,
+                )
+            },
+            confirmButton = {
+                M3TextButton(
+                    onClick = {
+                        val trimmed = value.trim()
+                        if (trimmed.isNotEmpty()) onConfirm(trimmed)
+                    },
+                ) {
+                    M3Text(text = confirmText)
                 }
-            }
-        }
+            },
+            dismissButton = {
+                M3TextButton(onClick = onDismiss) {
+                    M3Text(text = "取消")
+                }
+            },
+            shape = M3MaterialTheme.shapes.extraLarge,
+            containerColor = M3MaterialTheme.colorScheme.surfaceContainerHigh,
+        )
         return
     }
 

@@ -42,6 +42,9 @@ import com.chenzixin.wrongbook.feature.detail.QuestionDetailScreen
 import com.chenzixin.wrongbook.feature.export.ExportScreen
 import com.chenzixin.wrongbook.feature.export.ImportScreen
 import com.chenzixin.wrongbook.feature.generate.GenerateScreen
+import com.chenzixin.wrongbook.feature.guide.FirstRunGuide
+import com.chenzixin.wrongbook.feature.guide.GuideViewModel
+import com.chenzixin.wrongbook.feature.guide.UserGuideScreen
 import com.chenzixin.wrongbook.feature.home.HomeTabScreen
 import com.chenzixin.wrongbook.feature.scan.CameraCaptureScreen
 import com.chenzixin.wrongbook.feature.scan.ScanTabScreen
@@ -49,6 +52,11 @@ import com.chenzixin.wrongbook.feature.settings.ProfileEditScreen
 import com.chenzixin.wrongbook.feature.settings.SettingsTabScreen
 import com.chenzixin.wrongbook.feature.settings.UpdateScreen
 import com.chenzixin.wrongbook.feature.update.UpdateCheckViewModel
+import androidx.compose.material3.MaterialTheme as M3MaterialTheme
+import androidx.compose.material3.NavigationBar as M3NavigationBar
+import androidx.compose.material3.NavigationBarItem as M3NavigationBarItem
+import androidx.compose.material3.NavigationBarItemDefaults
+import androidx.compose.material3.Text as M3Text
 import com.chenzixin.wrongbook.data.prefs.UiStyle
 import com.chenzixin.wrongbook.ui.component.UpdateRecommendedDialog
 import com.chenzixin.wrongbook.ui.component.WbDivider
@@ -59,6 +67,8 @@ import com.chenzixin.wrongbook.ui.component.WbText
 import com.chenzixin.wrongbook.ui.theme.wbColors
 import com.chenzixin.wrongbook.ui.theme.wbUiStyle
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.filterNotNull
+import kotlinx.coroutines.flow.first
 import top.yukonga.miuix.kmp.basic.NavigationBar
 import top.yukonga.miuix.kmp.basic.NavigationBarItem
 import top.yukonga.miuix.kmp.basic.Scaffold
@@ -101,6 +111,7 @@ object Routes {
     const val EXPORT = "settings/export"
     const val IMPORT = "settings/import"
     const val ABOUT_DEV = "settings/about"
+    const val GUIDE = "settings/guide"
 }
 
 /** 5 个主 Tab，图标全部来自 Miuix 图标库。 */
@@ -163,6 +174,9 @@ fun AppNavHost() {
 
     val updateVm: UpdateCheckViewModel = hiltViewModel()
     val updateState by updateVm.state.collectAsState()
+    val guideVm: GuideViewModel = hiltViewModel()
+    val guideSeen by guideVm.guideSeen.collectAsState()
+    val showFirstRunGuide = guideSeen == false
     val style = wbUiStyle()
     val ios = style == UiStyle.IOS
     val v090 = style == UiStyle.V090
@@ -171,7 +185,10 @@ fun AppNavHost() {
     LaunchedEffect(Unit) {
         // 等开屏淡出后再查更新，避免「建议更新」弹窗压在品牌页上。
         delay(1_650)
-        updateVm.checkOnce()
+        // 首次启动先看引导，这一轮不查更新，避免弹窗打断引导；
+        // 老用户（guide_seen 已为 true）照常静默检查。
+        val seen = guideVm.guideSeen.filterNotNull().first()
+        if (seen) updateVm.checkOnce()
     }
 
     WbScreenBackground {
@@ -257,6 +274,7 @@ fun AppNavHost() {
                             onOpenQuestion = { id -> navController.navigate(Routes.question(id)) },
                             onNewQuestion = { navController.navigate(Routes.MANUAL) },
                             onOpenScan = { navController.navigate(Routes.SCAN) },
+                            onOpenGuide = { navController.navigate(Routes.GUIDE) },
                         )
                     }
                 }
@@ -290,9 +308,10 @@ fun AppNavHost() {
                             onOpenTags = { navController.navigate(Routes.TAGS) },
                             onOpenUpdate = { navController.navigate(Routes.UPDATE) },
                             onOpenStats = { navController.navigate(Routes.STATS) },
-                        onOpenAboutDev = { navController.navigate(Routes.ABOUT_DEV) },
+                            onOpenAboutDev = { navController.navigate(Routes.ABOUT_DEV) },
                             onOpenExport = { navController.navigate(Routes.EXPORT) },
                             onOpenImport = { navController.navigate(Routes.IMPORT) },
+                            onOpenGuide = { navController.navigate(Routes.GUIDE) },
                         )
                     }
                 }
@@ -369,6 +388,17 @@ fun AppNavHost() {
                         ImportScreen(onBack = { navController.popBackStack() })
                     }
                 }
+                composable(Routes.GUIDE) {
+                    WbRoute {
+                        UserGuideScreen(
+                            onBack = { navController.popBackStack() },
+                            onReplayIntro = {
+                                guideVm.resetSeen()
+                                navController.popBackStack()
+                            },
+                        )
+                    }
+                }
             }
 
             val info = updateState.info
@@ -385,11 +415,22 @@ fun AppNavHost() {
             }
         }
     }
+
+    // 首次启动的用户指南盖在已经渲染好的主界面上：不参与导航，不会重置 Tab 栈。
+    if (showFirstRunGuide) {
+        FirstRunGuide(
+            onFinish = guideVm::markSeen,
+            onOpenManual = {
+                guideVm.markSeen()
+                navController.navigate(Routes.GUIDE)
+            },
+        )
+    }
     }
 }
 
 /**
- * MD3 Expressive 底部导航：贴底 + 药丸指示器 + 大图标。
+ * MD3 Expressive 底部导航：Material3 NavigationBar + 药丸指示器。
  */
 @Composable
 private fun Md3TabBar(
@@ -398,53 +439,41 @@ private fun Md3TabBar(
     onSelect: (WbTab) -> Unit,
 ) {
     val c = wbColors()
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .background(c.cardBackground),
+    M3NavigationBar(
+        containerColor = c.cardBackground,
+        tonalElevation = 0.dp,
     ) {
-        WbDivider()
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .windowInsetsPadding(WindowInsets.navigationBars)
-                .padding(top = 8.dp, bottom = 4.dp),
-            horizontalArrangement = Arrangement.SpaceEvenly,
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            tabs.forEach { tab ->
-                val selected = currentRoute == tab.route
-                Column(
-                    modifier = Modifier
-                        .weight(1f)
-                        .clickable { onSelect(tab) },
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                ) {
-                    Box(
-                        modifier = Modifier
-                            .width(64.dp)
-                            .height(32.dp)
-                            .clip(androidx.compose.foundation.shape.RoundedCornerShape(50))
-                            .background(if (selected) c.tintSoft else androidx.compose.ui.graphics.Color.Transparent),
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        WbIcon(
-                            imageVector = tab.icon,
-                            contentDescription = tab.label,
-                            modifier = Modifier.size(22.dp),
-                            tint = if (selected) c.accent else c.secondaryLabel,
-                        )
-                    }
-                    Spacer(Modifier.height(2.dp))
-                    WbText(
-                        text = tab.label,
-                        fontSize = 12.sp,
-                        fontWeight = if (selected) androidx.compose.ui.text.font.FontWeight.SemiBold else androidx.compose.ui.text.font.FontWeight.Normal,
-                        color = if (selected) c.label else c.secondaryLabel,
-                        maxLines = 1,
+        tabs.forEach { tab ->
+            val selected = currentRoute == tab.route
+            M3NavigationBarItem(
+                selected = selected,
+                onClick = { onSelect(tab) },
+                icon = {
+                    WbIcon(
+                        imageVector = tab.icon,
+                        contentDescription = tab.label,
+                        modifier = Modifier.size(24.dp),
+                        tint = if (selected) {
+                            M3MaterialTheme.colorScheme.onPrimaryContainer
+                        } else {
+                            M3MaterialTheme.colorScheme.onSurfaceVariant
+                        },
                     )
-                }
-            }
+                },
+                label = {
+                    M3Text(
+                        text = tab.label,
+                        style = M3MaterialTheme.typography.labelMedium,
+                    )
+                },
+                colors = NavigationBarItemDefaults.colors(
+                    selectedIconColor = M3MaterialTheme.colorScheme.onPrimaryContainer,
+                    selectedTextColor = M3MaterialTheme.colorScheme.onSurface,
+                    indicatorColor = M3MaterialTheme.colorScheme.primaryContainer,
+                    unselectedIconColor = M3MaterialTheme.colorScheme.onSurfaceVariant,
+                    unselectedTextColor = M3MaterialTheme.colorScheme.onSurfaceVariant,
+                ),
+            )
         }
     }
 }

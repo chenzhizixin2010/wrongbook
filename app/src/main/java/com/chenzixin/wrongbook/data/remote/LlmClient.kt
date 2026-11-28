@@ -27,6 +27,13 @@ interface LlmClient {
         messages: List<ChatMsg>,
         jsonMode: Boolean = false,
         maxTokens: Int? = null,
+        /**
+         * 是否带上服务端内置的联网检索工具（`"tools":[{"type":"web_search"}]`）。
+         *
+         * 各家兼容网关支持程度不一：认的服务端会先去搜真实题目再答，
+         * 不认的会直接回 400 —— 调用方负责去掉工具重试一次。
+         */
+        webSearch: Boolean = false,
     ): WbResult<String>
 
     /** 测试连接：返回往返耗时（毫秒）。 */

@@ -7,6 +7,7 @@ import com.chenzixin.wrongbook.core.WbResult
 import com.chenzixin.wrongbook.data.update.DownloadProgress
 import com.chenzixin.wrongbook.data.update.UpdateInfo
 import com.chenzixin.wrongbook.data.update.UpdateRepository
+import com.chenzixin.wrongbook.domain.update.UpdateChannel
 import dagger.hilt.android.lifecycle.HiltViewModel
 import java.io.File
 import javax.inject.Inject
@@ -33,6 +34,8 @@ class UpdateViewModel @Inject constructor(
         val progress: DownloadProgress? = null,
         val downloadedFile: File? = null,
         val checked: Boolean = false,
+        /** 当前版本计划，检查页显示一行说明 */
+        val channel: UpdateChannel = UpdateChannel.DEFAULT,
     )
 
     private val _state = MutableStateFlow(UiState())
@@ -50,18 +53,21 @@ class UpdateViewModel @Inject constructor(
         if (_state.value.checking) return
         _state.update { it.copy(checking = true, message = null) }
         viewModelScope.launch {
-            val beta = runCatching { appPrefs.betaChannel.first() }.getOrDefault(false)
+            val channel = runCatching { appPrefs.updateChannel.first() }
+                .getOrDefault(UpdateChannel.DEFAULT)
             val result = repo.check(
                 owner = BuildConfig.GITHUB_OWNER,
                 repo = BuildConfig.GITHUB_REPO,
                 currentVersion = BuildConfig.VERSION_NAME,
-                includePrerelease = beta,
+                channel = channel,
+                alphaRepo = BuildConfig.ALPHA_GITHUB_REPO,
             )
             when (result) {
                 is WbResult.Ok -> _state.update {
                     it.copy(
                         checking = false,
                         checked = true,
+                        channel = channel,
                         info = result.value,
                         message = if (result.value == null) "已是最新版本" else null,
                     )

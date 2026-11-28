@@ -57,6 +57,7 @@ fun ErrataMark(
     val c = MiuixTheme.colorScheme
     val wb = wbColors()
     val style = wbUiStyle()
+    val md3e = style == UiStyle.MD3E
     val ios = style == UiStyle.IOS || style == UiStyle.MD3E
     val container = when {
         onBrand -> c.onPrimary.copy(alpha = 0.14f)
@@ -71,7 +72,7 @@ fun ErrataMark(
     Box(
         modifier = modifier
             .size(size)
-            .clip(RoundedCornerShape(28.dp))
+            .clip(RoundedCornerShape(if (md3e) 14.dp else 28.dp))
             .background(container),
         contentAlignment = Alignment.Center,
     ) {

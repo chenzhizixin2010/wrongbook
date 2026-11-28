@@ -212,6 +212,76 @@ object ImageUtils {
         return out
     }
 
+
+    /**
+     * 高清重绘：把小图放大并锐化，让印刷体轮廓更清楚。
+     *
+     * 不是 AI 超分（离线、无模型），而是「双三次放大 + 反锐化掩模 + 轻度提亮」：
+     * 对扫描件/截图这类线条图效果不错，对照片只能算勉强。
+     */
+    fun Bitmap.restoreHd(targetMaxSide: Int = 2400, strength: Float = 0.55f): Bitmap {
+        val scale = (targetMaxSide.toFloat() / maxOf(width, height)).coerceIn(1f, 3f)
+        val w = (width * scale).toInt().coerceAtLeast(1)
+        val h = (height * scale).toInt().coerceAtLeast(1)
+
+        // 1) Lanczos3 放大（比双线性保留更多细节）
+        val srcPixels = IntArray(width * height)
+        getPixels(srcPixels, 0, width, 0, 0, width, height)
+        val upscaledPixels = Lanczos.upscale(srcPixels, width, height, w.toDouble() / width)
+
+        // 2) 反锐化掩模：原图 - 模糊，再加回去
+        val blurred = IntArray(w * h)
+        for (y in 0 until h) {
+            for (x in 0 until w) {
+                var r = 0
+                var g = 0
+                var b = 0
+                var count = 0
+                for (dy in -1..1) {
+                    val yy = y + dy
+                    if (yy !in 0 until h) continue
+                    for (dx in -1..1) {
+                        val xx = x + dx
+                        if (xx !in 0 until w) continue
+                        val c = upscaledPixels[yy * w + xx]
+                        r += (c shr 16) and 0xFF
+                        g += (c shr 8) and 0xFF
+                        b += c and 0xFF
+                        count++
+                    }
+                }
+                blurred[y * w + x] = (0xFF shl 24) or ((r / count) shl 16) or ((g / count) shl 8) or (b / count)
+            }
+        }
+
+        val out = IntArray(w * h)
+        for (i in upscaledPixels.indices) {
+            val a = upscaledPixels[i]
+            val bl = blurred[i]
+            fun sharp(channel: Int): Int {
+                val original = (a shr channel) and 0xFF
+                val blur = (bl shr channel) and 0xFF
+                val sharpened = original + (original - blur) * strength
+                val lifted = sharpened * 1.04f + 4f
+                return lifted.toInt().coerceIn(0, 255)
+            }
+            out[i] = (0xFF shl 24) or (sharp(16) shl 16) or (sharp(8) shl 8) or sharp(0)
+        }
+
+        val result = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888)
+        result.setPixels(out, 0, w, 0, 0, w, h)
+        return result
+    }
+
+    /** 转成 JPEG 字节：HTML 内嵌、Word 媒体部件都用它。 */
+    fun Bitmap.toJpegBytes(maxSide: Int = 900, quality: Int = 82): ByteArray {
+        val scaled = scaledToMaxSide(maxSide)
+        val out = ByteArrayOutputStream()
+        scaled.compress(Bitmap.CompressFormat.JPEG, quality, out)
+        if (scaled !== this) scaled.recycle()
+        return out.toByteArray()
+    }
+
     fun Bitmap.toWebp(quality: Int = 82): ByteArray {
         val out = ByteArrayOutputStream()
         // WEBP_LOSSY 需要 API 30+，旧机型退回 WEBP（已废弃但可用）

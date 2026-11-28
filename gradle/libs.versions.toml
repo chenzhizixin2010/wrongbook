@@ -39,6 +39,9 @@ deepseek = "0.5.0"
 mlkitTextChinese = "16.0.1"
 markwon = "4.6.2"
 jlatexmath = "0.2.0"
+# 超分推理：TFLite 2.17.0 是最后一个 org.tensorflow 官方 AAR 稳定版，
+# 内置 EDSR×4 用到的算子（ADD/CONV_2D/MUL/PAD/TRANSPOSE/DEPTH_TO_SPACE）它全支持。
+tensorflowLite = "2.17.0"
 
 # —— 测试 ——
 junit = "4.13.2"
@@ -101,6 +104,7 @@ androidx-camera-view = { module = "androidx.camera:camera-view", version.ref = "
 # AI / OCR
 deepseek-kotlin = { module = "org.oremif:deepseek-kotlin", version.ref = "deepseek" }
 mlkit-text-chinese = { module = "com.google.mlkit:text-recognition-chinese", version.ref = "mlkitTextChinese" }
+tensorflow-lite = { module = "org.tensorflow:tensorflow-lite", version.ref = "tensorflowLite" }
 
 # Markdown / LaTeX（P6 用）
 markwon-core = { module = "io.noties.markwon:core", version.ref = "markwon" }

@@ -9,6 +9,7 @@ import com.chenzixin.wrongbook.data.local.dao.QuestionTagCrossRefDao
 import com.chenzixin.wrongbook.data.local.dao.TagDao
 import com.chenzixin.wrongbook.data.local.entity.ChatSessionEntity
 import com.chenzixin.wrongbook.data.local.entity.QuestionEntity
+import com.chenzixin.wrongbook.data.local.entity.QuestionImageEntity
 import com.chenzixin.wrongbook.data.local.entity.QuestionTagCrossRef
 import com.chenzixin.wrongbook.data.local.entity.TagEntity
 import com.chenzixin.wrongbook.di.IoDispatcher
@@ -36,6 +37,8 @@ class BackupRepository @Inject constructor(
     private val questionDao: QuestionDao,
     private val tagDao: TagDao,
     private val crossRefDao: QuestionTagCrossRefDao,
+    private val questionImageDao: com.chenzixin.wrongbook.data.local.dao.QuestionImageDao,
+    private val imageStore: com.chenzixin.wrongbook.data.local.QuestionImageStore,
     private val chatDao: ChatDao,
     @IoDispatcher private val io: CoroutineDispatcher,
 ) {
@@ -67,6 +70,7 @@ class BackupRepository @Inject constructor(
                     createdAt = q.createdAt,
                     updatedAt = q.updatedAt,
                     tagIds = item.tags.map { it.id },
+                    figures = questionImageDao.listByQuestion(q.id).map { it.path },
                 )
             }
             val chatDtos = sessions.map { session ->
@@ -99,6 +103,17 @@ class BackupRepository @Inject constructor(
                     writeText("tags.json", BackupCodec.encodeTags(tags.map { it.toDto() }))
                     writeText("chats.json", BackupCodec.encodeChats(chatDtos))
 
+                    // 插图打包到 figures/，方便导入时按文件名回填
+                    questions.forEach { item ->
+                        questionImageDao.listByQuestion(item.question.id).forEach { figure ->
+                            val file = File(context.filesDir, figure.path)
+                            if (!file.exists()) return@forEach
+                            zip.putNextEntry(ZipEntry("figures/${file.name}"))
+                            file.inputStream().use { it.copyTo(zip) }
+                            zip.closeEntry()
+                        }
+                    }
+
                     questions.forEach { item ->
                         listOf(item.question.imagePath, item.question.thumbPath)
                             .filter { it.isNotBlank() }
@@ -122,6 +137,7 @@ class BackupRepository @Inject constructor(
         try {
             val texts = mutableMapOf<String, String>()
             val images = mutableMapOf<String, ByteArray>()
+            val figures = mutableMapOf<String, ByteArray>()
 
             context.contentResolver.openInputStream(uri)?.use { input ->
                 ZipInputStream(input.buffered()).use { zip ->
@@ -131,6 +147,8 @@ class BackupRepository @Inject constructor(
                         val name = entry.name
                         if (name.startsWith("images/")) {
                             images[name.removePrefix("images/")] = bytes
+                        } else if (name.startsWith("figures/")) {
+                            figures[name.removePrefix("figures/")] = bytes
                         } else if (name.endsWith(".json")) {
                             texts[name] = String(bytes, Charsets.UTF_8)
                         }
@@ -193,6 +211,24 @@ class BackupRepository @Inject constructor(
                 val refs = dto.tagIds.mapNotNull { tagIdMap[it] }
                     .map { QuestionTagCrossRef(newId, it) }
                 if (refs.isNotEmpty()) crossRefDao.insertAll(refs)
+
+                // 插图：解码后走 store 重新压缩并生成缩略图
+                dto.figures.forEach { relative ->
+                    val bytes = figures[relative.substringAfterLast('/')] ?: return@forEach
+                    val bitmap = android.graphics.BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
+                        ?: return@forEach
+                    when (val saved = imageStore.saveFigure(bitmap)) {
+                        is WbResult.Ok -> questionImageDao.insert(
+                            QuestionImageEntity(
+                                questionId = newId,
+                                path = saved.value.imagePath,
+                                thumbPath = saved.value.thumbPath,
+                            ),
+                        )
+                        is WbResult.Err -> Unit
+                    }
+                    bitmap.recycle()
+                }
                 imported++
             }
 

@@ -1,6 +1,11 @@
 ﻿package com.chenzixin.wrongbook.ui.component
 
 import androidx.compose.foundation.background
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ListItem
+import androidx.compose.material3.ListItemDefaults
+import androidx.compose.material3.MaterialTheme as M3MaterialTheme
+import androidx.compose.material3.Text as M3Text
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -15,6 +20,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
@@ -160,6 +166,7 @@ fun WbDivider(
  * iOS：44dp 行高、17sp 标题、13sp 摘要、右侧 chevron。
  * Miuix：BasicComponent。
  */
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun WbListRow(
     title: String,
@@ -176,7 +183,60 @@ fun WbListRow(
     val md3e = style == UiStyle.MD3E
     val c = wbColors()
 
-    if (ios || v090 || md3e) {
+    if (md3e) {
+        val m3 = M3MaterialTheme.colorScheme
+        Column(modifier = Modifier.fillMaxWidth()) {
+            ListItem(
+                headlineContent = {
+                    M3Text(text = title, style = M3MaterialTheme.typography.bodyLarge)
+                },
+                supportingContent = if (subtitle != null) {
+                    { M3Text(text = subtitle, style = M3MaterialTheme.typography.bodyMedium) }
+                } else {
+                    null
+                },
+                leadingContent = when {
+                    leading != null -> leading
+                    icon != null -> {
+                        {
+                            Box(
+                                modifier = Modifier
+                                    .size(40.dp)
+                                    .clip(androidx.compose.foundation.shape.CircleShape)
+                                    .background(m3.primaryContainer),
+                                contentAlignment = Alignment.Center,
+                            ) {
+                                WbIcon(
+                                    imageVector = icon,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(22.dp),
+                                    tint = m3.onPrimaryContainer,
+                                )
+                            }
+                        }
+                    }
+                    else -> null
+                },
+                trailingContent = {
+                    if (trailing != null) {
+                        trailing()
+                    } else if (onClick != null) {
+                        WbIcon(
+                            imageVector = MiuixIcons.ChevronForward,
+                            contentDescription = null,
+                            modifier = Modifier.size(18.dp),
+                            tint = m3.onSurfaceVariant,
+                        )
+                    }
+                },
+                colors = ListItemDefaults.colors(containerColor = androidx.compose.ui.graphics.Color.Transparent),
+                modifier = Modifier.clickable(enabled = onClick != null) { onClick?.invoke() },
+            )
+            if (showDivider) WbDivider(startIndent = 16.dp)
+        }
+        return
+    }
+    if (ios || v090) {
         Column(modifier = Modifier.fillMaxWidth()) {
             Row(
                 modifier = Modifier

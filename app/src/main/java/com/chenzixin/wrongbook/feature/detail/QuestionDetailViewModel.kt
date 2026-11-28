@@ -33,7 +33,11 @@ class QuestionDetailViewModel @Inject constructor(
     private val llm: LlmClient,
     private val imageStore: QuestionImageStore,
     savedStateHandle: SavedStateHandle,
-    private val tagRepo: com.chenzixin.wrongbook.data.repository.TagRepository,) : ViewModel() {
+    private val tagRepo: com.chenzixin.wrongbook.data.repository.TagRepository,
+    private val imageRepo: com.chenzixin.wrongbook.data.repository.QuestionImageRepository,
+    private val ocr: com.chenzixin.wrongbook.data.ocr.OcrEngine,
+    private val orienter: com.chenzixin.wrongbook.data.ocr.OcrOrienter,
+) : ViewModel() {
 
     private val questionId: Long = savedStateHandle.get<Long>("questionId") ?: 0L
 
@@ -58,6 +62,22 @@ class QuestionDetailViewModel @Inject constructor(
         val refined: RefinedQuestion? = null,
         val variants: List<RefinedQuestion> = emptyList(),
     )
+
+    /** 题目插图（几何图等），与题面主图分开 */
+    val figures: kotlinx.coroutines.flow.StateFlow<List<com.chenzixin.wrongbook.data.local.entity.QuestionImageEntity>> =
+        imageRepo.observe(questionId).stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5_000),
+            initialValue = emptyList(),
+        )
+
+    /** 答案扫描的识别结果，供用户确认后写入 */
+    private val _answerScan = MutableStateFlow<com.chenzixin.wrongbook.domain.qa.AnswerText?>(null)
+    val answerScan: kotlinx.coroutines.flow.StateFlow<com.chenzixin.wrongbook.domain.qa.AnswerText?> =
+        _answerScan.asStateFlow()
+
+    private val _scanningAnswer = MutableStateFlow(false)
+    val scanningAnswer: kotlinx.coroutines.flow.StateFlow<Boolean> = _scanningAnswer.asStateFlow()
 
     private val _ai = MutableStateFlow(AiState())
     val ai: StateFlow<AiState> = _ai.asStateFlow()
@@ -263,6 +283,78 @@ class QuestionDetailViewModel @Inject constructor(
             }
             _ai.value = AiState()
             _message.value = if (saved == 0) "保存失败" else "已保存 $saved 道变式题"
+        }
+    }
+
+    // ---------------------------------------------------------------- 插图
+
+    fun addFigure(bitmap: android.graphics.Bitmap) {
+        viewModelScope.launch {
+            when (val r = imageRepo.add(questionId, bitmap)) {
+                is WbResult.Ok -> _message.value = "已添加插图"
+                is WbResult.Err -> _message.value = r.message
+            }
+        }
+    }
+
+    fun deleteFigure(image: com.chenzixin.wrongbook.data.local.entity.QuestionImageEntity) {
+        viewModelScope.launch {
+            when (val r = imageRepo.delete(image)) {
+                is WbResult.Ok -> _message.value = "已删除插图"
+                is WbResult.Err -> _message.value = r.message
+            }
+        }
+    }
+
+    fun restoreFigureHd(image: com.chenzixin.wrongbook.data.local.entity.QuestionImageEntity) {
+        viewModelScope.launch {
+            _message.value = "正在重绘…"
+            // 超分要几秒，阶段文案直接写进同一个弹窗，不会反复弹
+            when (val r = imageRepo.restoreHd(image) { stage -> _message.value = stage }) {
+                is WbResult.Ok -> _message.value = "已生成高清图"
+                is WbResult.Err -> _message.value = r.message
+            }
+        }
+    }
+
+    // ---------------------------------------------------------------- 答案扫描
+
+    /** OCR 识别答案照片，拆成答案与解析后交给用户确认。 */
+    fun scanAnswer(bitmap: android.graphics.Bitmap) {
+        if (_scanningAnswer.value) return
+        _scanningAnswer.value = true
+        viewModelScope.launch {
+            // 答案页经常是横着拍的，先摆正再 OCR，否则竖排识别率极低
+            val upright = runCatching { orienter.upright(bitmap) }.getOrDefault(bitmap)
+            val result = runCatching { ocr.recognize(upright) }
+            _scanningAnswer.value = false
+            val text = result.getOrNull()?.lines?.joinToString("\n") { it.text }.orEmpty()
+            if (text.isBlank()) {
+                _message.value = "没识别到文字，换个角度或光线再试"
+                return@launch
+            }
+            _answerScan.value = com.chenzixin.wrongbook.domain.qa.AnswerParser.parse(text)
+        }
+    }
+
+    fun dismissAnswerScan() {
+        _answerScan.value = null
+    }
+
+    /** 用户确认（可编辑）后写库。 */
+    fun saveScannedAnswer(answer: String, analysis: String) {
+        val question = item.value?.question ?: return
+        _answerScan.value = null
+        viewModelScope.launch {
+            when (repo.update(
+                question.copy(
+                    answer = answer.trim().ifBlank { null },
+                    analysis = analysis.trim().ifBlank { null },
+                ),
+            )) {
+                is WbResult.Ok -> _message.value = "已写入答案与解析"
+                is WbResult.Err -> _message.value = "保存失败，请重试"
+            }
         }
     }
 }
