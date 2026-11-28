@@ -1,4 +1,4 @@
-﻿# Errata · AI Mistake Notebook
+# Errata · AI Mistake Notebook
 
 一个**离线优先、AI 增强**的 Android 错题本（原名 WrongBook / 错题整理 App，包名保持不变）：拍照 → 透视矫正 → 本地 OCR 或视觉模型切题 → 矩形多选入库 → 多标签分类 → AI 讲解 / 整理 / 出同类题 → 按标签生成可打印练习卷。
 
@@ -7,7 +7,7 @@
 - 视觉风格：**Miuix / iOS / 0.9.0 液态玻璃 / MD3 Expressive 四皮肤**，设置内实时切换；Miuix 纯色 Monet，iOS Cupertino 玻璃，0.9.0 极光 + 悬浮胶囊，MD3E 官方 Material3 组件 + 动态取色 + 药丸导航
 - 数据：纯本地（Room + 私有目录图片），手动导出 ZIP
 
-**仓库**：https://github.com/chenzhizixin2010/wrongbook ｜ **当前版本**：v0.13.0
+**仓库**：https://github.com/chenzhizixin2010/wrongbook ｜ **官网**：https://chenzhizixin2010.github.io/wrongbook/ ｜ **当前版本**：v0.13.0
 
 **版本计划**（设置 → 关于 → 测试版计划，默认 Beta）：
 
