@@ -200,7 +200,7 @@ fun SettingsTabScreen(
 
         WbSection(
             header = "图像增强",
-            footer = "「题目详情 → 题目插图 → 高清重绘」会用模型把小图放大 4 倍（约 5–8 秒）；关掉则秒出。",
+            footer = "「题目详情 → 题目插图 → 高清重绘」会用模型把小图放大 4 倍（约 5–15 秒，看机型）；关掉则秒出。",
         ) {
             Column(modifier = Modifier.padding(14.dp)) {
                 WbSwitchRow(

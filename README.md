@@ -7,7 +7,7 @@
 - 视觉风格：**Miuix / iOS / 0.9.0 液态玻璃 / MD3 Expressive 四皮肤**，设置内实时切换；Miuix 纯色 Monet，iOS Cupertino 玻璃，0.9.0 极光 + 悬浮胶囊，MD3E 官方 Material3 组件 + 动态取色 + 药丸导航
 - 数据：纯本地（Room + 私有目录图片），手动导出 ZIP
 
-**仓库**：https://github.com/chenzhizixin2010/wrongbook ｜ **官网**：https://chenzhizixin2010.github.io/wrongbook/ ｜ **当前版本**：v0.13.0
+**仓库**：https://github.com/chenzhizixin2010/wrongbook ｜ **官网**：https://chenzhizixin2010.github.io/wrongbook/ ｜ **当前版本**：v0.13.1
 
 **版本计划**（设置 → 关于 → 测试版计划，默认 Beta）：
 
@@ -24,7 +24,7 @@ P0~P8 **功能全部落地**，编译与单元测试通过；真实模型链路�
 ```
 gradle :app:assembleDebug + :app:testDebugUnitTest
 -> BUILD SUCCESSFUL
--> 221 tests, 0 failures
+-> 239 tests, 0 failures
 -> app-debug.apk 72.2 MB（含 7.4MB 超分模型 + TFLite 运行时）
 ```
 
@@ -130,6 +130,15 @@ gradle :app:assembleDebug + :app:testDebugUnitTest
 | Groq / OpenRouter / Gemini | 有免费额度或 `:free` 模型 | 需外网 |
 
 ## 更新日志
+
+### v0.13.1
+
+见 [`docs/release-notes/v0.13.1.md`](docs/release-notes/v0.13.1.md)。**0.13.0 的紧急修复版**：
+
+- 修复「点开题目详情 / 打开 AI 对话闪退」：行内公式开关缺 `inline-parser` 插件，Markwon 装配时 NPE；并给渲染器加兜底（装配失败退化成纯文本）
+- 修复行内公式不渲染：单 `$...$` 升级为 `$$...$$`（Markwon 的 latex 插件只认双美元）
+- 修复超分自检误报「推理没结果」：这其实是「128×128 需要 4 块、预算只给了 1 块」
+- 修复「重新处理题目图片」把主图覆盖成 200px 缩略图（非 `.webp` 老图的路径推导有 bug），替换改为原子写 + 覆盖前校验可解码
 
 ### v0.13.0
 

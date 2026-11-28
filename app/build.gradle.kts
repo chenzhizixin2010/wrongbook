@@ -19,8 +19,8 @@ android {
         applicationId = "com.chenzixin.wrongbook"
         minSdk = 24
         targetSdk = 37
-        versionCode = 16
-        versionName = "0.13.0"
+        versionCode = 17
+        versionName = "0.13.1"
 
         // 更新源：仓库信息与镜像前缀。owner/repo 也可以在设置页里改。
         buildConfigField("String", "GITHUB_OWNER", "\"chenzhizixin2010\"")
@@ -148,6 +148,7 @@ dependencies {
     // Markdown + LaTeX（P6 聊天渲染）
     implementation(libs.markwon.core)
     implementation(libs.markwon.ext.latex)
+    implementation(libs.markwon.inline.parser)
     implementation(libs.jlatexmath.android)
 
     // 相机（P3）

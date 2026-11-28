@@ -39,12 +39,15 @@ class SuperResolutionEngine @Inject constructor(
     @IoDispatcher private val io: CoroutineDispatcher,
 ) {
 
-    /** 超分结果：放大后的位图 + 用了多少块 + 耗时。 */
-    data class Upscaled(
-        val bitmap: Bitmap,
-        val tiles: Int,
-        val millis: Long,
-    )
+    /** 超分结果。用 sealed 而不是可空返回值：跳过和失败要能分别说清原因。 */
+    sealed interface Upscale {
+        /** 成功：放大后的位图 + 用了多少块 + 耗时。 */
+        data class Done(val bitmap: Bitmap, val tiles: Int, val millis: Long) : Upscale
+        /** 没做：图片太大超出块预算等（不是错误，调用方走 Lanczos 即可）。 */
+        data class Skipped(val reason: String) : Upscale
+        /** 失败：模型不可用或推理异常。 */
+        data class Failed(val message: String) : Upscale
+    }
 
     private class Handle(
         val interpreter: Interpreter,
@@ -72,34 +75,36 @@ class SuperResolutionEngine @Inject constructor(
     /**
      * 把 [source] 放大 4 倍。
      *
-     * 返回 null 的情况：模型不可用、图片太大（块数超预算）、推理异常。
-     * 调用方**必须**有非超分的兜底路径。
+     * 调用方**必须**有非超分的兜底路径（[Skipped] / [Failed] 都表示「这次没放大」）。
      */
     suspend fun upscale(
         source: Bitmap,
         maxTiles: Int = TilingPlanner.DEFAULT_MAX_TILES,
         onProgress: (done: Int, total: Int) -> Unit = { _, _ -> },
-    ): Upscaled? = withContext(io) {
-        val h = obtain() ?: return@withContext null
-        val width = source.width
-        val height = source.height
+    ): Upscale = withContext(io) {
+        val h = obtain() ?: return@withContext Upscale.Failed(
+            lastError?.let { "模型不可用：$it" } ?: "模型不可用",
+        )
         val plan = TilingPlanner.plan(
-            width = width,
-            height = height,
+            width = source.width,
+            height = source.height,
             tile = h.tile,
             scale = h.scale,
             pad = TilingPlanner.DEFAULT_PAD,
             maxTiles = maxTiles,
-        ) ?: return@withContext null
+        ) ?: return@withContext Upscale.Skipped(
+            "图片 ${source.width}×${source.height} 分块后超过 $maxTiles 块预算",
+        )
 
         try {
-            runPlan(h, source, plan, onProgress)
+            val (bitmap, tiles, millis) = runPlan(h, source, plan, onProgress)
+            Upscale.Done(bitmap, tiles, millis)
         } catch (t: Throwable) {
             // 不吞异常：把原因留给设置页/日志，并丢掉解释器，下次重绘会重新加载
             lastError = t.message ?: t.javaClass.simpleName
             runCatching { h.interpreter.close() }
             handle = null
-            null
+            Upscale.Failed(lastError ?: "推理异常")
         }
     }
 
@@ -113,7 +118,7 @@ class SuperResolutionEngine @Inject constructor(
         source: Bitmap,
         plan: TilePlan,
         onProgress: (Int, Int) -> Unit,
-    ): Upscaled {
+    ): Triple<Bitmap, Int, Long> {
         val srcWidth = plan.srcWidth
         val srcHeight = plan.srcHeight
         val pixels = IntArray(srcWidth * srcHeight)
@@ -139,7 +144,7 @@ class SuperResolutionEngine @Inject constructor(
 
         val bitmap = Bitmap.createBitmap(plan.outWidth, plan.outHeight, Bitmap.Config.ARGB_8888)
         bitmap.setPixels(outPixels, 0, plan.outWidth, 0, 0, plan.outWidth, plan.outHeight)
-        return Upscaled(bitmap, plan.tiles.size, SystemClock.elapsedRealtime() - started)
+        return Triple(bitmap, plan.tiles.size, SystemClock.elapsedRealtime() - started)
     }
 
     /** 把一块源像素写成模型输入（RGB，0..1，越界按边缘复制）。 */
@@ -228,32 +233,47 @@ class SuperResolutionEngine @Inject constructor(
      * 用户可以在设置页点一下，确认「这台机器上模型真的能跑」——
      * 比在日志里写「已加载」有用得多。
      */
-    suspend fun selfTest(): WbResult<Long> {
+    suspend fun selfTest(): WbResult<SelfTest> = withContext(io) {
         val h = runCatching { obtain() }.getOrNull()
-            ?: return WbResult.Err("超分模型加载失败（$ASSET 缺失或与本机 ABI 不兼容）")
-        return withContext(io) {
-            runCatching {
-                val side = h.tile
-                val pixels = IntArray(side * side) { i ->
-                    val x = i % side
-                    val y = i / side
-                    val v = ((x + y) * 255) / (side * 2)
-                    (0xFF shl 24) or (v shl 16) or (v shl 8) or v
-                }
-                val bitmap = Bitmap.createBitmap(side, side, Bitmap.Config.ARGB_8888)
-                bitmap.setPixels(pixels, 0, side, 0, 0, side, side)
-                val result = upscale(bitmap, maxTiles = 1)?.millis
-                    ?: return@runCatching -1L
-                bitmap.recycle()
-                result
-            }.fold(
-                onSuccess = { ms ->
-                    if (ms >= 0) WbResult.Ok(ms) else WbResult.Err("模型能加载但推理没结果")
-                },
-                onFailure = { t -> WbResult.Err("超分自检失败：${t.message ?: "未知错误"}", t) },
-            )
+            ?: return@withContext WbResult.Err("超分模型加载失败（$ASSET 缺失或与本机 ABI 不兼容）")
+
+        // 注意：一张 tile×tile 的图并不等于「1 块」。分块步长是 tile-2*pad=112，
+        // 所以 128×128 会切成 2×2=4 块 —— 这里必须给够预算，否则会被当成「太大、跳过」。
+        val side = h.tile
+        val pixels = IntArray(side * side) { i ->
+            val x = i % side
+            val y = i / side
+            val v = ((x + y) * 255) / (side * 2)
+            (0xFF shl 24) or (v shl 16) or (v shl 8) or v
+        }
+        val bitmap = Bitmap.createBitmap(side, side, Bitmap.Config.ARGB_8888)
+        bitmap.setPixels(pixels, 0, side, 0, 0, side, side)
+
+        val outcome = upscale(bitmap, maxTiles = TilingPlanner.DEFAULT_MAX_TILES)
+        bitmap.recycle()
+
+        when (outcome) {
+            is Upscale.Done -> {
+                outcome.bitmap.recycle()
+                WbResult.Ok(
+                    SelfTest(
+                        tiles = outcome.tiles,
+                        totalMillis = outcome.millis,
+                        perTileMillis = if (outcome.tiles > 0) outcome.millis / outcome.tiles else outcome.millis,
+                    ),
+                )
+            }
+            is Upscale.Skipped -> WbResult.Err("模型能加载，但这一张被跳过：${outcome.reason}")
+            is Upscale.Failed -> WbResult.Err("模型能加载，但推理失败：${outcome.message}")
         }
     }
+
+    /** 自检结果，给设置页展示。 */
+    data class SelfTest(
+        val tiles: Int,
+        val totalMillis: Long,
+        val perTileMillis: Long,
+    )
 
     // ---------------------------------------------------------------- 加载
 

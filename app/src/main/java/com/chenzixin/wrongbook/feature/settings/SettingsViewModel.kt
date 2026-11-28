@@ -79,7 +79,8 @@ class SettingsViewModel @Inject constructor(
         _srTest.value = "自检中…（最多几秒）"
         viewModelScope.launch {
             _srTest.value = when (val r = superResolutionEngine.selfTest()) {
-                is WbResult.Ok -> "模型可用：一张 128×128 用时 ${r.value} ms"
+                is WbResult.Ok -> "模型可用：${r.value.tiles} 块共 ${r.value.totalMillis} ms" +
+                    "（平均 ${r.value.perTileMillis} ms/块）"
                 is WbResult.Err -> r.message
             }
         }

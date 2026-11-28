@@ -109,6 +109,9 @@ tensorflow-lite = { module = "org.tensorflow:tensorflow-lite", version.ref = "te
 # Markdown / LaTeX（P6 用）
 markwon-core = { module = "io.noties.markwon:core", version.ref = "markwon" }
 markwon-ext-latex = { module = "io.noties.markwon:ext-latex", version.ref = "markwon" }
+# 行内公式必需：ext-latex 的 inlinesEnabled(true) 会 require(MarkwonInlineParserPlugin)，
+# 缺了它 Markwon.builder().build() 直接 NPE（0.13.0 点开题目就崩就是这个原因）
+markwon-inline-parser = { module = "io.noties.markwon:inline-parser", version.ref = "markwon" }
 jlatexmath-android = { module = "ru.noties:jlatexmath-android", version.ref = "jlatexmath" }
 
 # 安全存储

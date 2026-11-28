@@ -25,7 +25,7 @@ import kotlinx.coroutines.withContext
  * 题目插图的读写：单独上传、删除、高清重绘。
  *
  * 「高清重绘」有两条路：
- * 1. **AI 超分**（默认）：内置 EDSR×4 模型，小图分块放大 4 倍，边缘更利，约 5–8 秒；
+ * 1. **AI 超分**（默认）：内置 EDSR×4 模型，小图分块放大 4 倍，边缘更利，约 5–15 秒；
  * 2. **Lanczos + 反锐化**：秒出，不依赖模型，图太大或模型不可用时自动走这条。
  *
  * 重绘后写入新文件、替换数据库记录，旧文件随之删除，避免目录里堆垃圾。
@@ -90,12 +90,22 @@ class QuestionImageRepository @Inject constructor(
         val enabled = runCatching { appPrefs.superResolution.first() }.getOrDefault(true)
         var enhanced: Bitmap? = null
         if (enabled) {
-            onStage("AI 超分中，最多 9 块（约 5–8 秒）…")
-            enhanced = runCatching {
+            onStage("AI 超分中，最多 9 块（约 5–15 秒，看机型）…")
+            val outcome = runCatching {
                 superResolution.upscale(decoded) { done, total ->
                     onStage("AI 超分中 $done/$total…")
                 }
-            }.getOrNull()?.bitmap
+            }.getOrNull()
+            enhanced = (outcome as? SuperResolutionEngine.Upscale.Done)?.bitmap
+            if (enhanced == null && outcome != null) {
+                // 跳过/失败都要能让用户知道为什么退化成了普通放大
+                val why = when (outcome) {
+                    is SuperResolutionEngine.Upscale.Skipped -> outcome.reason
+                    is SuperResolutionEngine.Upscale.Failed -> outcome.message
+                    is SuperResolutionEngine.Upscale.Done -> ""
+                }
+                onStage("已用普通放大（$why）")
+            }
         }
 
         val result = enhanced?.let { upscaled ->

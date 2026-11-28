@@ -76,7 +76,7 @@ class ImageMaintenance @Inject constructor(
 
     private suspend fun processOne(relativePath: String): Boolean {
         val file = File(context.filesDir, relativePath)
-        if (!file.exists()) return false
+        if (!file.exists() || file.length() == 0L) return false
 
         val original = BitmapFactory.decodeFile(file.absolutePath) ?: return false
         val upright = autoOrient(original)
@@ -86,27 +86,66 @@ class ImageMaintenance @Inject constructor(
         if (enhanced !== upright) upright.recycle()
 
         val full = enhanced.scaledToMaxSide(1600)
-
-        // 先写临时文件再替换，避免断电/被杀进程留下半张图
-        val tmp = File(file.parentFile, "${file.nameWithoutExtension}.tmp")
-        tmp.writeBytes(full.toWebp())
-        if (!tmp.renameTo(file)) {
-            file.delete()
-            tmp.renameTo(file)
-        }
+        val bytes = full.toWebp()
         if (full !== enhanced) full.recycle()
+        // 先确认新图自己还能解出来，解不出来就别覆盖原图（宁可这张不处理）
+        if (bytes.isEmpty() || !decodable(bytes)) {
+            enhanced.recycle()
+            return false
+        }
 
-        // 缩略图沿用同名规则
-        val thumbRelative = relativePath
-            .replace(".webp", "_thumb.webp")
-        val thumbFile = File(context.filesDir, thumbRelative)
-        if (thumbFile.exists()) {
-            val thumb = enhanced.scaledToMaxSide(200)
-            thumbFile.writeBytes(thumb.toWebp(quality = 70))
-            if (thumb !== enhanced) thumb.recycle()
+        val replaced = writeAtomically(file, bytes)
+
+        // 缩略图：路径由主图推导，推导结果与主图同名就跳过 ——
+        // 否则会拿 200px 的缩略图把主图覆盖掉（老版本对 .jpg/.png 路径就会这样）
+        val thumbRelative = thumbPathOf(relativePath)
+        if (thumbRelative != null) {
+            val thumbFile = File(context.filesDir, thumbRelative)
+            if (thumbFile.exists() && thumbFile.absolutePath != file.absolutePath) {
+                val thumb = enhanced.scaledToMaxSide(200)
+                val thumbBytes = thumb.toWebp(quality = 70)
+                if (thumb !== enhanced) thumb.recycle()
+                if (thumbBytes.isNotEmpty() && decodable(thumbBytes)) {
+                    runCatching { writeAtomically(thumbFile, thumbBytes) }
+                }
+            }
         }
         enhanced.recycle()
-        return true
+        return replaced
+    }
+
+    /** 只读文件头判断能不能解出来（InJustDecodeBounds 不分配像素内存）。 */
+    private fun decodable(bytes: ByteArray): Boolean {
+        if (bytes.isEmpty()) return false
+        val options = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+        return runCatching {
+            BitmapFactory.decodeByteArray(bytes, 0, bytes.size, options)
+            options.outWidth > 0 && options.outHeight > 0
+        }.getOrDefault(false)
+    }
+
+    /**
+     * 原子替换：先写 .tmp 再改名。
+     *
+     * 绝对不允许「先删原文件再改名」—— 那一步失败就等于把用户的题目图弄丢了
+     * （0.13.0 之前就是这么写的，重命名失败会留下一个指向空文件的数据库记录）。
+     */
+    private fun writeAtomically(target: File, bytes: ByteArray): Boolean {
+        val tmp = File(target.parentFile, "${target.name}.tmp")
+        return try {
+            tmp.writeBytes(bytes)
+            if (tmp.renameTo(target)) {
+                true
+            } else {
+                // 改名失败（有些 ROM / 外置存储会拒绝）：直接覆盖写，原文件保留到最后一步
+                target.writeBytes(bytes)
+                tmp.delete()
+                true
+            }
+        } catch (t: java.io.IOException) {
+            runCatching { tmp.delete() }
+            false
+        }
     }
 
     /**
@@ -166,8 +205,23 @@ class ImageMaintenance @Inject constructor(
         }
     }
 
-    private companion object {
+    companion object {
         /** OCR 总共读不到这么多字符时，认为打分不可信 */
         const val MIN_OCR_CHARS = 8
+
+        /**
+         * 由主图相对路径推导缩略图路径（纯函数，可单测）。
+         *
+         * 返回 null 表示**不要**重建缩略图：路径没有扩展名，或者推导结果会和主图同名
+         * （例如老数据里图片是 `.jpg`，硬拼 `_thumb.webp` 会生成同目录的另一个文件；
+         * 而用 `replace(".webp", ...)` 这种写法则会得到和主图完全一样的路径 —— 那会把主图覆盖掉）。
+         */
+        fun thumbPathOf(path: String): String? {
+            val slash = path.lastIndexOf('/')
+            val dot = path.lastIndexOf('.')
+            if (dot <= slash || dot <= 0) return null
+            val candidate = path.substring(0, dot) + "_thumb.webp"
+            return candidate.takeIf { it != path }
+        }
     }
 }
